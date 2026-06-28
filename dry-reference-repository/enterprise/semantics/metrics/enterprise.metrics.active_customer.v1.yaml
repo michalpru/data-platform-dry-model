@@ -1,0 +1,38 @@
+apiVersion: dry.platform/v1
+kind: Metric
+metadata:
+  fqn: enterprise.metrics.active_customer.v1
+  title: Active Customer
+  description: >
+    Enterprise-certified definition of an Active Customer.
+    ALL cross-domain reporting and executive dashboards MUST use this definition.
+    Domain teams requiring a different window (e.g., 30-day for campaign targeting)
+    must register a domain-local metric and explicitly annotate it as NOT for
+    cross-domain comparison.
+  owner:
+    team: data-governance
+    escalation: chief-data-officer
+  lifecycle:
+    state: certified
+    certifiedSince: "2025-01"
+spec:
+  model: enterprise.semantics.customer.v1
+  type: count_distinct
+  expr: customer_id
+  filters:
+    - field: last_activity_date
+      operator: within_days
+      value: 90
+      note: >
+        90-day activity window is the enterprise standard.
+        This was agreed upon by Finance, Marketing, and Sales as the cross-team canonical definition.
+        Domain requests to change this window must go through a governance review, and any
+        change requires a new version (v2) with a CDO-approved deprecation window for v1.
+  time:
+    defaultGrain: month
+    supportedGrains: [day, week, month, quarter]
+  compatibility:
+    policy: backward-compatible
+    note: >
+      Changing the activity window, the filter field, or the time grain is a BREAKING change.
+      Requires v2 and CDO approval.

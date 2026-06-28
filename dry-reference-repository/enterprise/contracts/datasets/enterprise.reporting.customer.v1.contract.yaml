@@ -1,0 +1,45 @@
+apiVersion: dry.platform/v1
+kind: DatasetContract
+metadata:
+  fqn: enterprise.reporting.customer.v1
+  title: Customer Master Dataset
+  description: >
+    Certified enterprise customer dataset. Single source of truth for customer identity.
+    All domains that need customer attributes for cross-team joins or reporting
+    must reference this dataset, not rebuild it from source systems.
+  owner:
+    team: data-governance
+    escalation: chief-data-officer
+  lifecycle:
+    state: certified
+spec:
+  grain:
+    - customer_id
+  slos:
+    freshnessMinutes: 1440  # daily refresh
+    availability: "99.9%"
+  schema:
+    - name: customer_id
+      type: string
+      nullable: false
+      description: "Stable durable customer identifier (surrogate key from CRM)."
+    - name: customer_segment
+      type: string
+      nullable: true
+      description: "Customer tier: enterprise | smb | consumer."
+    - name: region
+      type: string
+      nullable: true
+      description: "Geographic region."
+    - name: acquired_date
+      type: date
+      nullable: true
+      description: "Account creation date."
+    - name: last_activity_date
+      type: date
+      nullable: true
+      description: "Most recent qualifying activity date. Basis for active_customer metrics."
+  semanticNotes:
+    definitions:
+      customer_id: "Use this as the join key across all domain datasets. Do not use email or account_name — these are mutable."
+      last_activity_date: "Definition of qualifying activity is governed and documented in enterprise/semantics/models/enterprise.semantics.customer.v1.yaml."

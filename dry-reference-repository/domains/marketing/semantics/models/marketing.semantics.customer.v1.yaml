@@ -1,0 +1,51 @@
+apiVersion: dry.platform/v1
+kind: SemanticModel
+metadata:
+  fqn: marketing.semantics.customer.v1
+  title: Customer (Marketing Campaign View)
+  description: >
+    Marketing domain extension of enterprise.semantics.customer.v1.
+    Adds campaign-specific dimensions to the enterprise Customer entity.
+
+    Pattern: domain teams EXTEND the enterprise entity with domain-specific dimensions
+    rather than redefining the entity from scratch. The enterprise grain (customer_id),
+    standard dimensions, and last_activity_date definition are inherited — not overridden.
+
+    If the enterprise entity changes (e.g., a new standard dimension is added), this model
+    automatically inherits it. Breaking changes to the enterprise entity propagate here,
+    which is why enterprise.semantics.customer.v1 is governed with CDO approval for changes.
+  owner:
+    team: marketing-analytics
+    escalation: marketing-data-oncall
+  lifecycle:
+    state: shared
+    sharedSince: "2025-06"
+    note: "Shared within marketing analytics. Not for cross-domain executive reporting."
+spec:
+  extends: enterprise.semantics.customer.v1    # base entity: certified cross-org definition
+  entity:
+    name: Customer
+    grain: customer_id    # inherited from enterprise — do not change
+    description: "Marketing campaign view of the enterprise Customer entity."
+  additionalDimensions:
+    - name: campaign_source
+      type: string
+      description: "Acquisition channel (e.g., paid_search, organic, referral, email)."
+    - name: churn_risk_segment
+      type: string
+      description: "Churn risk band from the marketing propensity model (high / medium / low)."
+    - name: last_campaign_interaction_date
+      type: date
+      description: "Date of most recent campaign touchpoint."
+    - name: is_active_30d
+      type: boolean
+      description: >
+        True if last_activity_date is within the last 30 days.
+        Campaign targeting dimension — do not use for cross-domain comparison.
+        For cross-domain reporting, use enterprise.metrics.active_customer.v1 (90-day).
+  compatibility:
+    policy: backward-compatible
+    note: >
+      Additional dimensions are backward-compatible (existing consumers are unaffected).
+      Dimensions inherited from enterprise.semantics.customer.v1 cannot be overridden here.
+      Any change to enterprise dimensions must go through the Data Governance function.

@@ -1,0 +1,47 @@
+apiVersion: dry.platform/v1
+kind: Metric
+metadata:
+  fqn: marketing.metrics.active_customers_30d.v1
+  title: Active Customers (30-day Campaign Window)
+  description: >
+    Marketing domain metric: customers who had a qualifying activity within the last 30 days.
+    Used for campaign audience sizing and targeting ONLY.
+
+    ⚠ CROSS-DOMAIN REPORTING: Use enterprise.metrics.active_customer.v1 (90-day window).
+    This metric must NOT appear in executive dashboards or cross-team KPI comparisons.
+    If a number comparable with Finance or Sales is needed, use the enterprise metric.
+
+    This illustrates the domain-local vs enterprise-certified distinction from the article:
+    Marketing previously had this definition embedded in SQL views with no governance label.
+    Now it is explicitly declared as domain-local, with a pointer to the certified enterprise
+    metric. The divergence is traceable, justified, and governed.
+  owner:
+    team: marketing-analytics
+    escalation: marketing-data-oncall
+  lifecycle:
+    state: local
+    pointsToCanonical: enterprise.metrics.active_customer.v1
+    note: >
+      Domain-local. The 30-day window is a marketing campaign targeting parameter,
+      not the enterprise Active Customer definition.
+      Explicitly registered here to make the divergence traceable and prevent
+      accidental reuse outside its intended scope.
+spec:
+  model: marketing.semantics.customer.v1
+  type: count_distinct
+  expr: customer_id
+  filters:
+    - field: last_activity_date
+      operator: within_days
+      value: 30
+      note: "30-day window for campaign targeting. Enterprise standard is 90 days."
+  time:
+    defaultGrain: week
+    supportedGrains: [day, week, month]
+  seeAlso:
+    certified: enterprise.metrics.active_customer.v1
+  compatibility:
+    policy: internal
+    note: >
+      Internal to marketing analytics. No external compatibility guarantee.
+      Cross-domain consumers must not reference this metric directly.

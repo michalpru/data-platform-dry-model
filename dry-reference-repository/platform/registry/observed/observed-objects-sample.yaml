@@ -1,0 +1,21 @@
+apiVersion: dry.platform/v1
+kind: ObservedObjectSnapshot
+metadata:
+  source: warehouse_catalog_scan
+  capturedAt: "2026-05-24T00:00:00Z"
+spec:
+  objects:
+    - physicalRef: analytics_marketing.marts.active_customers_30d
+      ownerHint: marketing-analytics
+      observedType: table
+      concept: active_customer
+      status: accepted_local_variant
+      relatedCanonical: enterprise.metrics.active_customer.v1
+      note: Domain-local 30-day marketing metric; not valid for executive reporting.
+    - physicalRef: sandbox_finance.rev_events_copy_final
+      ownerHint: finance-analytics
+      observedType: table
+      concept: revenue_events
+      status: suspected_bypass
+      relatedCanonical: finance.reporting.revenue_events.v1
+      note: Candidate shadow copy; review whether downstream consumers should switch to the certified dataset.

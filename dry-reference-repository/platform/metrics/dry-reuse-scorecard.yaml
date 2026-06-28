@@ -1,0 +1,38 @@
+apiVersion: dry.platform/v1
+kind: ReuseScorecard
+metadata:
+  name: dry-reuse-scorecard
+spec:
+  structuralMetrics:
+    - name: registered_artifacts_by_lifecycle
+      source: platform.registry.registered
+      dimensions: [interfaceType, lifecycle, owner]
+    - name: certified_consumer_count
+      source: platform.registry.dependency_graph
+      dimensions: [fqn, owner]
+    - name: duplication_hotspots
+      source: platform.registry.observed
+      dimensions: [concept, sourceSystem, suspectedCanonical]
+  behavioralMetrics:
+    - name: callable_logic_adoption_rate
+      numerator: domain_jobs_importing_registered_callable_logic
+      denominator: domain_jobs_containing_equivalent_local_logic
+      source: ci_static_analysis_and_runtime_job_metadata
+    - name: certified_dataset_adoption_rate
+      numerator: queries_against_registered_certified_datasets
+      denominator: queries_against_registered_or_equivalent_datasets
+      source: warehouse_query_logs
+    - name: certified_metric_adoption_rate
+      numerator: dashboards_using_certified_metrics
+      denominator: dashboards_reporting_equivalent_business_concepts
+      source: semantic_layer_telemetry
+    - name: bypass_count
+      source: platform.registry.observed
+      filter: status == suspected_bypass
+  actionThresholds:
+    highBypassCount:
+      condition: bypass_count > 5
+      action: review_access_patterns_and_discoverability
+    lowCertifiedMetricAdoption:
+      condition: certified_metric_adoption_rate < 0.8
+      action: improve_semantic_layer_guardrails

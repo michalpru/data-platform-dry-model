@@ -1,0 +1,9 @@
+name: dry_shared_macros
+version: "0.1.0"
+kind: sql_template_macro_package
+macroPaths:
+  - macros
+
+description: >
+  Tool-neutral SQL template macro package. In a real implementation this package
+  can be adapted to an organization's SQL compiler or templating runtime.

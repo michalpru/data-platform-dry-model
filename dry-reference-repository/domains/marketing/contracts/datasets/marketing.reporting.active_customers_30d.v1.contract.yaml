@@ -1,0 +1,46 @@
+apiVersion: dry.platform/v1
+kind: DatasetContract
+metadata:
+  fqn: marketing.reporting.active_customers_30d.v1
+  title: Active Customers (30-day window)
+  description: >
+    Marketing dataset: customers active within the last 30 days.
+    Intended for campaign targeting and audience segmentation.
+    NOT for cross-domain reporting or executive dashboards — use enterprise.metrics.active_customer.v1.
+  owner:
+    team: marketing-analytics
+  lifecycle:
+    state: local
+    note: >
+      Intentionally local. The 30-day activity window is a marketing campaign targeting
+      decision, not an enterprise-canonical definition. This contract is declared explicitly
+      to make the local intent traceable and to prevent accidental cross-domain reuse.
+      Cross-domain active customer reporting must use enterprise.metrics.active_customer.v1.
+spec:
+  grain:
+    - customer_id
+  slos:
+    freshnessMinutes: 1440
+    availability: "99.5%"
+  schema:
+    - name: customer_id
+      type: string
+      nullable: false
+    - name: customer_segment
+      type: string
+      nullable: true
+    - name: region
+      type: string
+      nullable: true
+    - name: last_activity_date
+      type: date
+      nullable: true
+    - name: is_active_30d
+      type: boolean
+      nullable: false
+  semanticNotes:
+    definitions:
+      is_active_30d: "True if last_activity_date is within the last 30 days. Domain-local window for campaign segmentation only."
+  dependencies:
+    upstreamDatasets:
+      - fqn: enterprise.reporting.customer.v1   # joins from enterprise certified customer master

@@ -1,0 +1,42 @@
+# Registered by CI on merge to main.
+# Promoted from: enterprise/semantics/models/enterprise.semantics.customer.v1.yaml
+#
+# Registry scope: certified semantic entity contract for cross-domain customer identity.
+
+apiVersion: dry.platform/v1
+kind: DryArtifact
+metadata:
+  fqn: enterprise.semantics.customer.v1
+  title: Customer Semantic Model
+  description: >
+    Enterprise-certified semantic model for the Customer entity.
+    Defines customer grain, durable identity, and standard dimensions used across domains.
+    Domain teams extend this semantic model instead of redefining customer identity locally.
+  owner:
+    team: data-governance
+    escalation: chief-data-officer
+  lifecycle:
+    state: certified
+
+spec:
+  interfaceTypes:
+    - semantic_contract
+  compatibility:
+    policy: backward-compatible
+    breakingChanges:
+      - grain_change
+      - identity_key_change
+      - dimension_removal
+      - relationship_key_change
+    note: >
+      Adding dimensions is backward-compatible.
+      Changing the customer grain, durable identity key, or removing dimensions requires
+      a new version and CDO-approved deprecation window.
+  knownConsumers:
+    - fqn: enterprise.metrics.active_customer.v1
+      relationship: metric_base_model
+    - fqn: marketing.semantics.customer.v1
+      relationship: extends_model
+    - fqn: finance.reporting.revenue_events.v1
+      relationship: joins_on_customer_id
+  sourceManifest: enterprise/semantics/models/enterprise.semantics.customer.v1.yaml

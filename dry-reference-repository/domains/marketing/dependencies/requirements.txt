@@ -1,0 +1,5 @@
+# Python wheel dependency
+# Declares that the marketing domain reuses the platform-published dry_platform_utils package.
+# This domain does NOT copy platform utility code — it declares a versioned dependency.
+
+dry-platform-utils>=0.1.0,<1.0.0

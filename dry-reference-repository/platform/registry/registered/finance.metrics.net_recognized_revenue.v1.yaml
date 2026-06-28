@@ -1,0 +1,39 @@
+# Registered by CI on merge to main.
+# Promoted from: domains/finance/semantics/metrics/finance.metrics.net_recognized_revenue.v1.yaml
+#
+# Registry scope: certified semantic contract for finance and cross-domain revenue reporting.
+# Domain teams that need to report revenue in executive dashboards consume this metric.
+
+apiVersion: dry.platform/v1
+kind: DryArtifact
+metadata:
+  fqn: finance.metrics.net_recognized_revenue.v1
+  title: Net Recognized Revenue
+  description: >
+    Finance-certified definition of Net Recognized Revenue.
+    The single governing definition for revenue reporting across finance dashboards
+    and executive reporting contexts.
+    Resolves the "divergent revenue totals" failure pattern from the whitepaper use case.
+  owner:
+    team: finance-analytics
+    escalation: finance-data-oncall
+  lifecycle:
+    state: certified
+
+spec:
+  interfaceTypes:
+    - semantic_contract
+  compatibility:
+    policy: backward-compatible
+    breakingChanges:
+      - filter_population_change
+      - aggregation_type_change
+      - expr_change
+      - default_grain_change
+    note: >
+      Any change that alters historical metric values is breaking.
+      Requires v2 with a CDO-acknowledged deprecation window for v1.
+  knownConsumers:
+    - fqn: enterprise.metrics.active_customer.v1
+      relationship: co-reported_in_executive_dashboards
+  sourceManifest: domains/finance/semantics/metrics/finance.metrics.net_recognized_revenue.v1.yaml

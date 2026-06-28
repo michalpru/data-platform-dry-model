@@ -1,0 +1,31 @@
+# Registered by CI on merge to main.
+# Promoted from: enterprise/semantics/metrics/enterprise.metrics.active_customer.v1.yaml
+#
+# Registry scope: certified semantic contract for cross-domain reporting.
+apiVersion: dry.platform/v1
+kind: DryArtifact
+metadata:
+  fqn: enterprise.metrics.active_customer.v1
+  title: Active Customer
+  description: Certified enterprise definition of Active Customer for executive and cross-domain reporting.
+  owner:
+    team: data-governance
+    escalation: chief-data-officer
+  lifecycle:
+    state: certified
+spec:
+  interfaceTypes:
+    - semantic_contract
+  compatibility:
+    policy: semantic-versioned
+    breakingChanges:
+      - activity_window_change
+      - filter_field_change
+      - allowed_dimension_change
+      - default_time_grain_change
+  knownConsumers:
+    - fqn: finance.metrics.net_recognized_revenue.v1
+      relationship: executive_reporting_context
+    - fqn: marketing.metrics.active_customers_30d.v1
+      relationship: local_variant_points_to_certified_metric
+  sourceManifest: enterprise/semantics/metrics/enterprise.metrics.active_customer.v1.yaml

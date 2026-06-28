@@ -1,0 +1,38 @@
+# Template: reusable logic artifact (callable logic interface)
+
+apiVersion: dry.platform/v1
+kind: ReusableLogic
+metadata:
+  fqn: platform.logic.with_boolean_flag.v1
+  title: Boolean Flag Helper
+  description: Shared callable logic used to standardize boolean flag expressions across transformations.
+  owner:
+    team: platform-data-engineering
+    escalation: data-platform-oncall
+  lifecycle:
+    state: shared # local | shared | certified | deprecated | retired
+  registry:
+    publish: true
+    interfaceType: callable_logic
+spec:
+  dryLayer:
+    - code
+    - logic
+  implementation:
+    language: sql
+    framework: dbt # dbt | sqlmesh | spark | python | warehouse-native | custom
+    package: dry_shared_macros
+    symbol: with_boolean_flag
+  compatibility:
+    policy: backward-compatible
+    deprecationWindowDays: 90
+  dependencies: []
+  usage:
+    intendedConsumers:
+      - domain_transformation_models
+    antiPatterns:
+      - copy_paste_generated_sql
+      - inline_reimplementation_in_domain_repositories
+  links:
+    sourceRepo: "https://github.com/your-org/your-repo"
+    docs: "./README.md"

@@ -1,0 +1,44 @@
+apiVersion: dry.platform/v1
+kind: Metric
+metadata:
+  fqn: finance.metrics.net_recognized_revenue.v1
+  title: Net Recognized Revenue
+  description: >
+    Finance-certified definition of Net Recognized Revenue.
+    All finance dashboards and any cross-domain revenue reporting must reference
+    this metric definition rather than deriving revenue aggregations from raw tables.
+
+    Context from the whitepaper use case: the absence of a governed metric like this
+    is what allowed finance teams to re-derive revenue directly from source systems,
+    resulting in divergent totals across executive dashboards. This metric is the
+    enforcement point that makes the canonical path the default path.
+  owner:
+    team: finance-analytics
+    escalation: finance-data-oncall
+  lifecycle:
+    state: certified
+    certifiedSince: "2025-06"
+    note: "Certified for use in executive dashboards and cross-domain revenue reporting."
+spec:
+  model: finance.semantics.revenue_events.v1
+  type: sum
+  expr: recognized_revenue_amount
+  filters:
+    - field: event_date
+      operator: not_null
+      note: "Excludes events with no recognition date — these are in pending-recognition state."
+  time:
+    defaultGrain: month
+    supportedGrains: [day, week, month, quarter, year]
+  compatibility:
+    policy: backward-compatible
+    breakingChanges:
+      - filter_population_change
+      - aggregation_type_change
+      - expr_change
+      - default_grain_change
+    note: >
+      Any change that alters metric values for historical periods is breaking.
+      Requires a new version (v2) and finance-analytics sign-off.
+      Cross-domain consumers (executive dashboards, ML training pipelines)
+      must be notified and acknowledge migration before v1 deprecation.

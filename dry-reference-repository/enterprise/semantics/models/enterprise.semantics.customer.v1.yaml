@@ -1,0 +1,46 @@
+apiVersion: dry.platform/v1
+kind: SemanticModel
+metadata:
+  fqn: enterprise.semantics.customer.v1
+  title: Customer
+  description: >
+    Enterprise-certified semantic model for the Customer entity.
+    This is the shared definition of customer identity, grain, and standard dimensions
+    used across all domains. Domain teams extend this model with domain-specific dimensions
+    rather than redefining the entity.
+  owner:
+    team: data-governance
+    escalation: chief-data-officer
+  lifecycle:
+    state: certified
+    certifiedSince: "2025-01"
+spec:
+  entity:
+    name: Customer
+    grain: customer_id
+    description: >
+      A single customer account as recorded in the CRM system of record.
+      customer_id is the stable, durable identifier across all systems.
+
+  dimensions:
+    - name: customer_segment
+      type: string
+      description: "Customer tier or segment (e.g., enterprise, smb, consumer)."
+    - name: region
+      type: string
+      description: "Geographic region of the customer account."
+    - name: acquired_date
+      type: date
+      description: "Date the customer account was created."
+    - name: last_activity_date
+      type: date
+      description: >
+        Date of the most recent qualifying activity.
+        Definition of 'qualifying activity' is standardized in the governance policy.
+
+  compatibility:
+    policy: backward-compatible
+    note: >
+      Adding new dimensions is backward-compatible.
+      Renaming or removing dimensions, or changing grain, requires a new version (v2)
+      and CDO approval. Domain teams must migrate to the new version before v1 deprecation.

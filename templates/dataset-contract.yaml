@@ -1,0 +1,90 @@
+# Template: Dataset contract (queryable dataset interface)
+#
+# This template covers two complementary governance surfaces on the same physical interface.
+# They are not competing; a single dataset is governed through both lenses simultaneously.
+#
+# DATA CONTRACT concerns (producer-consumer interface stability):
+#   grain, schema, slos, materialization, structural compatibility
+#
+# DRY GOVERNANCE concerns (semantic stability and reuse enforcement):
+#   lifecycle, registry, dependencies, semanticGovernance
+#   Note: changes that preserve schema but alter semantics are reuse-breaking
+#   even if they remain compatible under a data contract. See whitepaper §3.2.
+
+apiVersion: dry.platform/v1
+kind: DatasetContract
+metadata:
+  fqn: finance.reporting.revenue_events.v1  # use format: domain.namespace.name.vN
+  title: Revenue Events
+  description: Certified finance reporting dataset exposing canonical revenue-event facts.
+  owner:
+    team: finance-analytics
+    escalation: finance-data-oncall
+  # DRY GOVERNANCE: lifecycle and registry are reuse-interface governance, not data-contract fields
+  lifecycle:
+    state: certified # local | shared | certified | deprecated | retired
+  registry:
+    publish: true
+    interfaceType: queryable_dataset
+
+spec:
+  # --- DATA CONTRACT ---
+
+  grain:
+    - revenue_event_id
+  materialization:
+    type: table # table | view | materialized_view | file | api
+    refreshMode: incremental
+  slos:
+    freshnessMinutes: 180
+    availability: "99.9%"
+  schema:
+    - name: revenue_event_id
+      type: string
+      nullable: false
+    - name: customer_id
+      type: string
+      nullable: false
+    - name: event_ts
+      type: timestamp
+      nullable: false
+    - name: amount
+      type: decimal(18,2)
+      nullable: false
+  compatibility:
+    policy: backward-compatible       # structural: schema and interface shape
+    deprecationWindowDays: 90
+
+  # --- DRY GOVERNANCE ---
+
+  dependencies:
+    - fqn: enterprise.reporting.customer.v1
+      relationship: joins_on_customer_id
+  semanticGovernance:
+    # Semantic notes govern cross-team interpretation alignment, not just field descriptions.
+    # These are DRY governance concerns: transformation logic, grain ownership, business meaning.
+    transformationLogic: >
+      Revenue events are recognized at invoice settlement. Refunds are excluded.
+      Logic is defined in finance.reporting.revenue_events transformation model.
+    grainOwnership: >
+      Each row represents one revenue event. Grain is owned and enforced by the
+      finance-analytics team. Downstream aggregation must not alter the grain.
+    fieldDefinitions:
+      amount: "Recognized revenue amount in reporting currency after refund exclusion."
+    semanticBreakingChanges:
+      # Changes below are reuse-breaking even if schema is preserved (see whitepaper §3.2).
+      - change: filter population altered (e.g. refund exclusion rule changed)
+        breaking: true
+        reason: metric values change across historical periods
+      - change: grain redefined (e.g. row now represents invoice line, not event)
+        breaking: true
+        reason: joins, counts, and point-in-time interpretation produce different results
+      - change: field renamed at interface
+        breaking: true
+        reason: all consumers referencing by name break immediately
+      - change: new non-nullable column added
+        breaking: true
+        reason: existing consumers cannot satisfy the constraint
+      - change: new nullable column added
+        breaking: false
+        reason: additive; existing queries are unaffected

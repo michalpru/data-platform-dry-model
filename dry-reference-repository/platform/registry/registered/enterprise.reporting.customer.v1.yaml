@@ -1,0 +1,43 @@
+# Registered by CI on merge to main.
+# Promoted from: enterprise/contracts/datasets/enterprise.reporting.customer.v1.contract.yaml
+#                enterprise/semantics/models/enterprise.semantics.customer.v1.yaml
+#                enterprise/semantics/metrics/enterprise.metrics.active_customer.v1.yaml
+#
+# Registry scope: certified, cross-organizational. All domains are consumers.
+# Ownership: Data Governance team (CDO office).
+# This artifact represents the resolution of the "Active Customer" divergence problem
+# described in Part 1 of the article.
+
+apiVersion: dry.platform/v1
+kind: DryArtifact
+metadata:
+  fqn: enterprise.reporting.customer.v1
+  title: Customer Master (Enterprise)
+  description: >
+    Certified enterprise customer dataset and semantic definition.
+    All domains reference this for cross-domain joins and executive reporting.
+  owner:
+    team: data-governance
+    escalation: chief-data-officer
+  lifecycle:
+    state: certified
+spec:
+  interfaceTypes:
+    - queryable_dataset
+    - semantic_contract
+  physicalImplementations:
+    - system: warehouse
+      env: prod
+      ref: analytics.enterprise.customer
+    - system: warehouse
+      env: uat
+      ref: analytics_uat.enterprise.customer
+  compatibility:
+    policy: backward-compatible
+    note: "Version changes require CDO approval and a governed deprecation window."
+  knownConsumers:
+    - fqn: finance.reporting.revenue_events.v1
+      relationship: joins_on_customer_id
+    - fqn: marketing.reporting.active_customers_30d.v1
+      relationship: joins_on_customer_id
+  sourceManifest: enterprise/contracts/datasets/enterprise.reporting.customer.v1.contract.yaml

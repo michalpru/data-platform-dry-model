@@ -1,0 +1,38 @@
+apiVersion: dry.platform/v1
+kind: DuplicationDetectionPolicy
+metadata:
+  name: dry-duplication-detection-policy
+spec:
+  scope:
+    includeLifecycleStates: [shared, certified]
+    excludeLifecycleStates: [local]
+  structuralFingerprinting:
+    sql:
+      dialectScope: same-dialect-only
+      normalization:
+        - strip_whitespace
+        - normalize_aliases
+        - normalize_case
+        - ast_canonicalization
+      enforcement:
+        certifiedExactMatch: block
+        sharedExactMatch: warn
+        nearMatch: advisory_review
+    python:
+      normalization:
+        - python_ast_dump
+        - ignore_comments
+      enforcement:
+        certifiedExactMatch: block
+        sharedExactMatch: warn
+  semanticSimilarity:
+    embeddings:
+      inputs: [artifact_description, field_names, metric_names, business_terms]
+      threshold: 0.88
+      enforcement: advisory_only
+    llmAnalysis:
+      use: explain_similarity_for_reviewer
+      enforcement: advisory_only
+  exceptionPath:
+    requiredFor: [certifiedExactMatch, nearMatch]
+    fields: [justification, ownerApproval, expiryDate]

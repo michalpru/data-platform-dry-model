@@ -1,0 +1,43 @@
+# Template: metric (semantic contract interface)
+#
+# This is a governance manifest, not a replacement for a dbt or SQLMesh metric definition.
+# The spec section is an illustrative reference; the authoritative implementation lives in
+# the tool-native definition (dbt semantic_models:/metrics: YAML, SQLMesh METRIC(), etc.).
+#
+# WHAT THIS ADDS OVER dbt/SQLMesh:
+#   lifecycle   — local | shared | certified (no equivalent in either tool)
+#   registry    — org-scoped enrollment for cross-team discoverability
+#   fqn         — org-scoped, version-pinned identity (dbt unique_id is project-scoped only)
+#   compatibility — backward-compat policy and deprecation window enforcement
+#
+# In an operational system, the spec section would be generated from the tool manifest
+# (e.g., dbt ls --output json) rather than authored manually to avoid dual maintenance.
+
+apiVersion: dry.platform/v1
+kind: Metric
+metadata:
+  fqn: finance.metrics.net_recognized_revenue.v1
+  title: Net Recognized Revenue
+  description: Certified finance KPI for recognized revenue in reporting currency.
+  owner:
+    team: finance-analytics
+    escalation: finance-data-oncall
+  lifecycle:
+    state: certified # local | shared | certified | deprecated | retired
+  registry:
+    publish: true
+    interfaceType: semantic_contract
+spec:
+  model: finance.semantic.revenue_events.v1
+  # Reuses the recognized_amount measure defined in the source semantic model
+  # rather than re-deriving the aggregation here (DRY in Semantics).
+  type: simple
+  measure: recognized_amount
+  time:
+    defaultGrain: day
+  allowedDimensions:
+    - event_date
+    - customer_id
+  compatibility:
+    policy: backward-compatible
+    deprecationWindowDays: 90

@@ -1,0 +1,50 @@
+# Template: semantic model (semantic contract interface)
+#
+# This is a governance manifest, not a replacement for a dbt SemanticModel or SQLMesh model.
+# The spec section mirrors dbt's semantic_models: structure for reference; the authoritative
+# implementation lives in the tool-native definition.
+#
+# WHAT THIS ADDS OVER dbt/SQLMesh:
+#   lifecycle    — local | shared | certified (no equivalent in either tool)
+#   registry     — org-scoped enrollment for cross-team discoverability
+#   fqn          — org-scoped identity linking this semantic model to its source dataset
+#                  via registry FQN (not a dbt ref(), works across tool boundaries)
+#   compatibility — semantic interface stability policy (not just structural)
+#   sourceDataset — cross-tool dependency declaration via org-registry FQN
+#
+# In an operational system, the spec section would be generated from the tool manifest
+# rather than authored manually to avoid dual maintenance.
+
+apiVersion: dry.platform/v1
+kind: SemanticModel
+metadata:
+  fqn: finance.semantic.revenue_events.v1
+  title: Revenue Events semantic model
+  description: Domain-scoped semantic model for finance revenue-event analysis.
+  owner:
+    team: finance-analytics
+    escalation: finance-data-oncall
+  lifecycle:
+    state: shared # local | shared | certified | deprecated | retired
+  registry:
+    publish: true
+    interfaceType: semantic_contract
+spec:
+  entity:
+    name: RevenueEvent
+    grain: revenue_event_id
+  sourceDataset: finance.reporting.revenue_events.v1
+  dimensions:
+    - name: event_date
+      type: date
+    - name: customer_id
+      type: string
+  measures:
+    - name: revenue_event_count
+      type: count
+      expr: revenue_event_id
+    - name: recognized_amount
+      type: sum
+      expr: amount
+  compatibility:
+    policy: backward-compatible

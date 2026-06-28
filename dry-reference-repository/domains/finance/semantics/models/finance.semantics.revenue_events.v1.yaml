@@ -1,0 +1,62 @@
+apiVersion: dry.platform/v1
+kind: SemanticModel
+metadata:
+  fqn: finance.semantics.revenue_events.v1
+  title: Revenue Event
+  description: >
+    Finance domain semantic model for the Revenue Event entity.
+    Defines the canonical grain, measures, and time dimensions for revenue analysis.
+    Finance teams and any cross-domain consumer that needs revenue facts reference this
+    model rather than redefining aggregation rules in SQL.
+  owner:
+    team: finance-analytics
+    escalation: finance-data-oncall
+  lifecycle:
+    state: shared
+    sharedSince: "2025-06"
+    note: >
+      Shared across Finance Analytics. Under review for promotion to certified.
+      Cross-domain consumers should coordinate with the finance-analytics team before
+      depending on this model in production dashboards.
+spec:
+  entity:
+    name: RevenueEvent
+    grain: revenue_event_id
+    description: >
+      A single recognized revenue event record.
+      Grain is the event, not the customer or date.
+      Use time dimensions for period-level aggregation.
+  model: finance.reporting.revenue_events.v1
+
+  dimensions:
+    - name: event_date
+      type: date
+      description: "Calendar date of revenue recognition."
+    - name: customer_id
+      type: string
+      description: >
+        Customer identifier. Join key to enterprise.reporting.customer.v1.
+        Do not use any other identifier for cross-domain joins.
+
+  measures:
+    - name: recognized_revenue_amount
+      type: sum
+      expr: amount
+      description: "Sum of recognized revenue in reporting currency."
+    - name: revenue_event_count
+      type: count_distinct
+      expr: revenue_event_id
+      description: "Count of distinct recognized revenue events."
+
+  compatibility:
+    policy: backward-compatible
+    breakingChanges:
+      - grain_change
+      - measure_type_change
+      - measure_expr_change
+      - dimension_removal
+    note: >
+      Adding new dimensions or measures is backward-compatible.
+      Changing grain, removing measures, or changing measure expressions requires
+      a new version (v2) and finance-analytics team sign-off.
+      Cross-domain consumers must be notified before any breaking version change.

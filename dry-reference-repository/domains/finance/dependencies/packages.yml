@@ -1,0 +1,7 @@
+# Example: SQL macro package dependency file.
+# This demonstrates dependency-based reuse: domains import shared macros/packages.
+
+packages:
+  - git: "https://github.com/your-org/dry-platform-packages"
+    subdirectory: "platform/packages/sql/dry_shared_macros"
+    revision: "v0.1.0"

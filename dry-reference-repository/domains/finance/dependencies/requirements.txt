@@ -1,0 +1,5 @@
+# Example: domain runtime dependencies
+# In a real repo, pin versions and use your org's resolver (pip-tools/poetry/uv).
+
+# Platform-shared wheel (published to internal PyPI)
+dry-platform-utils>=0.1.0,<1.0.0

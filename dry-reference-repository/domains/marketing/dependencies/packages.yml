@@ -1,0 +1,11 @@
+# SQL macro package dependency
+# Declares that the marketing domain reuses the platform-published dry_shared_macros package.
+# This domain does NOT copy macros — it declares a versioned dependency.
+# Install with your organization's SQL package resolver.
+
+packages:
+  - git: "https://github.com/your-org/dry-shared-macros"
+    revision: "1.0.0"    # pin to a version, not a branch
+  # Alternative (internal registry, if published):
+  # - package: your-org/dry_shared_macros
+  #   version: [">=0.1.0", "<1.0.0"]

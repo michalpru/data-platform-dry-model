@@ -1,0 +1,189 @@
+# DRY Promotion Gate
+# Reference GitHub Actions workflow enforcing DRY lifecycle policy at merge time.
+# Aligns with Part 3, Section 2.4 (Enforcing Reuse in CI/CD).
+#
+# ADAPTATION NOTE:
+# - Replace "TODO: wire up ..." steps with your chosen tools.
+# - Gate 3 (duplication): use SQLGlot for SQL AST, Python ast module for Python logic.
+# - Gate 4 (similarity): use pgvector / Qdrant / Pinecone with an embedding model.
+# - Registry publish: POST to your registry API, or update INDEX.md in Stage 1 (YAML-only).
+
+name: DRY Promotion Gate
+
+on:
+  pull_request:
+    paths:
+      - "domains/**/*.py"
+      - "domains/**/*.sql"
+      - "domains/**/contracts/**/*.yaml"
+      - "domains/**/semantics/**/*.yaml"
+      - "enterprise/**/*.yaml"
+      - "platform/packages/**/*.py"
+      - "platform/packages/**/*.sql"
+      - "platform/registry/registered/**/*.yaml"
+
+jobs:
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Gate 1: Metadata validation
+  # Blocking for: shared + certified
+  # Checks: owner, FQN format, lifecycle state present
+  # ─────────────────────────────────────────────────────────────────────────────
+  validate-metadata:
+    name: "Gate 1 — Metadata validation"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect changed artifact manifests
+        id: changed
+        run: |
+          git diff --name-only origin/${{ github.base_ref }}...HEAD \
+            | grep -E "\.(yaml|yml)$" > changed_manifests.txt
+          echo "Changed manifests:"
+          cat changed_manifests.txt
+
+      - name: Validate required fields (owner, fqn, lifecycle)
+        run: |
+          # Fail if any shared/certified manifest is missing owner, fqn, or lifecycle.
+          # Tool options: yamale, conftest (OPA), custom Python script.
+          #
+          # Example (yamale):
+          #   pip install yamale
+          #   yamale --schema templates/artifact-manifest-schema.yaml <manifest>
+          #
+          echo "TODO: wire up manifest schema validator"
+
+      - name: Check FQN naming convention
+        run: |
+          # FQN must match: domain.namespace.name.vN
+          # Example: finance.reporting.revenue_events.v1
+          echo "TODO: validate FQN regex pattern"
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Gate 2: Compatibility check
+  # Blocking for: certified
+  # Checks: breaking schema/signature changes require version bump
+  # ─────────────────────────────────────────────────────────────────────────────
+  check-compatibility:
+    name: "Gate 2 — Compatibility check"
+    needs: validate-metadata
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # required to compare against previous version
+
+      - name: Detect breaking schema changes
+        run: |
+          # Breaking changes (require version bump):
+          #   - added non-nullable column   (consumers may not provide it)
+          #   - removed column              (consumers may depend on it)
+          #   - renamed column
+          #   - changed column type
+          #   - changed dataset grain
+          #   - changed metric filter or time grain
+          #
+          # Compatibility rules by interface type:
+          #   - queryable_dataset :  schema + grain + SLOs
+          #   - callable_logic    :  function signature + behavior contract
+          #   - semantic_contract :  metric definition + filters + dimensions
+          #
+          echo "TODO: wire up schema/signature diff tool"
+
+      - name: Enforce version increment on breaking change
+        run: |
+          # If breaking change detected and version tag unchanged → fail.
+          # Example: v1 → v1 with breaking change = block.
+          # v1 → v2 with breaking change = allow.
+          echo "TODO: enforce version bump rule"
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Gate 3: Structural duplication detection
+  # Blocking for: certified | Warn for: shared
+  # Compares structural fingerprint of new artifact against registry
+  # ─────────────────────────────────────────────────────────────────────────────
+  detect-duplication:
+    name: "Gate 3 — Structural duplication detection"
+    needs: check-compatibility
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate structural fingerprint
+        run: |
+          # SQL transformations: normalize with SQLGlot (pip install sqlglot)
+          #   import sqlglot
+          #   canonical = sqlglot.parse_one(sql, dialect="bigquery").sql(dialect="bigquery")
+          #
+          # Python logic: normalize with ast module
+          #   import ast, hashlib
+          #   tree = ast.parse(source)
+          #   fingerprint = hashlib.sha256(ast.dump(tree).encode()).hexdigest()
+          #
+          # Metric / semantic YAML: hash normalized field set (sorted keys, stripped whitespace)
+          #
+          echo "TODO: wire up structural fingerprinter"
+
+      - name: Compare fingerprint against registry
+        run: |
+          # Query DRY Artifact Registry for near-duplicate fingerprints.
+          # If exact match found on a certified artifact:
+          #   → FAIL with message:
+          #     "Artifact <fqn> is structurally equivalent to <existing_fqn>.
+          #      Reuse <existing_fqn> or provide explicit justification for divergence."
+          #
+          # If match found on a shared artifact:
+          #   → WARN (PR comment). Does not block.
+          #
+          echo "TODO: wire up registry fingerprint lookup"
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Advisory: Semantic similarity (embedding-based)
+  # Never blocks. Annotates PR with similarity warnings.
+  # Enable in Stage 3 once registry has sufficient artifact coverage.
+  # ─────────────────────────────────────────────────────────────────────────────
+  semantic-similarity:
+    name: "Advisory — Semantic similarity"
+    needs: detect-duplication
+    runs-on: ubuntu-latest
+    continue-on-error: true   # advisory: never fails the workflow
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compute embedding similarity
+        run: |
+          # Generate embedding for candidate artifact (description + field names + business terms).
+          # Query vector store (pgvector / Qdrant / Pinecone) for cosine similarity > threshold.
+          # If similarity above threshold:
+          #   → Post PR comment: "Potential duplicate of <existing_fqn> (similarity: 0.93).
+          #                       Review before promoting."
+          # Does not block promotion.
+          #
+          # LLM-based reasoning can complement this for cross-language / cross-dialect cases
+          # but is non-deterministic and must remain advisory-only.
+          #
+          echo "TODO: wire up embedding model + vector store lookup"
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Publish: Update registry on merge to main
+  # Triggered only after all blocking gates pass.
+  # ─────────────────────────────────────────────────────────────────────────────
+  publish-registry:
+    name: "Publish registry update"
+    needs: [validate-metadata, check-compatibility, detect-duplication]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Parse manifests and publish to registry
+        run: |
+          # Stage 1 (YAML-only registry): update INDEX.md snapshot.
+          # Stage 2 (registry API):
+          #   - Parse merged manifests
+          #   - POST to /registry/artifacts with: fqn, interface_type, lifecycle_state, owner,
+          #     physical_refs, dependencies, consumers (from dependency graph)
+          #   - API updates dependency/consumer counts for impact analysis
+          #
+          echo "TODO: wire up registry publish step"
