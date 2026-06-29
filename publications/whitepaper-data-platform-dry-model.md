@@ -1,4 +1,4 @@
-﻿# The Data Platform DRY Model
+# The Data Platform DRY Model
 
 ## Evaluating and Operationalizing Reuse at Scale
 
@@ -19,7 +19,7 @@ Reuse in data platforms operates across four distinct layers. Lower layers enabl
 - and **DRY in Materialization** *(Physical Data Assets)* that addresses reusing an existing physical dataset that meets grain or refresh-frequency requirements, instead of rebuilding it, while keeping every materialization traced to a single canonical source.
 
 #### DRY Layers in Data Analytics Platform
-<img src="../model-docs/assets-diagrams/dry-layers-platform-view.jpg" width="725"/>
+<img src="assets-diagrams/dry-layers-platform-view.jpg" width="725"/>
 
 *DRY layers represent reuse surfaces, not execution order.*
 
@@ -50,7 +50,7 @@ On paper, the problem was solved.
 In practice, reuse fragmented.
 
 #### Case Study
-![Case Study](../model-docs/assets-diagrams/case-study-whitepaper.jpg)
+![Case Study](assets-diagrams/case-study-whitepaper.jpg)
 
 *Illustrative composite scenario: synthesized from common failure patterns, not a specific organization.*
 
@@ -113,7 +113,7 @@ The use case above shows that canonical logic and semantic layers are not enough
 **The Data Platform DRY Model provides the operational lens for evaluating and operationalizing reuse at scale.**
 
 #### Data Platform DRY Model
-<img src="../model-docs/assets-diagrams/dry-model-phases.jpg" width="700"/>
+<img src="assets-diagrams/dry-model-phases.jpg" width="700"/>
 
 ### Phase I: Evaluation
 
@@ -144,7 +144,7 @@ In this phase, the Data Platform DRY Model explains how reuse becomes observable
 ### Where DRY Is Achieved
 
 **Model navigation map**<br> 
-<img src="../model-docs/assets-diagrams/dry-model-phases-I-interfaces.jpg" width="500"/>
+<img src="assets-diagrams/dry-model-phases-I-interfaces.jpg" width="500"/>
 
 Although platform artifacts vary widely in form, within data transformation and analytical workloads they ultimately expose 3 primary reuse interfaces:
 ### 1. Callable logic
@@ -309,7 +309,7 @@ While modern data-contract specifications increasingly include semantic descript
 Both disciplines may govern the same physical interface. A schema-compatible change can still break reuse if it changes the meaning of a dataset or metric, while an operationally reliable interface can still allow duplicated logic or semantic drift.
 
 #### Reuse Interfaces and Data Contracts
-<img src="../model-docs/assets-diagrams/reuse-interface-vs-data-contract.jpg" width="850"/>
+<img src="assets-diagrams/reuse-interface-vs-data-contract.jpg" width="850"/>
 
 The detailed compatibility model and breaking-change reference are provided in the companion reference: [Reuse Interfaces and Data Contracts](../model-docs/02-platform-artifacts-and-reuse-interfaces.md#5-reuse-interfaces-and-data-contracts).
 
@@ -318,7 +318,7 @@ The detailed compatibility model and breaking-change reference are provided in t
 ### 3.3. DRY Quality Attributes
 ### How DRY Is Evaluated
 **Model navigation map**<br> 
-<img src="../model-docs/assets-diagrams/dry-model-phases-I-quality-attributes.jpg" width="500"/>
+<img src="assets-diagrams/dry-model-phases-I-quality-attributes.jpg" width="500"/>
 
 Data Platforms are evaluated against **the unified set of 13 DRY Quality Attributes**, organized into 3 groups:
 - **Engineering Enablement**  
@@ -452,14 +452,14 @@ Companion references provide the detailed evaluation vocabulary: [DRY Quality At
 ### From Expected Capability to Operational Reality
 
 **Model navigation map**<br> 
-<img src="../model-docs/assets-diagrams/dry-model-phases-I-operational-maturity.jpg" width="500"/>
+<img src="assets-diagrams/dry-model-phases-I-operational-maturity.jpg" width="500"/>
 
 Maturity describes how reuse behaves operationally in practice, not which tools are present. An organization can use SQL Data Transformation Frameworks and SQL macros that enable reusability, abstraction, and parametrization, but if teams copy and paste the generated SQL instead of referencing the macro, Operational Maturity remains M0. The framework separates the expected capabilities described by the reuse-specific quality attributes from the operational reality measured by the Maturity Levels, precisely to surface this gap.
 
 No explicit weights are assigned to individual DRY Quality Attributes. Required Maturity Levels depend on the specific use case, for example building shared transformation modules across platforms makes portability a must-have attribute.
 
 #### Maturity Levels For DRY Quality Attributes
-<img src="../model-docs/assets-diagrams/maturity-levels.jpg" width="800"/>
+<img src="assets-diagrams/maturity-levels.jpg" width="800"/>
 
 #### Maturity Assessment Scope
 
@@ -650,7 +650,7 @@ Operationalization combines a control plane (artifact registry), enforcement mec
 ### What exists and how it is used
 
 **Model navigation map**<br> 
-<img src="../model-docs/assets-diagrams/dry-model-phases-II-artifact-registry.jpg" width="500"/>
+<img src="assets-diagrams/dry-model-phases-II-artifact-registry.jpg" width="500"/>
 
 Many organizations already maintain shared "ETL" libraries, reusable transformation models, canonical datasets, and semantic definitions. **Yet these assets remain fragmented across repositories, package registries, warehouse schemas, and BI tools.** As a result, there is no consistent way to understand what is intended to be shared across domains, what is duplicated, and what is actually used.
 
@@ -681,7 +681,7 @@ At its core, the registry is a minimal reuse-control index.
 
 **Each reusable artifact must have a stable logical identity independent of physical implementation**, because the same definition is often realized in multiple warehouses, dialects, or layers (e.g., a transformation model and its materialized table). The registry links that logical identity to those physical bindings across systems and enriches it with Derived Structural Signals and Observed Behavioral Signals, making reuse measurable across repositories, warehouse objects, and semantic layers. 
 
-<img src="../model-docs/assets-diagrams/dry-artifact-registry.jpg" width="900"/>
+<img src="assets-diagrams/dry-artifact-registry.jpg" width="900"/>
 
 *The Registry is a reuse-governance control plane, not a query-runtime component: it ingests design-time and observed runtime signals but never sits in the query-execution path. It is built on top of existing code repositories, data catalogs, and lineage systems, adding a thin dedicated store for the reuse-governance metadata they do not hold. Its implementation ranges from an `INDEX` file for a single repository to a small relational database and API for cross-repository use, with a vector store only for advanced similarity detection. It is an integration effort, not the purchase of a specific product.*
 
@@ -776,7 +776,7 @@ Companion implementation references expand these operating patterns: [Artifact R
 ### 4.2. Lifecycle as a Compatibility Guarantee
 
 **Model navigation map**<br> 
-<img src="../model-docs/assets-diagrams/dry-model-phases-II-lifecycle-governance.jpg" width="500"/>
+<img src="assets-diagrams/dry-model-phases-II-lifecycle-governance.jpg" width="500"/>
 
 Compatibility reflects whether an artifact can evolve without breaking its consumers. At platform scale, lifecycle turns that compatibility expectation into an enforceable policy: it defines which artifacts may change freely, which expose stable reuse interfaces, which operate as platform contracts, and how consumers are migrated before retirement.
 
@@ -810,7 +810,7 @@ Companion implementation references expand these operating patterns: [Lifecycle 
 ### 4.3. The Reuse Enforcement Model
 
 **Model navigation map**<br> 
-<img src="../model-docs/assets-diagrams/dry-model-phases-II-reuse-enforcement.jpg" width="500"/>
+<img src="assets-diagrams/dry-model-phases-II-reuse-enforcement.jpg" width="500"/>
 
 #### 4.3.1. Enforcement Across the Platform Lifecycle
 
@@ -830,7 +830,7 @@ The registry metadata defined by lifecycle governance becomes actionable in CI/C
 
 #### Structural Reuse Enforcement in CI/CD
 
-<img src="../model-docs/assets-diagrams/cicd-reuse-enforcement.jpg" width="900"/>
+<img src="assets-diagrams/cicd-reuse-enforcement.jpg" width="900"/>
 
 #### Build-Time Enforcement Model
 Build-time enforcement applies only to artifacts declared as shared or certified. Within the governed population:
@@ -923,7 +923,7 @@ Companion implementation references expand these operating patterns: [CI/CD Enfo
 ### 4.5. Reuse Measurement
 
 **Model navigation map**<br> 
-<img src="../model-docs/assets-diagrams/dry-model-phases-II-reuse-measurement.jpg" width="500"/>
+<img src="assets-diagrams/dry-model-phases-II-reuse-measurement.jpg" width="500"/>
 
 Making DRY observable requires measurement at two complementary levels:
 
@@ -972,7 +972,7 @@ Companion implementation references expand these operating patterns: [Adoption M
 DRY governance should be introduced incrementally, demonstrating the value of shared assets before attempting platform-wide enforcement.
 
 #### Staged Adoption
-<img src="../model-docs/assets-diagrams/staged-adoption-plan.jpg" width="850"/>
+<img src="assets-diagrams/staged-adoption-plan.jpg" width="850"/>
 
 
 #### Stage 1 - First weeks: One problem, one canonical definition, one adoption baseline
@@ -1053,3 +1053,4 @@ Implemented pragmatically, DRY stops being a coordination tax and becomes a stru
 ---
 
 *Author's note: This publication reflects my independent professional perspective. It is not written on behalf of, endorsed by, or based on the internal architecture of any current or former employer, client, or vendor. Scenarios, diagrams, and reference architectures are illustrative and should not be interpreted as describing a specific company's implementation. All text and diagrams in this publication are my own original work.*
+

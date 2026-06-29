@@ -273,7 +273,7 @@ Compatibility in this model is defined at the level of the reuse interface: what
 | Data Contracts | Define guarantees associated with that same interface surface, especially structure and operational reliability. |
 
 ### Reuse Interfaces and Data Contracts
-![Reuse Interfaces and Data Contracts](../model-docs/assets-diagrams/reuse-interface-vs-data-contract.jpg)
+![Reuse Interfaces and Data Contracts](../publications/assets-diagrams/reuse-interface-vs-data-contract.jpg)
 
 Compatibility is defined at the level of the reuse interface, specifying what aspects of an artifact must remain stable:
 
@@ -295,3 +295,4 @@ Compatibility is defined at the level of the reuse interface, specifying what as
 | Metric, dimension, or entity deprecated or removed | ❌<br>Breaking | Consumers depending on it by name or schema position break immediately. |
 | New dimension added | ⚠️<br>Non-breaking if additive | Existing queries are unaffected; new slicers are available but not required. |
 | Implementation change, interface stable (underlying table renamed, source swapped) | ✅<br>Non-breaking | The interface contract is preserved; only the implementation detail changes. |
+

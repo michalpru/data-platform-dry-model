@@ -35,7 +35,7 @@ Consider a familiar scenario: a company with several valid, but competing defini
 - **Finance** calculates ARPA (Avg. Revenue per Active Customer) using their own definition: those who were billed in the last 90 days. This definition is embedded directly in BI calculations.
 
 #### Duplicated or Inconsistent Definitions of Active Customer
-<img src="../model-docs/assets-diagrams/before-dry-active-customers-use-case.jpg" width="900"/>
+<img src="assets-diagrams/before-dry-active-customers-use-case.jpg" width="900"/>
 
 Each definition makes sense within its own context. None is "wrong". The issue surfaces when executives ask for a **leadership KPI dashboard** containing:
 
@@ -84,7 +84,7 @@ After addressing the root cause, the organization moved from ungoverned implemen
 These semantic definitions were reused consistently across all business metrics. Core metrics, such as LTV for Active Customers or ARPA, were defined once and reused downstream. Additionally, a canonical `fact_invoices` table brought financial logic into the warehouse, eliminating BI-layer workarounds and logic duplication.
 
 #### Shared Semantic Definitions of Active Customer
-<img src="../model-docs/assets-diagrams/after-dry-active-customers-use-case.jpg" width="1200"/>
+<img src="assets-diagrams/after-dry-active-customers-use-case.jpg" width="1200"/>
 
 With DRY in semantics, when Marketing later requested a change (exclude trial accounts), the definition was updated once and became available consistently through governed consumption paths across dashboards, notebooks, ML pipelines, and executive reports.
 
@@ -118,7 +118,7 @@ When we say duplication appears across code, logic, or semantics, all of these c
 Materialization is a different reuse surface: it governs **reusing an existing physical copy at the grain, or refresh frequency a consumer needs, instead of rebuilding it**, while keeping every copy traced to a single canonical source.
 
 ### DRY Layer Relationships
-![DRY Layer Relationships](../model-docs/assets-diagrams/dry-layer-relationships.jpg)
+![DRY Layer Relationships](assets-diagrams/dry-layer-relationships.jpg)
 Lower layers enable higher ones, but do not create them automatically. Semantics can be governed over logical models or virtualized query layers without mandatory physical materialization first. Materialization is an optimization and operationalization layer, not a universal prerequisite.
 
 ---
@@ -128,7 +128,7 @@ Lower layers enable higher ones, but do not create them automatically. Semantics
 This addresses the most familiar form of duplication: avoiding copy-pasted boilerplate logic and repeated technical patterns across pipelines and queries.
 
 #### DRY in Code: Reusable Technical Utilities
-![DRY in Code In Data Platform View](../model-docs/assets-diagrams/dry-in-code-platform-view.jpg)
+![DRY in Code In Data Platform View](assets-diagrams/dry-in-code-platform-view.jpg)
 *Here are the DRY layers mapped into a Data Platform view where code utilities and transformation logic define reusable building blocks, while pipelines orchestrate their execution to produce physical data assets. DRY layers represent reuse surfaces, not execution order.*
 
 Shared, generic technical utilities, such as **standardized merge mechanisms, data deduplication, or data hashing functions, must be implemented once and reused across pipelines**. Shared schema validation methods also prevent upstream drift from breaking canonical transformations and enabling scalable DRY adoption. Without this discipline, platforms quickly accumulate technical debt, increase maintenance overhead, and slow the delivery of new data workloads.
@@ -148,7 +148,7 @@ It improves developer productivity and reduces maintenance surface. It is founda
 DRY in Data Transformation Logic moves **one level up** the abstraction stack. This is where reuse starts to affect data correctness and consistency across teams. Instead of reusing generic helpers, it **centralizes business-specific transformations** that define canonical datasets or attributes. This is essential for building governed data products. 
 
 #### DRY in Logic: Centralizing Canonical Rules
-![DRY in Logic In Data Platform View](../model-docs/assets-diagrams/dry-in-logic-platform-view.jpg)
+![DRY in Logic In Data Platform View](assets-diagrams/dry-in-logic-platform-view.jpg)
 
 There are **two common patterns** in data platforms, and both are valid. The key design choice is where to allow flexibility and where to enforce consistency. 
 Consider a simple example determining when an order is "completed"
@@ -175,7 +175,7 @@ DRY in Semantics eliminates duplication of interpretation. It defines:
 - how it should be consumed.
 
 #### DRY in Semantics: Enforcing Consistent Meaning of Data
-![DRY in Semantics In Data Platform View](../model-docs/assets-diagrams/dry-in-semantics-platform-view.jpg)
+![DRY in Semantics In Data Platform View](assets-diagrams/dry-in-semantics-platform-view.jpg)
 
 Organizations achieve DRY in Semantics by centralizing interpretation, most commonly through a semantic layer, or alternatively through strongly governed metric definitions embedded in canonical data products.
 
@@ -223,7 +223,7 @@ Reusable artifacts, such as views, macros, or semantic definitions, often expand
 Each materialization should itself be a governed, observable, owned artifact that is either a declared canonical source or traces to one.
 
 #### DRY in Materialization (*Physical Data Assets*) 
-![DRY in Data Assets In Data Platform View](../model-docs/assets-diagrams/dry-in-materialization-platform-view.jpg)
+![DRY in Data Assets In Data Platform View](assets-diagrams/dry-in-materialization-platform-view.jpg)
 
 Logic-first architectures define canonical transformations as code rather than tables, allowing consumers to materialize outputs as needed. **Cost reduction opportunities** are brought by computing joins and transformations once, and reading results many times. When reuse is low, on-demand queries are often cheaper. This reflects a deliberate trade-off:
 
@@ -240,7 +240,7 @@ In practice, DRY failures emerge when reuse is optimized locally within a layer,
 
 
 ### DRY Dependency Map
-<img src="../model-docs/assets-diagrams/dry-dependency-map.jpg" width="600"/>
+<img src="assets-diagrams/dry-dependency-map.jpg" width="600"/>
 
 Use this diagram to diagnose why DRY initiatives fail
 
@@ -283,7 +283,7 @@ A critical governance gap often emerges at the foundation of the DRY Dependency 
 **Respect domain boundaries.** Explicit ownership does not mean centralizing every definition. Canonical definitions within a domain do not automatically become enterprise-wide truth, and over-centralization creates unnecessary coupling and slows delivery. Domain-local canonicals should be reused only within a particular domain unless they encode business concepts that truly require cross-domain alignment and are deliberately promoted enterprise-wide. Other artifacts are not reuse candidates at all: local helpers, one-off transformations, and implementation details private to a single consumer. The discipline lies in separating them from shared meaning, which is itself scoped: whether domain-level or enterprise-wide.
 
 ### DRY Operating Model
-![DRY Operating Model](../model-docs/assets-diagrams/dry-operating-model.jpg)
+![DRY Operating Model](assets-diagrams/dry-operating-model.jpg)
 
 The operating model separates four responsibilities: stewardship, implementation, platform operationalization, and organizational governance. Stewardship defines who is accountable for reusable assets over time, while implementation defines who builds and operates them across the DRY layers.
 
