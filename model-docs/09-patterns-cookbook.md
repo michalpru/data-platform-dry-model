@@ -1,4 +1,4 @@
-﻿# Patterns cookbook (implementation-agnostic)
+# Patterns cookbook (implementation-agnostic)
 
 This is a curated list of patterns referenced by the DRY Model.
 

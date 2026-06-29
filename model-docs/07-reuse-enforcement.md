@@ -1,4 +1,4 @@
-﻿# Enforcement in CI/CD (promotion gates)
+# Enforcement in CI/CD (promotion gates)
 
 Reuse Enforceability, evaluated in Phase I, measures how strongly artifacts or interfaces make reuse the natural or lowest-friction path. Reuse Enforcement, introduced here, is the operational layer that acts on that structural potential through registry-backed resolution, CI/CD gates, authoring-time signals, and lifecycle policies.
 

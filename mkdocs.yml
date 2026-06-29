@@ -1,0 +1,42 @@
+site_name: The Data Platform DRY Model
+site_description: Evaluating and Operationalizing Reuse at Scale
+docs_dir: publications
+use_directory_urls: false
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.top
+    - toc.integrate
+    - content.code.copy
+    - search.highlight
+
+nav:
+  - Whitepaper: whitepaper-data-platform-dry-model.md
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - tables
+  - md_in_html
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+
+plugins:
+  - search
+
+exclude_docs: |
+  article-why-reuse-breaks-at-scale.md

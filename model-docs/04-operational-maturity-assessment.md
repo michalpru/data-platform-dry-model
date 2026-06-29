@@ -170,7 +170,7 @@ This worked example applies the assessment method end to end. It scores the **th
 To eliminate conflicting definitions of "Revenue", the analytics engineering team consolidated revenue logic on top of the standardized Orders, Invoices, and Refunds tables. Core revenue recognition rules were encoded as a table-valued SQL UDF and materialized into a governed Revenue Events dataset. On top of that, a BI-embedded semantic layer exposed certified metrics such as Net Recognized and Invoiced Revenue. Structurally, the platform appeared to satisfy DRY in Logic and DRY in Semantics; on paper, the problem was solved. In practice, reuse fragmented:
 
 #### Case Study
-![Case Study](../model-docs/assets-diagrams/case-study-whitepaper.jpg)
+![Case Study](../publications/assets-diagrams/case-study-whitepaper.jpg)
 *Illustrative composite scenario: synthesized from common failure patterns, not a specific organization.*
 
 - A Finance-owned data warehouse running on a different vendor couldn't reuse the UDFs, due to runtime and packaging constraints, and rebuilt revenue calculations directly from source systems.
@@ -291,3 +291,4 @@ At the end of an assessment, produce:
 - a short statement of which duplication is justified, tolerated, or uncontrolled
 
 These outputs are the **Evaluation (Phase I)** result of the Data Platform DRY Model: clarity on structural gaps and where to invest, not implementation. They feed the **Operationalization (Phase II)** phase, where binding constraints become enforcement work: the prioritized remediation backlog becomes the operationalization roadmap, and the target maturity profile sets the enforcement bar per asset criticality. See [Artifact Registry spec](05-artifact-registry-spec.md), [Lifecycle & Versioning](06-lifecycle-versioning.md), and [Reuse Enforcement](07-reuse-enforcement.md).
+
