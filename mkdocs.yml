@@ -37,6 +37,9 @@ markdown_extensions:
 
 plugins:
   - search
+  - redirects:
+        redirect_maps:
+          index.md: whitepaper-data-platform-dry-model.md
 
 exclude_docs: |
   article-why-reuse-breaks-at-scale.md
