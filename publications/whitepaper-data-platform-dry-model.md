@@ -1,10 +1,10 @@
----
-title: "The Data Platform DRY Model"
-subtitle: "Evaluating and Operationalizing Reuse at Scale"
-description: "Evaluating and operationalizing reuse at scale across data platform surfaces: code, logic, semantics, and materialization."
----
+# The Data Platform DRY Model
+
+## Evaluating and Operationalizing Reuse at Scale
 
 *Version 1.0.0 · June 2026*
+
+---
 
 ## Abstract
 
@@ -92,12 +92,17 @@ The turning point came when the platform team inventoried shared callable logic,
 
 The remediation was addressed with 3 structural initiatives incrementally delivered:
 
-### 1. Warehouse-Portable SQL Data Transformation Framework  
-  This introduced multi-warehouse compatible SQL templating functions and transformation models, providing modularity, testability, and lifecycle management on top of SQL code. It made it possible to shift reusable logic from runtime-specific UDFs into portable, modular, dependency-managed artifacts.
-### 2. DRY Artifact Registry Integrated into CI/CD  
-   A lightweight artifact registry was introduced to make reuse measurable and enforceable. New pull requests were evaluated against existing revenue definitions using structural comparison and semantic similarity analysis. Reimplementations were flagged before merge. Consumption-time telemetry exposed which dashboards and queries bypassed governed semantic metrics. For the first time, reuse adoption became visible.
-### 3. Headless Semantic Layer for Business-Critical Metrics  
-   Implemented headless, platform-level semantic layer (instead of the BI-embedded one), beginning with Tier-1 executive metrics, to enable consistent, tool-agnostic reuse across the BI tools, data applications, and multiple warehouses.
+### 1. Warehouse-Portable SQL Data Transformation Framework
+
+This introduced multi-warehouse compatible SQL templating functions and transformation models, providing modularity, testability, and lifecycle management on top of SQL code. It made it possible to shift reusable logic from runtime-specific UDFs into portable, modular, dependency-managed artifacts.
+
+### 2. DRY Artifact Registry Integrated into CI/CD
+
+A lightweight artifact registry was introduced to make reuse measurable and enforceable. New pull requests were evaluated against existing revenue definitions using structural comparison and semantic similarity analysis. Reimplementations were flagged before merge. Consumption-time telemetry exposed which dashboards and queries bypassed governed semantic metrics. For the first time, reuse adoption became visible.
+
+### 3. Headless Semantic Layer for Business-Critical Metrics
+
+Implemented headless, platform-level semantic layer (instead of the BI-embedded one), beginning with Tier-1 executive metrics, to enable consistent, tool-agnostic reuse across the BI tools, data applications, and multiple warehouses.
 
 ### The Outcome
 
@@ -149,18 +154,31 @@ In this phase, the Data Platform DRY Model explains how reuse becomes observable
 <img src="assets-diagrams/dry-model-phases-I-interfaces.jpg" width="500"/>
 
 Although platform artifacts vary widely in form, within data transformation and analytical workloads they ultimately expose 3 primary reuse interfaces:
+
 ### 1. Callable logic
+
 Reused by engineers inside pipelines. Callable logic artifacts are consumed through code rather than exposed as services
+
 ### 2. Queryable datasets
+
 Reused through SQL. Queryable datasets enable platform-level reuse through stable query interfaces. The reuse interface remains the same regardless of the access mechanism (direct access to a table or view in a warehouse, or an API or service endpoint exposing the same dataset)
+
 ### 3. Semantic contracts
+
 Reused through governed business definitions. Semantic contracts provide one of the strongest mechanisms for enforcing shared business meaning across tools and teams
 
 **This distinction is critical because reuse is governed at the interface through which it occurs, not at the level of implementation.** Each interface type has different enforcement mechanisms, governance surfaces, failure modes, and organizational impact. Some artifacts expose more than one interface: for example, table-valued UDFs are implemented as callable logic but consumed as datasets through SQL `FROM` clauses, which often leads them to be misused as governed data assets.
 
 #### 18 Common Platform Artifacts* Evaluated Across 3 Interface Types
 
-<table>
+<table style="width:100%; table-layout:fixed">
+  <colgroup>
+    <col style="width:14%"/>
+    <col style="width:23%"/>
+    <col style="width:21%"/>
+    <col style="width:21%"/>
+    <col style="width:21%"/>
+  </colgroup>
   <thead>
     <tr>
       <th>Artifact Group</th>
@@ -333,13 +351,13 @@ Data Platforms are evaluated against **the unified set of 13 DRY Quality Attribu
 
 Each attribute's *Expected Capability* describes an operational capability jointly enabled by the artifact's structure and the platform, and realized through engineering and governance practice.
 
-<table style="width:100%; table-layout:fixed">
+<table class="dry-num-table" style="width:100%; table-layout:fixed">
   <colgroup>
-    <col style="width:4%"/>
+    <col style="width:5%"/>
+    <col style="width:17%"/>
     <col style="width:18%"/>
-    <col style="width:22%"/>
-    <col style="width:40%"/>
-    <col style="width:16%"/>
+    <col style="width:46%"/>
+    <col style="width:14%"/>
   </colgroup>
   <thead>
     <tr>
@@ -471,11 +489,11 @@ Maturity should be evaluated using the following scope rules:
 - **Per Quality Attribute**: Maturity Levels are defined independently for each DRY Quality Attribute.
 - **Per DRY layer and interface type**: Assessment uses only the quality attributes relevant to the interfaces that implement a given layer, and each interface type within that layer is assessed separately.
 
-<table style="width:100%; table-layout:fixed">
+<table class="dry-num-table" style="width:100%; table-layout:fixed">
   <colgroup>
-    <col style="width:4%"/>
+    <col style="width:5%"/>
     <col style="width:18%"/>
-    <col style="width:24%"/>
+    <col style="width:23%"/>
     <col style="width:54%"/>
   </colgroup>
   <thead>
@@ -578,16 +596,16 @@ Maturity results should be interpreted using the following rules:
 
 <table style="width:100%; table-layout:auto;">
   <colgroup>
-    <col style="width:10%">
-    <col style="width:50%">
-    <col style="width:11%">
-    <col style="width:17%">
+    <col style="width:14%">
+    <col style="width:20%">
     <col style="width:12%">
+    <col style="width:34%">
+    <col style="width:20%">
   </colgroup>
   <thead>
     <tr>
       <th>Pattern</th>
-      <th style="min-width:440px; white-space: nowrap;">Typical Maturity Profile</th>
+      <th style="white-space: nowrap;">Typical Maturity Profile</th>
       <th>Weakest Constraint</th>
       <th>What It Looks Like</th>
       <th>Systemic Impact</th>
@@ -596,28 +614,28 @@ Maturity results should be interpreted using the following rules:
   <tbody>
     <tr>
       <td><strong>Modern Stack, Voluntary Reuse</strong></td>
-      <td style="min-width:440px; white-space: nowrap;">Reusability&nbsp;M1-M2<br>Discovery&nbsp;&amp;&nbsp;Metadata&nbsp;M1-M2<br>Reuse&nbsp;Enforceability&nbsp;M0-M1</td>
+      <td style="white-space: nowrap;">Reusability&nbsp;M1-M2<br>Discovery&nbsp;&amp;&nbsp;Metadata&nbsp;M1-M2<br>Reuse&nbsp;Enforceability&nbsp;M0-M1</td>
       <td>Reuse Enforceability</td>
       <td>Tools such as dbt and catalogs exist, but shared models, macros, datasets, or metrics can be bypassed without detection or review.</td>
       <td>Reuse remains optional; duplicate implementations multiply, and the platform cannot tell which version consumers use.</td>
     </tr>
     <tr>
       <td><strong>Good Tools, Chaotic Process</strong></td>
-      <td style="min-width:440px; white-space: nowrap;">Reusability&nbsp;M2–M3<br>Reuse&nbsp;Enforceability&nbsp;M2<br>Lifecycle&nbsp;Mgmt&nbsp;M0-M1</td>
+      <td style="white-space: nowrap;">Reusability&nbsp;M2–M3<br>Reuse&nbsp;Enforceability&nbsp;M2<br>Lifecycle&nbsp;Mgmt&nbsp;M0-M1</td>
       <td>Versioning & Lifecycle Mgmt</td>
       <td>Duplication is routed to review, but artifact evolution is poorly governed and consumers defensively fork.</td>
       <td>Trust in shared assets declines over time.</td>
     </tr>
     <tr>
       <td><strong>Reusable Code, Inconsistent Meaning</strong></td>
-      <td style="min-width:440px; white-space: nowrap;">Reusability&nbsp;M3<br>Testability&nbsp;M2-M3<br>Semantic&nbsp;Alignment&nbsp;M0-M1</td>
+      <td style="white-space: nowrap;">Reusability&nbsp;M3<br>Testability&nbsp;M2-M3<br>Semantic&nbsp;Alignment&nbsp;M0-M1</td>
       <td>Semantic Alignment</td>
       <td>Pipelines are modular, reusable, and tested, but teams define concepts such as revenue, active customer, or completed order differently.</td>
       <td>Clean implementations produce conflicting KPIs, reconciliation cycles, and lower trust in reporting.</td>
     </tr>
     <tr>
       <td><strong>Governed but Hard to Consume</strong></td>
-      <td style="min-width:440px; white-space: nowrap;">Reuse&nbsp;Enforceability&nbsp;M2-M3<br>Semantic&nbsp;Alignment&nbsp;M2-M3<br>Service&nbsp;Exposure&nbsp;Cap.&nbsp;M0-M1</td>
+      <td style="white-space: nowrap;">Reuse&nbsp;Enforceability&nbsp;M2-M3<br>Semantic&nbsp;Alignment&nbsp;M2-M3<br>Service&nbsp;Exposure&nbsp;Cap.&nbsp;M0-M1</td>
       <td>Service Exposure Capability</td>
       <td>Certified assets exist, but they are not exposed through standardized consumption interfaces; teams use direct tables, one-off extracts, or local workarounds.</td>
       <td>Governance intent erodes as certified assets are bypassed, undermining reuse, lineage, and policy enforcement.</td>

@@ -33,6 +33,11 @@ format:
     theme:
       - cosmo
       - theme.scss
+    include-in-header:
+      text: |
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     toc: true
     toc-depth: 3
     toc-title: "On this page"
@@ -46,8 +51,9 @@ format:
     code-overflow: wrap
     fig-responsive: true
     grid:
-      body-width: 1100px
-      sidebar-width: 280px
-      margin-width: 240px
+      sidebar-width: 270px
+      body-width: 1240px
+      margin-width: 80px
+      gutter-width: 1.5rem
     mermaid:
       theme: neutral

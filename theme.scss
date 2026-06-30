@@ -1,7 +1,7 @@
 /*-- scss:defaults --*/
 
-// Typography — high-quality system font stacks (no external font CDN, privacy-friendly)
-$font-family-sans-serif: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji" !default;
+// Typography — Inter (modern, screen-optimized) with a high-quality system fallback
+$font-family-sans-serif: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji" !default;
 $font-family-monospace: "SFMono-Regular", "Cascadia Code", Menlo, Consolas, "Liberation Mono", monospace !default;
 
 $font-size-root: 17px !default;
@@ -20,16 +20,21 @@ body {
   letter-spacing: 0.1px;
 }
 
-// Headings
+// Headings — semibold (not heavy) for a lighter, more readable long-form feel
 h1, h2, h3, h4, h5 {
-  font-weight: 650;
+  font-weight: 600;
   letter-spacing: -0.2px;
   color: $headings-color;
 }
 
 h1.title {
-  font-weight: 750;
+  font-weight: 680;
   letter-spacing: -0.6px;
+}
+
+// This document uses inline bold heavily; keep emphasis distinct but not heavy
+strong, b {
+  font-weight: 600;
 }
 
 .subtitle, p.subtitle {
@@ -74,6 +79,16 @@ main img {
   padding: 4px;
 }
 
+// Diagram sizing — source images are 3000–6000px wide, so we render them much
+// larger than their authored pixel widths (no blur) to match the wider body.
+// Mapped by the inline width attribute; always capped to the content column.
+main img[width="500"] { width: 720px; }
+main img[width="700"] { width: 980px; }
+main img[width="760"] { width: 820px; }
+main img[width="800"] { width: 1080px; }
+main img[width="850"] { width: 1120px; }
+main img[width="900"] { width: 1160px; }
+
 // Captions rendered with <small> under diagrams
 img + br + em,
 p > small {
@@ -83,8 +98,8 @@ p > small {
   font-size: 0.85rem;
 }
 
-// Tables — clear borders, comfortable padding, vertically centered cells,
-// and emoji/status icons sized to match body text.
+// Tables — clear borders, compact padding, vertically centered cells,
+// and emoji/status icons sized a touch larger than body text.
 table {
   border-collapse: collapse;
   margin: 1.5rem 0;
@@ -94,9 +109,20 @@ table {
 
 th, td {
   border: 1px solid #d8dee7;
-  padding: 0.6rem 0.75rem;
+  padding: 0.4rem 0.6rem;
   vertical-align: middle;
   text-align: left;
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+// Bootstrap applies its own borders/spacing to pipe tables (.table); normalize
+// them so markdown and raw-HTML tables look identical.
+.table > :not(caption) > * > * {
+  border: 1px solid #d8dee7;
+  padding: 0.4rem 0.6rem;
+  background-color: transparent;
+  box-shadow: none;
 }
 
 // Merged group-label cells (rowspan) are centered both ways for scannability
@@ -109,27 +135,46 @@ td[align="center"], th[align="center"] {
   text-align: center;
 }
 
-thead th,
-table th[scope="col"] {
-  background: #14253b;
-  color: #ffffff;
-  font-weight: 600;
-  vertical-align: middle;
+// Numbered reference tables: keep the # column on a single line (no "1 0" wrapping)
+.dry-num-table td:first-child {
+  white-space: nowrap;
 }
 
-tbody tr:nth-child(even) {
-  background: #f6f8fb;
+// Status icons (✅ ❌ ⚠️) read slightly larger so the warning glyph isn't tiny
+td[align="center"] {
+  font-size: 1.08rem;
+}
+
+// Lightweight, modern header: light slate fill, dark text, and a brand-colored
+// underline for definition. !important overrides Bootstrap's higher-specificity
+// .table cell rules. Applies to BOTH raw-HTML and Bootstrap pipe tables.
+thead th,
+table th[scope="col"],
+.table > thead th {
+  background-color: #f1f5f9 !important;
+  color: #1e293b !important;
+  font-weight: 600;
+  font-size: 0.95rem;
+  letter-spacing: 0.01em;
+  vertical-align: middle;
+  border-color: #d8dee7;
+  border-bottom: 2px solid #14253b !important;
+}
+
+tbody tr:nth-child(even),
+.table > tbody > tr:nth-child(even) > * {
+  background-color: #f6f8fb;
 }
 
 // Status icons (✅ ❌ ⚠️) and other emoji inside tables read at full size
 td, th {
-  line-height: 1.5;
+  line-height: 1.45;
 }
 
-// Secondary/fine-print text inside cells stays smaller than the status icon
+// Secondary/fine-print text inside cells: readable, not tiny grey
 td small, th small {
-  font-size: 0.78rem;
-  color: #6b7890;
+  font-size: 0.85rem;
+  color: #475569;
 }
 
 // Inline captions / fine print
