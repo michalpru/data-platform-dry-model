@@ -19,7 +19,7 @@ Reuse in data platforms operates across four distinct layers. Lower layers enabl
 - and **DRY in Materialization** *(Physical Data Assets)* that addresses reusing an existing physical dataset that meets grain or refresh-frequency requirements, instead of rebuilding it, while keeping every materialization traced to a single canonical source.
 
 #### DRY Layers in Data Analytics Platform
-<img src="assets-diagrams/dry-layers-platform-view.jpg" width="725"/>
+<img src="assets-diagrams/dry-layers-platform-view.jpg" width="850"/>
 
 *DRY layers represent reuse surfaces, not execution order.*
 
