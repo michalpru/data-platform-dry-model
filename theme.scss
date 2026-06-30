@@ -1,0 +1,156 @@
+/*-- scss:defaults --*/
+
+// Typography — high-quality system font stacks (no external font CDN, privacy-friendly)
+$font-family-sans-serif: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji" !default;
+$font-family-monospace: "SFMono-Regular", "Cascadia Code", Menlo, Consolas, "Liberation Mono", monospace !default;
+
+$font-size-root: 17px !default;
+$line-height-base: 1.65 !default;
+
+// Palette
+$body-color: #1f2733 !default;
+$link-color: #1c5fb0 !default;
+$headings-color: #14253b !default;
+
+/*-- scss:rules --*/
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: 0.1px;
+}
+
+// Headings
+h1, h2, h3, h4, h5 {
+  font-weight: 650;
+  letter-spacing: -0.2px;
+  color: $headings-color;
+}
+
+h1.title {
+  font-weight: 750;
+  letter-spacing: -0.6px;
+}
+
+.subtitle, p.subtitle {
+  color: #4a5a72;
+  font-weight: 400;
+}
+
+h2 {
+  margin-top: 2.4rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid #e6e9ee;
+}
+
+h3 {
+  margin-top: 1.8rem;
+}
+
+// Readable measure for body text
+p, li {
+  font-size: 1rem;
+}
+
+// Links
+a {
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+// Images / diagrams — responsive, centered, subtle framing
+.quarto-document-content img,
+main img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 1.5rem auto;
+  border: 1px solid #e6e9ee;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(20, 37, 59, 0.06);
+  background: #ffffff;
+  padding: 4px;
+}
+
+// Captions rendered with <small> under diagrams
+img + br + em,
+p > small {
+  display: block;
+  text-align: center;
+  color: #6b7890;
+  font-size: 0.85rem;
+}
+
+// Tables — clear borders, comfortable padding, vertically centered cells,
+// and emoji/status icons sized to match body text.
+table {
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  font-size: 0.95rem;
+  width: 100%;
+}
+
+th, td {
+  border: 1px solid #d8dee7;
+  padding: 0.6rem 0.75rem;
+  vertical-align: middle;
+  text-align: left;
+}
+
+thead th,
+table th[scope="col"] {
+  background: #14253b;
+  color: #ffffff;
+  font-weight: 600;
+  vertical-align: middle;
+}
+
+tbody tr:nth-child(even) {
+  background: #f6f8fb;
+}
+
+// Status icons (✅ ❌ ⚠️) and other emoji inside tables read at full size
+td, th {
+  line-height: 1.5;
+}
+
+// Inline captions / fine print
+small {
+  color: #6b7890;
+}
+
+// Blockquotes
+blockquote {
+  border-left: 4px solid $link-color;
+  background: #f6f8fb;
+  color: #34425a;
+  padding: 0.6rem 1rem;
+  margin: 1.4rem 0;
+}
+
+// Inline code
+code:not(.sourceCode) {
+  background: #eef1f6;
+  color: #b4316b;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+// Mermaid diagrams centered
+.cell-output-display svg,
+pre.mermaid svg,
+.quarto-figure svg {
+  display: block;
+  margin: 1.5rem auto;
+  max-width: 100%;
+}
+
+// Horizontal rules as section dividers
+hr {
+  border: 0;
+  border-top: 1px solid #e6e9ee;
+  margin: 2.5rem 0;
+}

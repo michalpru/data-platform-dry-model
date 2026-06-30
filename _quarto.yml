@@ -1,0 +1,53 @@
+project:
+  type: website
+  output-dir: _site
+  render:
+    - index.qmd
+    - publications/whitepaper-data-platform-dry-model.md
+  resources:
+    - publications/assets-diagrams/**
+
+website:
+  title: "The Data Platform DRY Model"
+  description: "Evaluating and Operationalizing Reuse at Scale"
+  site-url: https://michalpru.github.io/data-platform-dry-model/
+  repo-url: https://github.com/michalpru/data-platform-dry-model
+  open-graph: true
+  twitter-card: true
+  navbar:
+    background: dark
+    pinned: true
+    title: "The Data Platform DRY Model"
+    left:
+      - text: "Whitepaper"
+        href: publications/whitepaper-data-platform-dry-model.html
+    right:
+      - icon: github
+        href: https://github.com/michalpru/data-platform-dry-model
+        aria-label: GitHub repository
+  page-footer:
+    center: "The Data Platform DRY Model · Evaluating and Operationalizing Reuse at Scale"
+
+format:
+  html:
+    theme:
+      - cosmo
+      - theme.scss
+    toc: true
+    toc-depth: 3
+    toc-title: "On this page"
+    toc-location: left
+    number-sections: false
+    anchor-sections: true
+    smooth-scroll: true
+    link-external-newwindow: true
+    link-external-icon: true
+    code-copy: true
+    code-overflow: wrap
+    fig-responsive: true
+    grid:
+      body-width: 1100px
+      sidebar-width: 280px
+      margin-width: 240px
+    mermaid:
+      theme: neutral

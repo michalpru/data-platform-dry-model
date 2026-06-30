@@ -1,0 +1,12 @@
+---
+title: "The Data Platform DRY Model"
+toc: false
+format:
+  html:
+    include-in-header:
+      text: |
+        <meta http-equiv="refresh" content="0; url=./publications/whitepaper-data-platform-dry-model.html">
+---
+
+This whitepaper has a new home. If you are not redirected automatically,
+[open the whitepaper](./publications/whitepaper-data-platform-dry-model.html).
