@@ -88,7 +88,7 @@ p > small {
 table {
   border-collapse: collapse;
   margin: 1.5rem 0;
-  font-size: 0.95rem;
+  font-size: 1rem;
   width: 100%;
 }
 
@@ -97,6 +97,16 @@ th, td {
   padding: 0.6rem 0.75rem;
   vertical-align: middle;
   text-align: left;
+}
+
+// Merged group-label cells (rowspan) are centered both ways for scannability
+td[rowspan] {
+  text-align: center;
+}
+
+// Honor inline HTML alignment (e.g. <td align="center">) from the source tables
+td[align="center"], th[align="center"] {
+  text-align: center;
 }
 
 thead th,
@@ -114,6 +124,12 @@ tbody tr:nth-child(even) {
 // Status icons (✅ ❌ ⚠️) and other emoji inside tables read at full size
 td, th {
   line-height: 1.5;
+}
+
+// Secondary/fine-print text inside cells stays smaller than the status icon
+td small, th small {
+  font-size: 0.78rem;
+  color: #6b7890;
 }
 
 // Inline captions / fine print

@@ -862,24 +862,10 @@ Reuse artifact versioning should be distinguished from data contract versioning.
 | LLM-based analysis | Build time | Detection | Variable | Advisory only; flagged cases route to follow-up review and do not block promotion |
 
 **Duplication Detection and Prevention Flow**
-```{mermaid}
-flowchart TD
-    A([Developer authors artifact]) --> B
-    B["Registry-backed canonical resolution<br/>Authoring time"] -->|Canonical found| P0([Reuse canonical<br/>Reimplementation avoided])
-    B -->|No canonical found| C
-    C["Workspace similarity search<br/>Advisory signal to developer"] --> D([Artifact submitted to CI/CD])
-    D --> E["Structural fingerprinting · AST comparison<br/>Build time"]
-    E -->|High-confidence<br/>direct match| REVIEW0([Required review<br/>Exception approval])
-    E -->|Near-identical match| REVIEW0
-    E -->|No match| F["Embedding-based similarity<br/>Advisory"]
-    F -->|Similarity flagged| G["LLM-based analysis<br/>Advisory complement"]
-    F -->|No flag| PASS([Proceed to promotion])
-    G -->|Flagged| REVIEW2([Human review<br/>Justification required])
-    G -->|No flag| PASS
-    REVIEW0 -->|Approved or exception recorded| PASS
-    REVIEW0 -->|Required evidence or exception rationale missing| BLOCKED([Promotion blocked])
-    REVIEW2 --> PASS
-```
+
+<img src="assets-diagrams/duplication-detection-flow.png" width="760"/>
+
+*Detection signals route to required review or exception approval; promotion is blocked only when required review evidence or exception rationale is missing.*
 
 #### Authoring-Time Prevention: AI Coding Assistants and Registry-Backed Resolution
 
