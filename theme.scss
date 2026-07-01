@@ -1,11 +1,11 @@
 /*-- scss:defaults --*/
 
-// Typography — Inter (modern, screen-optimized) with a high-quality system fallback
-$font-family-sans-serif: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji" !default;
+// Typography — Public Sans (lightweight, modern) with high-quality system fallback
+$font-family-sans-serif: "Public Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji" !default;
 $font-family-monospace: "SFMono-Regular", "Cascadia Code", Menlo, Consolas, "Liberation Mono", monospace !default;
 
-$font-size-root: 17px !default;
-$line-height-base: 1.65 !default;
+$font-size-root: 16px !default;
+$line-height-base: 1.55 !default;
 
 // Palette
 $body-color: #1f2733 !default;
@@ -43,18 +43,48 @@ strong, b {
 }
 
 h2 {
-  margin-top: 2.4rem;
+  margin-top: 2.1rem;
   padding-bottom: 0.3rem;
   border-bottom: 1px solid #e6e9ee;
+  font-size: 1.6rem;
 }
 
+// "###" subsections sized between h2 and body copy, so they read as
+// subsections rather than near-siblings of "##".
 h3 {
-  margin-top: 1.8rem;
+  margin-top: 1.6rem;
+  font-size: 1.28rem;
+}
+
+// "####" minor headings stay just below h3 to preserve the hierarchy
+h4 {
+  font-size: 1.08rem;
 }
 
 // Readable measure for body text
 p, li {
   font-size: 1rem;
+}
+
+// Constrain the text measure (~10% shorter lines) for readability, while
+// leaving tables and diagrams free to use the full content width.
+main p,
+main ul,
+main ol,
+main blockquote {
+  max-width: 70rem;
+}
+
+// Slight breathing room between list items so lists don't read as a monolith
+li {
+  margin-bottom: 0.35rem;
+}
+li:last-child {
+  margin-bottom: 0;
+}
+li > ul,
+li > ol {
+  margin-top: 0.35rem;
 }
 
 // Links
@@ -98,12 +128,12 @@ p > small {
   font-size: 0.85rem;
 }
 
-// Tables — clear borders, compact padding, vertically centered cells,
-// and emoji/status icons sized a touch larger than body text.
+// Tables — clear borders, compact padding, vertically centered cells.
+// Cell text is set a touch smaller than body copy for a lighter, scannable feel.
 table {
   border-collapse: collapse;
   margin: 1.5rem 0;
-  font-size: 1rem;
+  font-size: 0.92rem;
   width: 100%;
 }
 
@@ -140,9 +170,19 @@ td[align="center"], th[align="center"] {
   white-space: nowrap;
 }
 
-// Status icons (✅ ❌ ⚠️) read slightly larger so the warning glyph isn't tiny
-td[align="center"] {
-  font-size: 1.08rem;
+// Status-icon tables only: enlarge the ✅ ❌ ⚠️ glyphs for legibility. Text
+// tables keep one uniform cell size regardless of alignment, so columns never
+// look like they use a different font size.
+.dry-icon-table td[align="center"] {
+  font-size: 1rem;
+}
+
+// The ❌ "cross mark" and standalone check glyphs fill more of their em box than
+// the ⚠️ warning triangle, so they look oversized at an equal font-size. Shrink
+// only the standalone icon cells (those without a caption label) so ❌ visually
+// matches ⚠️. Labeled cells (with <br><small>) keep the full size.
+.dry-icon-table td[align="center"]:not(:has(small)):not(:has(br)) {
+  font-size: 0.88rem;
 }
 
 // Lightweight, modern header: light slate fill, dark text, and a brand-colored
@@ -154,11 +194,13 @@ table th[scope="col"],
   background-color: #f1f5f9 !important;
   color: #1e293b !important;
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   letter-spacing: 0.01em;
   vertical-align: middle;
   border-color: #d8dee7;
   border-bottom: 2px solid #14253b !important;
+  // Taller header row so it is at least as tall as an average body row
+  padding: 0.6rem 0.6rem !important;
 }
 
 tbody tr:nth-child(even),
@@ -215,3 +257,4 @@ hr {
   border-top: 1px solid #e6e9ee;
   margin: 2.5rem 0;
 }
+

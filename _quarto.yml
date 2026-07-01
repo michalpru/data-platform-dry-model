@@ -12,15 +12,13 @@ website:
   description: "Evaluating and Operationalizing Reuse at Scale"
   site-url: https://michalpru.github.io/data-platform-dry-model/
   repo-url: https://github.com/michalpru/data-platform-dry-model
+  favicon: favicon.svg
   open-graph: true
   twitter-card: true
   navbar:
     background: dark
     pinned: true
     title: "The Data Platform DRY Model"
-    left:
-      - text: "Whitepaper"
-        href: publications/whitepaper-data-platform-dry-model.html
     right:
       - icon: github
         href: https://github.com/michalpru/data-platform-dry-model
@@ -37,7 +35,8 @@ format:
       text: |
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+        <meta property="og:type" content="article">
     toc: true
     toc-depth: 3
     toc-title: "On this page"

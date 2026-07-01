@@ -52,7 +52,7 @@ On paper, the problem was solved.
 In practice, reuse fragmented.
 
 #### Case Study
-![Case Study](assets-diagrams/case-study-whitepaper.jpg)
+<img src="assets-diagrams/case-study-whitepaper.jpg" width="900"/>
 
 *Illustrative composite scenario: synthesized from common failure patterns, not a specific organization.*
 
@@ -171,7 +171,7 @@ Reused through governed business definitions. Semantic contracts provide one of 
 
 #### 18 Common Platform Artifacts* Evaluated Across 3 Interface Types
 
-<table style="width:100%; table-layout:fixed">
+<table class="dry-icon-table" style="width:100%; table-layout:fixed">
   <colgroup>
     <col style="width:14%"/>
     <col style="width:23%"/>
@@ -322,6 +322,7 @@ Across all artifact types, the goal is not to enforce a specific implementation 
 ### 3.2. Reuse-Interface Governance and Data Contracts: Complementary Disciplines
 
 Reuse-interface governance and data contracts operate on overlapping interface surfaces, but they protect different concerns. 
+
 - **Reuse-interface governance** protects reuse consistency: transformation logic, grain, business meaning, and semantic stability.
 - **Data contract** protects producer-consumer reliability: schema, freshness, availability, and other operational guarantees. 
 While modern data-contract specifications increasingly include semantic descriptors, contract enforcement focuses on producer-consumer interface stability rather than cross-team interpretation alignment, which remains a reuse-interface governance concern.
@@ -736,7 +737,7 @@ The raw feeds shown above (DAG and lineage exports, catalog exports, semantic te
 
 #### Sources for Reuse Observation
 
-<table>
+<table class="dry-icon-table">
   <thead>
     <tr>
       <th width="40%">Source</th>
@@ -1047,11 +1048,13 @@ The prerequisites and known challenges for these mechanisms are documented in [K
 The goal is not to eliminate all duplication. The goal is to make divergence intentional, visible, and economically rational. DRY does not fail because teams lack discipline or modern tools. It fails because reuse is rarely treated as a structural property of the platform.
 
 The Data Platform DRY Model provides the things practitioners consistently lack:
+
 - The 13 DRY Quality Attributes and M0–M3 Maturity Levels give a common language for assessing reuse - making it possible to compare platforms, identify bottlenecks, and define target states without relying on intuition.
 - The DRY Artifact Registry makes reuse visible for the first time: what reusable artifacts exist, who owns them, where they are bypassed, and where duplication has accumulated. The registry observes broadly; it enforces narrowly.
 - Lifecycle governance and CI/CD enforcement close the loop: turning visibility into accountability and making reuse the default path rather than the exception.
 
 **Common practical applications include**:
+
 - Platform and tool evaluation: score an existing platform (or a candidate data warehouse, transformation framework, or semantic layer) against the Quality Attributes and their Maturity Levels.
 - Operationalizing reuse governance: establish the operating model for reuse (defined ownership, lifecycle states, and enforcement policy), making reuse a governed discipline of the platform.
 - AI-assisted authoring: expose the DRY Artifact Registry as a context source to AI coding assistants, so discovering a canonical artifact is easier than re-implementing one, moving reuse enforcement upstream to authoring time.
@@ -1065,4 +1068,10 @@ Implemented pragmatically, DRY stops being a coordination tax and becomes a stru
 ---
 
 *Author's note: This publication reflects my independent professional perspective. It is not written on behalf of, endorsed by, or based on the internal architecture of any current or former employer, client, or vendor. Scenarios, diagrams, and reference architectures are illustrative and should not be interpreted as describing a specific company's implementation. All text and diagrams in this publication are my own original work.*
+
+---
+
+**Michal Pruszynski** · [LinkedIn](https://www.linkedin.com/in/michal-p-555b5749) · [Medium](https://medium.com/@pruszynski.michal)
+
+© 2026 · [Source](https://github.com/michalpru/data-platform-dry-model) · [License](https://github.com/michalpru/data-platform-dry-model/blob/main/LICENSE)
 
