@@ -66,13 +66,14 @@ p, li {
   font-size: 1rem;
 }
 
-// Constrain the text measure (~10% shorter lines) for readability, while
-// leaving tables and diagrams free to use the full content width.
-main p,
+// Constrain the text measure (~22% shorter lines) for readability, while
+// leaving tables and diagrams free to use the full content width. Paragraphs
+// that hold a diagram are excluded so images still center at full width.
+main p:not(:has(img)),
 main ul,
 main ol,
 main blockquote {
-  max-width: 70rem;
+  max-width: 59rem;
 }
 
 // Slight breathing room between list items so lists don't read as a monolith
@@ -112,12 +113,21 @@ main img {
 // Diagram sizing — source images are 3000–6000px wide, so we render them much
 // larger than their authored pixel widths (no blur) to match the wider body.
 // Mapped by the inline width attribute; always capped to the content column.
-main img[width="500"] { width: 720px; }
+main img[width="500"] { width: 720px; margin-top: 0.4rem; }
 main img[width="700"] { width: 980px; }
 main img[width="760"] { width: 820px; }
 main img[width="800"] { width: 1080px; }
 main img[width="850"] { width: 1120px; }
 main img[width="900"] { width: 1160px; }
+main img[width="1000"] { width: 1220px; }
+
+// Navigation-map label + diagram: add space above the "Model navigation map"
+// label (separating it from the preceding subtitle) and keep it close to its
+// diagram below. Nav-map diagrams are the width="500" images.
+main p:has(img[width="500"]) {
+  margin-top: 2.4rem;
+  margin-bottom: 0;
+}
 
 // Captions rendered with <small> under diagrams
 img + br + em,
@@ -185,6 +195,13 @@ td[align="center"], th[align="center"] {
   font-size: 0.88rem;
 }
 
+// Tables whose first column is a category/label spine: render that first column
+// at the header font size so the label spine reads as prominently as the header
+// row rather than as ordinary body text.
+.dry-firstcol-lg td:first-child {
+  font-size: 1rem;
+}
+
 // Lightweight, modern header: light slate fill, dark text, and a brand-colored
 // underline for definition. !important overrides Bootstrap's higher-specificity
 // .table cell rules. Applies to BOTH raw-HTML and Bootstrap pipe tables.
@@ -194,12 +211,12 @@ table th[scope="col"],
   background-color: #f1f5f9 !important;
   color: #1e293b !important;
   font-weight: 600;
-  font-size: 0.9rem;
   letter-spacing: 0.01em;
   vertical-align: middle;
   border-color: #d8dee7;
   border-bottom: 2px solid #14253b !important;
-  // Taller header row so it is at least as tall as an average body row
+  // Header row slightly larger than body cells, and tall enough to match rows
+  font-size: 1rem;
   padding: 0.8rem 0.6rem !important;
 }
 
@@ -256,5 +273,13 @@ hr {
   border: 0;
   border-top: 1px solid #e6e9ee;
   margin: 2.5rem 0;
+}
+
+// Major section divider: a heavier, brand-colored rule that visually separates
+// the closing sections (When Duplication Is Justified, Model Applicability,
+// Contribution) from the body of Section 4.
+hr.section-major {
+  border-top: 3px solid #14253b;
+  margin: 3.5rem 0 2.25rem;
 }
 
