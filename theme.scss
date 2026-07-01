@@ -1,5 +1,9 @@
 /*-- scss:defaults --*/
 
+// Disable the Bootswatch "cosmo" theme's Google Fonts import (Source Sans Pro).
+// We self-host Public Sans instead, so no visitor data is sent to Google (GDPR).
+$web-font-path: false !default;
+
 // Typography — Public Sans (lightweight, modern) with high-quality system fallback
 $font-family-sans-serif: "Public Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji" !default;
 $font-family-monospace: "SFMono-Regular", "Cascadia Code", Menlo, Consolas, "Liberation Mono", monospace !default;
