@@ -125,6 +125,9 @@ main img[width="850"] { width: 1120px; }
 main img[width="900"] { width: 1160px; }
 main img[width="1000"] { width: 1220px; }
 
+// Opt-in left alignment for specific diagrams (overrides the centered auto margins)
+main img.align-left { margin-left: 0; margin-right: auto; }
+
 // Navigation-map label + diagram: add space above the "Model navigation map"
 // label (separating it from the preceding subtitle) and keep it close to its
 // diagram below. Nav-map diagrams are the width="500" images.

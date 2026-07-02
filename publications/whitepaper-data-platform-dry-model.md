@@ -511,7 +511,7 @@ Maturity describes how reuse behaves operationally in practice, not which tools 
 No explicit weights are assigned to individual DRY Quality Attributes. Required Maturity Levels depend on the specific use case, for example building shared transformation modules across platforms makes portability a must-have attribute.
 
 #### Maturity Levels For DRY Quality Attributes
-<img src="assets-diagrams/maturity-levels.jpg" width="675"/>
+<img src="assets-diagrams/maturity-levels.jpg" width="675" class="align-left"/>
 
 #### Maturity Assessment Scope
 
@@ -1179,7 +1179,7 @@ The Data Platform DRY Model is:
 <hr class="section-major">
 
 ## Contribution
-Many elements of the Data Platform DRY Model, such as consumption interfaces, data contracts, lifecycle management, metadata cataloging, CI/CD controls, access governance, and usage telemetry are **general data-platform architecture concerns**, applicable beyond reuse. The contribution is in applying these mechanisms **through a reuse-governance lens**: **assembling and adapting them into a coherent framework** for making reuse failure visible, assessable, and enforceable at scale.
+Many elements of the Data Platform DRY Model, such as consumption interfaces, data contracts, lifecycle management, metadata cataloging, CI/CD controls, access governance, and usage telemetry are **general data-platform architecture concerns**, applicable beyond reuse. The contribution is in applying these mechanisms through a reuse-governance lens: **assembling and adapting them into a coherent framework** for making reuse failure visible, assessable, and enforceable at scale.
 
 The prerequisites and known challenges for these mechanisms are documented in [Known implementation risks and open questions](https://github.com/michalpru/data-platform-dry-model/blob/main/model-docs/00-overview.md#known-implementation-risks-and-open-questions).
 
@@ -1195,15 +1195,15 @@ The Data Platform DRY Model provides the things practitioners consistently lack:
 - The **DRY Artifact Registry** makes reuse visible for the first time: what reusable artifacts exist, who owns them, where they are bypassed, and where duplication has accumulated. The registry observes broadly; it enforces narrowly.
 - **Lifecycle governance and CI/CD enforcement** close the loop: turning visibility into accountability and making reuse the default path rather than the exception.
 
-**Common practical applications include**:
+Common practical applications include:
 
-- **Platform and tool evaluation**: score an existing platform (or a candidate data warehouse, transformation framework, or semantic layer) against the Quality Attributes and their Maturity Levels.
-- Operationalizing **reuse governance**: establish the operating model for reuse (defined ownership, lifecycle states, and enforcement policy), making reuse a governed discipline of the platform.
+- Platform and tool evaluation: **score an existing platform** (or a candidate data warehouse, transformation framework, or semantic layer) against the Quality Attributes and their Maturity Levels.
+- Operationalizing reuse governance: **establish the operating model for reuse** (defined ownership, lifecycle states, and enforcement policy), making reuse a governed discipline of the platform.
 - **AI-assisted authoring**: expose the DRY Artifact Registry as a context source to AI coding assistants, so discovering a canonical artifact is easier than re-implementing one, moving reuse enforcement upstream to authoring time.
 - **Duplication detection in CI/CD**: shift it from post-hoc review to a build-time platform property.
-- **Reuse measurement baseline**: establish structural and behavioral reuse metrics across layers and interfaces, turning "we have a canonical definition" into "we can prove it is actually used" and making cost reductions visible to leadership.
+- Reuse measurement baseline: **establish structural and behavioral reuse metrics** across layers and interfaces, turning "we have a canonical definition" into "we can prove it is actually used" and making cost reductions visible to leadership.
 
-The model applies whether you are building a new platform, governing an existing one, or evaluating how a specific tool fits into your reuse architecture.
+**The model applies whether you are building a new platform, governing an existing one, or evaluating how a specific tool fits into your reuse architecture.**
 
 Implemented pragmatically, DRY stops being a coordination tax and becomes a structural advantage: changes propagate safely, semantics remain consistent, and data platforms scale without proportional increases in cost or complexity.
 
