@@ -1191,17 +1191,17 @@ The goal is not to eliminate all duplication. The goal is to make divergence int
 
 The Data Platform DRY Model provides the things practitioners consistently lack:
 
-- The 13 DRY Quality Attributes and M0–M3 Maturity Levels give a common language for assessing reuse - making it possible to compare platforms, identify bottlenecks, and define target states without relying on intuition.
-- The DRY Artifact Registry makes reuse visible for the first time: what reusable artifacts exist, who owns them, where they are bypassed, and where duplication has accumulated. The registry observes broadly; it enforces narrowly.
-- Lifecycle governance and CI/CD enforcement close the loop: turning visibility into accountability and making reuse the default path rather than the exception.
+- The **13 DRY Quality Attributes and M0–M3 Maturity Levels** give a common language for assessing reuse - making it possible to compare platforms, identify bottlenecks, and define target states without relying on intuition.
+- The **DRY Artifact Registry** makes reuse visible for the first time: what reusable artifacts exist, who owns them, where they are bypassed, and where duplication has accumulated. The registry observes broadly; it enforces narrowly.
+- **Lifecycle governance and CI/CD enforcement** close the loop: turning visibility into accountability and making reuse the default path rather than the exception.
 
 **Common practical applications include**:
 
-- Platform and tool evaluation: score an existing platform (or a candidate data warehouse, transformation framework, or semantic layer) against the Quality Attributes and their Maturity Levels.
-- Operationalizing reuse governance: establish the operating model for reuse (defined ownership, lifecycle states, and enforcement policy), making reuse a governed discipline of the platform.
-- AI-assisted authoring: expose the DRY Artifact Registry as a context source to AI coding assistants, so discovering a canonical artifact is easier than re-implementing one, moving reuse enforcement upstream to authoring time.
-- Duplication detection in CI/CD: shift it from post-hoc review to a build-time platform property.
-- Reuse measurement baseline: establish structural and behavioral reuse metrics across layers and interfaces, turning "we have a canonical definition" into "we can prove it is actually used" and making cost reductions visible to leadership.
+- **Platform and tool evaluation**: score an existing platform (or a candidate data warehouse, transformation framework, or semantic layer) against the Quality Attributes and their Maturity Levels.
+- Operationalizing **reuse governance**: establish the operating model for reuse (defined ownership, lifecycle states, and enforcement policy), making reuse a governed discipline of the platform.
+- **AI-assisted authoring**: expose the DRY Artifact Registry as a context source to AI coding assistants, so discovering a canonical artifact is easier than re-implementing one, moving reuse enforcement upstream to authoring time.
+- **Duplication detection in CI/CD**: shift it from post-hoc review to a build-time platform property.
+- **Reuse measurement baseline**: establish structural and behavioral reuse metrics across layers and interfaces, turning "we have a canonical definition" into "we can prove it is actually used" and making cost reductions visible to leadership.
 
 The model applies whether you are building a new platform, governing an existing one, or evaluating how a specific tool fits into your reuse architecture.
 
