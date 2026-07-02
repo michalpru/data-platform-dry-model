@@ -734,7 +734,7 @@ At its core, the registry is a minimal reuse-control index that records which de
 <img src="assets-diagrams/dry-artifact-registry.jpg" width="900"/>
 
 
-#### Implementation effort
+#### Implementation guidance
 The registry is built on top of existing code repositories, data catalogs, and lineage systems, adding a thin dedicated store for the **reuse-governance metadata** they do not hold, with a publishing and observation API. Its implementation ranges from an `INDEX` file for a single repository to a small relational database and API for cross-repository use, with a vector store only for advanced similarity detection. It is an integration effort, not the purchase of a specific product.
 The connectors, identity normalization, and attribution that feed it are real engineering. **While these components are widely used individually, integrating them into a coherent reuse control plane is still an emerging practice** and should be adopted incrementally as a reference architecture. 
 
