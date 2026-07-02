@@ -13,7 +13,7 @@ Organizations diagnose this only as a data quality problem or a tooling gap, but
 
 The term "DRY", **Don't Repeat Yourself**, is a familiar principle in software development, where it primarily applies to code reuse. In data analytics platforms, DRY has a broader strategic role. **This model extends DRY deliberately**, as a unifying lens for reuse across data platform surfaces that code-level DRY does not address: **business logic, semantics, and physical materialization**. The extension is not a redefinition of DRY; it applies the same structural discipline: define once, reuse everywhere, change in one place.
 
-Reuse in data platforms operates across four distinct layers. Lower layers enable higher ones, but none emerges automatically from the others. These layers are reuse surfaces, **not** data-state stages: medallion (bronze/silver/gold) and staging/intermediate/mart progressions describe how data matures; **DRY layers describe what is reused**.
+Reuse in data platforms operates across four distinct layers. Lower layers enable higher ones, but do not automatically produce them. These layers are reuse surfaces, **not** data-state stages: medallion (bronze/silver/gold) describes how data matures; **DRY layers describe what is reused**.
 
 - **DRY in Code** addresses technical utilities reuse that prevents the most familiar form of duplication: avoiding copy-pasted boilerplate logic, and repeated technical patterns across pipelines and queries.
 - **DRY in Logic** addresses the reuse of business-specific data transformations that define canonical datasets or attributes, such as "completed order" or "active customer".
@@ -713,13 +713,7 @@ What is missing is a control plane that makes these artifacts visible, comparabl
 
 The DRY Artifact Registry is best treated as an advanced operating pattern for a reuse governance control plane. It is **a logical metadata index over existing platform components**, such as transformation frameworks, catalogs, lineage systems, and warehouse signals, not a new system category or universal system of record. It is *logical* because each artifact's identity is independent of its physical implementations. 
 
-Leading catalog and warehouse vendors are already converging toward governed metric and semantic-model registration, and frameworks such as dbt Mesh add governed model access and cross-project references for the queryable dataset interface. These advances each address a single interface or vendor. 
-**The Model generalizes across all three reuse interfaces: callable logic, queryable datasets, and semantic contracts - as a vendor-neutral target architecture**.
-
-The DRY Artifact Registry tracks whether datasets, transformation logic, and semantic contracts represent canonical, governed definitions: which artifact is canonical for a concept, what its lifecycle state is, and who is bypassing it. **This sets it apart from adjacent tooling:**
-
-- Data observability platforms monitor data quality: anomalies, schema drift, freshness, and pipeline reliability - that is, whether shared datasets are operationally reliable.
-- Data catalogs answer what data exists, its lineage, and who owns it. The Registry treats them as a signal source and adds a reuse-governance overlay.
+Many platform tools now govern parts of this problem: catalogs track data assets and lineage, semantic layers manage metrics, and frameworks such as dbt Mesh support governed transformation models and cross-project references. **The DRY Model generalizes beyond any single tool or interface, covering callable logic, queryable datasets, and semantic contracts as a vendor-neutral reuse architecture.**
 
 At its core, the registry is a minimal reuse-control index. 
 **It stores only the information required to understand and control reuse:**
@@ -766,9 +760,7 @@ The registry is lightweight at its core - a thin deployed store with a publishin
 3. **Observed Behavioral Signals**  
   Captured from warehouse query history, access metadata, audit logs, and semantic-layer telemetry to surface adoption patterns, bypass behavior, and actively used artifacts that were not intentionally registered. 
 
-Together, these mechanisms make reuse visible and measurable by connecting declared intent, implementation structure, and actual consumption.
-
-The raw feeds shown above (DAG and lineage exports, catalog exports, semantic telemetry, query logs) are processed, not copied. The registry keeps only derived facts keyed to each artifact's logical identity: dependency edges and bindings from structural feeds, and adoption and bypass signals from behavioral feeds.
+Together, these mechanisms make reuse visible and measurable by connecting declared intent, implementation structure, and actual consumption. Raw feeds (DAG and lineage exports, catalog exports, semantic telemetry, query logs) are processed, not copied: the registry stores only derived facts keyed to each artifact's logical identity.
 
 #### Sources for Reuse Observation
 
@@ -822,11 +814,7 @@ Broad observation is best implemented through passive metadata harvesting from t
 In practice, the observation layer can start with scheduled ingestion of dbt or SQLMesh manifests, warehouse metadata crawlers, and OpenLineage events directly or through metadata catalogs such as DataHub or OpenMetadata. AI-assisted repository scanning can enrich this layer by extracting candidate callable logic, SQL transformations, semantic summaries, signatures, and similarity clusters from domain repositories. These agents should flag candidates for promotion review, not assign lifecycle state automatically.
 
 
-#### How Teams Actually Reuse Artifacts
-
-The DRY Artifact Registry does not distribute code; it surfaces canonical dependencies, such as a package, shared schema object, or semantic definition, so developers can adopt them instead of re-implementing the logic.
-
-Shared utilities are commonly distributed as versioned packages for dbt or SQLMesh projects, Spark clusters, and managed notebook environments. Reuse therefore occurs through dependency management rather than manual coordination between teams.
+The registry does not distribute code; it surfaces canonical dependencies, such as a package, shared schema object, or semantic definition, so developers can adopt them instead of re-implementing logic. 
 
 Companion implementation references expand these operating patterns: [Artifact Registry Specification](https://github.com/michalpru/data-platform-dry-model/blob/main/model-docs/05-artifact-registry-spec.md)
 

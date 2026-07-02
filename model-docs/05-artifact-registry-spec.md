@@ -2,6 +2,11 @@
 
 The DRY Artifact Registry is a **reuse-control index**, not a general-purpose catalog.
 
+The DRY Artifact Registry tracks whether datasets, transformation logic, and semantic contracts represent canonical, governed definitions: which artifact is canonical for a concept, what its lifecycle state is, and who is bypassing it. **This sets it apart from adjacent tooling:**
+
+- Data observability platforms monitor data quality: anomalies, schema drift, freshness, and pipeline reliability - that is, whether shared datasets are operationally reliable.
+- Data catalogs answer what data exists, its lineage, and who owns it. The Registry treats them as a signal source and adds a reuse-governance overlay.
+
 ## Purpose
 
 - Unify discovery and lifecycle governance for reusable artifacts across:
