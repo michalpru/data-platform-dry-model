@@ -711,11 +711,11 @@ What is missing is a control plane that makes these artifacts visible, comparabl
 
 ### DRY Artifact Registry
 
-The DRY Artifact Registry is best treated as an advanced operating pattern for a reuse governance control plane. It is **a logical metadata index over existing platform components**, such as transformation frameworks, catalogs, lineage systems, and warehouse signals, not a new system category or universal system of record. It is *logical* because each artifact's identity is independent of its physical implementations. 
+The DRY Artifact Registry is best treated as an advanced operating pattern for a reuse governance control plane: **a logical metadata index over existing code repositories and platform components**, such as transformation frameworks, catalogs, lineage systems, and warehouse signals. It is not a new system category or universal system of record. Each reusable artifact has a stable logical identity independent of its physical implementations, allowing the registry to link the same definition across warehouses, dialects, and layers, and enrich it with structural and behavioral signals.
 
-Many platform tools now govern parts of this problem: catalogs track data assets and lineage, semantic layers manage metrics, and frameworks such as dbt Mesh support governed transformation models and cross-project references. **The DRY Model generalizes beyond any single tool or interface, covering callable logic, queryable datasets, and semantic contracts as a vendor-neutral reuse architecture.**
+Existing platform tools govern parts of this problem: catalogs track data assets and lineage, semantic layers manage metrics, and frameworks such as dbt Mesh support governed transformation models and cross-project references. **The DRY Model generalizes beyond any single tool or interface, covering callable logic, queryable datasets, and semantic contracts as a vendor-neutral reuse architecture.**
 
-At its core, the registry is a minimal reuse-control index. 
+At its core, the registry is a minimal reuse-control index that records which definitions are canonical, their lifecycle state, and where consumers reuse or bypass them. 
 **It stores only the information required to understand and control reuse:**
 
 - **Artifact Identity**: a stable, unique logical identifier (namespace, logical name, interface type, and version)
@@ -730,13 +730,18 @@ At its core, the registry is a minimal reuse-control index.
 - **Derived Structural Signals**: duplication candidates and dependency edges derived from structural analysis
 - **Observed Behavioral Signals**: identified consumer-to-artifact usage edges, plus adoption and bypass aggregates, derived from behavioral feeds
 
-**Each reusable artifact must have a stable logical identity independent of physical implementation**, because the same definition is often realized in multiple warehouses, dialects, or layers (e.g., a transformation model and its materialized table). The registry links that logical identity to those physical bindings across systems and enriches it with Derived Structural Signals and Observed Behavioral Signals, making reuse measurable across repositories, warehouse objects, and semantic layers. 
 
 <img src="assets-diagrams/dry-artifact-registry.jpg" width="900"/>
 
-The Registry is a reuse-governance control plane, not a query-runtime component: **it ingests design-time and observed runtime signals but it never sits in the query-execution path**. It is built on top of existing code repositories, data catalogs, and lineage systems, adding a thin dedicated store for the **reuse-governance metadata** they do not hold. Its implementation ranges from an `INDEX` file for a single repository to a small relational database and API for cross-repository use, with a vector store only for advanced similarity detection. It is an integration effort, not the purchase of a specific product.
 
-The registry is lightweight at its core - a thin deployed store with a publishing and observation API, but the work around it is not. The connectors, identity normalization, and attribution that feed it are real engineering. **While these components are widely used individually, integrating them into a coherent reuse control plane is still an emerging practice** and should be adopted incrementally as a reference architecture. 
+#### Implementation effort
+The registry is built on top of existing code repositories, data catalogs, and lineage systems, adding a thin dedicated store for the **reuse-governance metadata** they do not hold, with a publishing and observation API. Its implementation ranges from an `INDEX` file for a single repository to a small relational database and API for cross-repository use, with a vector store only for advanced similarity detection. It is an integration effort, not the purchase of a specific product.
+The connectors, identity normalization, and attribution that feed it are real engineering. **While these components are widely used individually, integrating them into a coherent reuse control plane is still an emerging practice** and should be adopted incrementally as a reference architecture. 
+
+#### What the registry is *not*
+- **Not a query-runtime component:** it ingests design-time and observed runtime signals, but **never sits in the query-execution path**
+- **Not a distribution mechanism:** it does not distribute code or data assets; it surfaces canonical dependencies, such as packages, shared schema objects, or semantic definitions, so developers can adopt them instead of re-implementing logic
+
 
 #### Registry operates through complementary mechanisms:
 
@@ -812,9 +817,6 @@ The same registry supports governance for declared reusable artifacts and observ
 Broad observation is best implemented through passive metadata harvesting from transformation framework manifests, warehouse catalogs, lineage events, semantic-layer telemetry, and repository scanning. These signals make local implementations searchable and comparable without adding publication overhead.
 
 In practice, the observation layer can start with scheduled ingestion of dbt or SQLMesh manifests, warehouse metadata crawlers, and OpenLineage events directly or through metadata catalogs such as DataHub or OpenMetadata. AI-assisted repository scanning can enrich this layer by extracting candidate callable logic, SQL transformations, semantic summaries, signatures, and similarity clusters from domain repositories. These agents should flag candidates for promotion review, not assign lifecycle state automatically.
-
-
-The registry does not distribute code; it surfaces canonical dependencies, such as a package, shared schema object, or semantic definition, so developers can adopt them instead of re-implementing logic. 
 
 Companion implementation references expand these operating patterns: [Artifact Registry Specification](https://github.com/michalpru/data-platform-dry-model/blob/main/model-docs/05-artifact-registry-spec.md)
 
