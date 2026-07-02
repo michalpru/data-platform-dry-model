@@ -120,7 +120,7 @@ The use case above shows that canonical logic and semantic layers are not enough
 **The Data Platform DRY Model provides the operational lens for evaluating and operationalizing reuse at scale.**
 
 #### Data Platform DRY Model
-<img src="assets-diagrams/dry-model-phases.jpg" width="700"/>
+<img src="assets-diagrams/dry-model-phases.jpg" width="650"/>
 
 ### Phase I: Evaluation
 
