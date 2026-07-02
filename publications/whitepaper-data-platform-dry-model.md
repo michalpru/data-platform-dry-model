@@ -511,7 +511,7 @@ Maturity describes how reuse behaves operationally in practice, not which tools 
 No explicit weights are assigned to individual DRY Quality Attributes. Required Maturity Levels depend on the specific use case, for example building shared transformation modules across platforms makes portability a must-have attribute.
 
 #### Maturity Levels For DRY Quality Attributes
-<img src="assets-diagrams/maturity-levels.jpg" width="675" class="align-left"/>
+<img src="assets-diagrams/maturity-levels.jpg" width="725" class="align-left"/>
 
 #### Maturity Assessment Scope
 
