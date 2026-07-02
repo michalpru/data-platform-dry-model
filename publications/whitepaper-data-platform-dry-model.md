@@ -2,7 +2,7 @@
 
 ## Evaluating and Operationalizing Reuse at Scale
 
-*Version 1.0.0 · June 2026*
+*Version 1.0.0 · July 2026*
 
 ---
 
@@ -21,7 +21,7 @@ Reuse in data platforms operates across four distinct layers. Lower layers enabl
 - and **DRY in Materialization** *(Physical Data Assets)* that addresses reusing an existing physical dataset that meets grain or refresh-frequency requirements, instead of rebuilding it, while keeping every materialization traced to a single canonical source.
 
 #### DRY Layers in Data Analytics Platform
-<img src="assets-diagrams/dry-layers-platform-view.jpg" width="800"/>
+<img src="assets-diagrams/dry-layers-platform-view.jpg" width="700"/>
 
 *DRY layers represent reuse surfaces, not execution order.*
 
@@ -120,7 +120,7 @@ The use case above shows that canonical logic and semantic layers are not enough
 **The Data Platform DRY Model provides the operational lens for evaluating and operationalizing reuse at scale.**
 
 #### Data Platform DRY Model
-<img src="assets-diagrams/dry-model-phases.jpg" width="600"/>
+<img src="assets-diagrams/dry-model-phases.jpg" width="650"/>
 
 ### Phase I: Evaluation
 
@@ -285,7 +285,7 @@ Reused through governed business definitions. Semantic contracts provide one of 
   </tbody>
 </table>
 
-*Caveat: Execution frameworks and orchestration constructs (such as workflows, DAGs, and stored procedures) and application-level interfaces are intentionally excluded from this comparison, as they do not directly encode or enforce reusable logic or shared definitions.
+<p class="table-note"><em>Caveat: Execution frameworks and orchestration constructs (such as workflows, DAGs, and stored procedures) and application-level interfaces are intentionally excluded from this comparison, as they do not directly encode or enforce reusable logic or shared definitions.</em></p>
 
 ### Structural Reuse Strength Across Common Platform Artifacts
 
@@ -311,7 +311,7 @@ The detailed mapping of reuse interfaces to ML feature stores is provided in the
 
 ### Mapping Interface Types to DRY Layers and Beneficiaries
 
-<table class="dry-firstcol-lg" style="width:100%; table-layout:auto;">
+<table class="dry-firstcol-lg dry-tall-rows" style="width:100%; table-layout:auto;">
   <thead>
     <tr>
       <th>Interface Type</th>
@@ -775,9 +775,9 @@ The raw feeds shown above (DAG and lineage exports, catalog exports, semantic te
 <table class="dry-icon-table">
   <thead>
     <tr>
-      <th width="44%">Source</th>
-      <th width="28%" align="center">Structural Signals <br> (Design-Time)</th>
-      <th width="28%" align="center">Observed Behavioral Signals <br> (Consumption-Time)</th>
+      <th width="40%">Source</th>
+      <th width="30%" align="center">Structural Signals <br> (Design-Time)</th>
+      <th width="30%" align="center">Observed Behavioral Signals <br> (Consumption-Time)</th>
     </tr>
   </thead>
   <tbody>
@@ -1193,7 +1193,7 @@ Many elements of the Data Platform DRY Model, such as consumption interfaces, da
 
 The prerequisites and known challenges for these mechanisms are documented in [Known implementation risks and open questions](https://github.com/michalpru/data-platform-dry-model/blob/main/model-docs/00-overview.md#known-implementation-risks-and-open-questions).
 
---- 
+<hr class="section-major">
 
 ## Summary and Practical Applications
 
@@ -1220,8 +1220,6 @@ Implemented pragmatically, DRY stops being a coordination tax and becomes a stru
 ---
 
 *Author's note: This publication reflects my independent professional perspective. It is not written on behalf of, endorsed by, or based on the internal architecture of any current or former employer, client, or vendor. Scenarios, diagrams, and reference architectures are illustrative and should not be interpreted as describing a specific company's implementation. All text and diagrams in this publication are my own original work.*
-
----
 
 **Michal Pruszynski** · [LinkedIn](https://www.linkedin.com/in/michal-p-555b5749) · [Medium](https://medium.com/@pruszynski.michal)
 

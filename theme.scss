@@ -206,6 +206,21 @@ td[align="center"], th[align="center"] {
   font-size: 1rem;
 }
 
+// Table note / caption: span the full content width so it aligns with the table
+// it annotates, instead of being clipped to the narrower text measure.
+p.table-note {
+  max-width: none;
+  margin-top: 0.6rem;
+  font-size: 0.9rem;
+  color: #475569;
+}
+
+// Taller body rows for tables that need more vertical breathing room.
+.dry-tall-rows tbody td {
+  padding-top: 0.85rem;
+  padding-bottom: 0.85rem;
+}
+
 // Lightweight, modern header: light slate fill, dark text, and a brand-colored
 // underline for definition. !important overrides Bootstrap's higher-specificity
 // .table cell rules. Applies to BOTH raw-HTML and Bootstrap pipe tables.
