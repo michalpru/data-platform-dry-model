@@ -209,6 +209,15 @@ td[align="center"], th[align="center"] {
   font-size: 1rem;
 }
 
+// In the icon+spine artifact table, rowspan group cells make `td:first-child`
+// land on the Artifact column in most rows but on the spine column in the
+// group-start rows — which left the Artifact column rendering at two different
+// sizes. Level every text (non-icon) cell to the regular body size so the whole
+// Artifact column is uniform and matches the regular text.
+.dry-icon-table.dry-firstcol-lg td:not([align]) {
+  font-size: 1rem;
+}
+
 // Table note / caption: span the full content width so it aligns with the table
 // it annotates, instead of being clipped to the narrower text measure.
 p.table-note {

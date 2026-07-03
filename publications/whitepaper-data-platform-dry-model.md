@@ -8,10 +8,12 @@
 
 ## Abstract
 
-Data analytics platforms fail in a predictable pattern. Metrics diverge across teams. Reconciliation cycles consume engineering capacity before every leadership dashboard review. Shared business rules are reimplemented independently in pipelines, notebooks, dashboards, and ML models, leading to inconsistent definitions and semantic drift, even in technically functional data platforms.<br> 
+Data analytics platforms fail in a predictable pattern. Metrics diverge across teams. Reconciliation cycles consume engineering capacity before every leadership dashboard review. Shared business rules are reimplemented independently in pipelines, notebooks, dashboards, and ML models, leading to inconsistent definitions and semantic drift, even in technically functional data platforms.
+
 Organizations diagnose this only as a data quality problem or a tooling gap, but the root cause is a structural failure of reuse.
 
-The term "DRY", **Don't Repeat Yourself**, is a familiar principle in software development, where it primarily applies to code reuse. In data analytics platforms, DRY has a broader strategic role. **This model extends DRY deliberately**, as a unifying lens for reuse across data platform surfaces that code-level DRY does not address: **business logic, semantics, and physical materialization**. The extension is not a redefinition of DRY; it applies the same structural discipline: define once, reuse everywhere, change in one place.
+The term "DRY", **Don't Repeat Yourself**, is a familiar principle in software development, where it primarily applies to code reuse. In data analytics platforms, DRY has a broader strategic role. **This model extends DRY deliberately**, as a unifying lens for reuse across data platform surfaces that code-level DRY does not address: **business logic, semantics, and physical materialization**.<br>  
+The extension is not a redefinition of DRY; it applies the same structural discipline: **define once, reuse everywhere, change in one place**.
 
 Reuse in data platforms operates across four distinct layers. Lower layers enable higher ones, but do not automatically produce them. These layers are reuse surfaces, **not** data-state stages: medallion (bronze/silver/gold) describes how data matures; **DRY layers describe what is reused**.
 
@@ -120,7 +122,7 @@ The use case above shows that canonical logic and semantic layers are not enough
 **The Data Platform DRY Model provides the operational lens for evaluating and operationalizing reuse at scale.**
 
 #### Data Platform DRY Model
-<img src="assets-diagrams/dry-model-phases.jpg" width="675"/>
+<img src="assets-diagrams/dry-model-phases.jpg" width="700"/>
 
 ### Phase I: Evaluation
 
@@ -504,7 +506,7 @@ Companion references provide the detailed evaluation vocabulary: [DRY Quality At
 #### From Expected Capability to Operational Reality
 
 **Model navigation map**<br> 
-<img src="assets-diagrams/dry-model-phases-I-operational-maturity.jpg" width="500"/>
+<img src="assets-diagrams/dry-model-phases-I-operational-maturity.jpg" width="550"/>
 
 Maturity describes how reuse behaves operationally in practice, not which tools are present. An organization can use SQL Data Transformation Frameworks and SQL macros that enable reusability, abstraction, and parametrization, but if teams copy and paste the generated SQL instead of referencing the macro, Operational Maturity remains M0. The framework separates the expected capabilities described by the reuse-specific quality attributes from the operational reality measured by the Maturity Levels, precisely to surface this gap.
 
@@ -769,12 +771,12 @@ Together, these mechanisms make reuse visible and measurable by connecting decla
 
 #### Sources for Reuse Observation
 
-<table class="dry-icon-table">
+<table class="dry-icon-table dry-tall-rows" style="width:100%; table-layout:fixed;">
   <thead>
     <tr>
-      <th width="40%">Source</th>
-      <th width="30%" align="center">Structural Signals <br> (Design-Time)</th>
-      <th width="30%" align="center">Observed Behavioral Signals <br> (Consumption-Time)</th>
+      <th width="50%">Source</th>
+      <th width="25%" align="center">Structural Signals <br> (Design-Time)</th>
+      <th width="25%" align="center">Observed Behavioral Signals <br> (Consumption-Time)</th>
     </tr>
   </thead>
   <tbody>
