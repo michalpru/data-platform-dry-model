@@ -1,0 +1,8 @@
+# Folder-level metadata applied to documents in publications/.
+# Keeps whitepaper-data-platform-dry-model.md free of front matter so the
+# GitHub repo view stays clean, while still providing page metadata for the
+# Quarto site (HTML title, description, author).
+pagetitle: "The Data Platform DRY Model"
+description-meta: "A structured model for evaluating and operationalizing reuse across the four layers of a data analytics platform — code, logic, semantics, and materialization — to eliminate duplication and semantic drift at scale."
+author-meta: "Michal Pruszynski"
+date-meta: "2026-06-01"

@@ -1,0 +1,24 @@
+cff-version: 1.2.0
+message: "If you reference this work, please cite it as below."
+title: "The Data Platform DRY Model: Evaluating and Operationalizing Reuse at Scale"
+abstract: >-
+  A structured model for evaluating and operationalizing reuse across the four
+  layers of a data analytics platform — code, logic, semantics, and
+  materialization — to eliminate duplication and semantic drift at scale.
+type: report
+authors:
+  - family-names: Pruszynski
+    given-names: Michal
+version: "1.0.0"
+date-released: "2026-06-01"
+url: "https://michalpru.github.io/data-platform-dry-model/"
+repository-code: "https://github.com/michalpru/data-platform-dry-model"
+license: CC-BY-4.0
+keywords:
+  - data platform
+  - analytics platform
+  - DRY
+  - reuse
+  - data engineering
+  - semantic layer
+  - data modeling

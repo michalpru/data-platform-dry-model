@@ -2,7 +2,7 @@
 
 ## Evaluating and Operationalizing Reuse at Scale
 
-*Version 1.0.0 · June 2026*
+*Version 1.0.0 · July 2026*
 
 ---
 
@@ -13,7 +13,7 @@ Organizations diagnose this only as a data quality problem or a tooling gap, but
 
 The term "DRY", **Don't Repeat Yourself**, is a familiar principle in software development, where it primarily applies to code reuse. In data analytics platforms, DRY has a broader strategic role. **This model extends DRY deliberately**, as a unifying lens for reuse across data platform surfaces that code-level DRY does not address: **business logic, semantics, and physical materialization**. The extension is not a redefinition of DRY; it applies the same structural discipline: define once, reuse everywhere, change in one place.
 
-Reuse in data platforms operates across four distinct layers. Lower layers enable higher ones, but none emerges automatically from the others. These layers are reuse surfaces, **not** data-state stages: medallion (bronze/silver/gold) and staging/intermediate/mart progressions describe how data matures; DRY layers describe what is reused.
+Reuse in data platforms operates across four distinct layers. Lower layers enable higher ones, but do not automatically produce them. These layers are reuse surfaces, **not** data-state stages: medallion (bronze/silver/gold) describes how data matures; **DRY layers describe what is reused**.
 
 - **DRY in Code** addresses technical utilities reuse that prevents the most familiar form of duplication: avoiding copy-pasted boilerplate logic, and repeated technical patterns across pipelines and queries.
 - **DRY in Logic** addresses the reuse of business-specific data transformations that define canonical datasets or attributes, such as "completed order" or "active customer".
@@ -21,7 +21,7 @@ Reuse in data platforms operates across four distinct layers. Lower layers enabl
 - and **DRY in Materialization** *(Physical Data Assets)* that addresses reusing an existing physical dataset that meets grain or refresh-frequency requirements, instead of rebuilding it, while keeping every materialization traced to a single canonical source.
 
 #### DRY Layers in Data Analytics Platform
-<img src="assets-diagrams/dry-layers-platform-view.jpg" width="850"/>
+<img src="assets-diagrams/dry-layers-platform-view.jpg" width="700"/>
 
 *DRY layers represent reuse surfaces, not execution order.*
 
@@ -35,7 +35,7 @@ This document defines the **Data Platform DRY Model**:
 - the **Maturity Levels** that describe how reuse behaves in practice, and
 - the **enforcement patterns**: artifact registry, lifecycle governance, and CI/CD controls, that make reuse observable and enforceable at scale.
 
-It is a standalone reference intended for engineering leaders, platform architects, and data practitioners responsible for designing and governing data analytics platforms.
+**It is a standalone reference intended for engineering leaders, platform architects, and data practitioners responsible for designing and governing data analytics platforms.**
 
 --- 
 
@@ -52,7 +52,7 @@ On paper, the problem was solved.
 In practice, reuse fragmented.
 
 #### Case Study
-![Case Study](assets-diagrams/case-study-whitepaper.jpg)
+<img src="assets-diagrams/case-study-whitepaper.jpg" width="1000"/>
 
 *Illustrative composite scenario: synthesized from common failure patterns, not a specific organization.*
 
@@ -67,7 +67,7 @@ No pipelines failed.
 
 Yet executive dashboards began to diverge. “Revenue” matched in some contexts and not in others.
 
-The platform lacked critical capabilities: visibility into reuse adoption and mechanisms to enforce it. As a result, canonical definitions existed but were not the default path for consumption.
+**The platform lacked critical capabilities: visibility into reuse adoption and mechanisms to enforce it.** As a result, canonical definitions existed but were not the default path for consumption.
 
 When the executive sponsor asked a simple question: ”How widely is our canonical Revenue actually reused?”, the platform and analytics engineering teams could not answer.
 
@@ -92,19 +92,19 @@ The turning point came when the platform team inventoried shared callable logic,
 
 The remediation was addressed with 3 structural initiatives incrementally delivered:
 
-### 1. Warehouse-Portable SQL Data Transformation Framework
+#### 1. Warehouse-Portable SQL Data Transformation Framework
 
 This introduced multi-warehouse compatible SQL templating functions and transformation models, providing modularity, testability, and lifecycle management on top of SQL code. It made it possible to shift reusable logic from runtime-specific UDFs into portable, modular, dependency-managed artifacts.
 
-### 2. DRY Artifact Registry Integrated into CI/CD
+#### 2. DRY Artifact Registry Integrated into CI/CD
 
 A lightweight artifact registry was introduced to make reuse measurable and enforceable. New pull requests were evaluated against existing revenue definitions using structural comparison and semantic similarity analysis. Reimplementations were flagged before merge. Consumption-time telemetry exposed which dashboards and queries bypassed governed semantic metrics. For the first time, reuse adoption became visible.
 
-### 3. Headless Semantic Layer for Business-Critical Metrics
+#### 3. Headless Semantic Layer for Business-Critical Metrics
 
 Implemented headless, platform-level semantic layer (instead of the BI-embedded one), beginning with Tier-1 executive metrics, to enable consistent, tool-agnostic reuse across the BI tools, data applications, and multiple warehouses.
 
-### The Outcome
+#### The Outcome
 
 Within two quarters, metric reconciliation cycles shortened dramatically. Forked revenue definitions were consolidated or explicitly justified.
 
@@ -120,7 +120,7 @@ The use case above shows that canonical logic and semantic layers are not enough
 **The Data Platform DRY Model provides the operational lens for evaluating and operationalizing reuse at scale.**
 
 #### Data Platform DRY Model
-<img src="assets-diagrams/dry-model-phases.jpg" width="700"/>
+<img src="assets-diagrams/dry-model-phases.jpg" width="675"/>
 
 ### Phase I: Evaluation
 
@@ -148,22 +148,22 @@ In this phase, the Data Platform DRY Model explains how reuse becomes observable
 ## 3. Reuse Evaluation 
 
 ### 3.1. Data Platform Artifacts and Reuse Interfaces
-### Where DRY Is Achieved
+#### Where DRY Is Achieved
 
 **Model navigation map**<br> 
 <img src="assets-diagrams/dry-model-phases-I-interfaces.jpg" width="500"/>
 
 Although platform artifacts vary widely in form, within data transformation and analytical workloads they ultimately expose 3 primary reuse interfaces:
 
-### 1. Callable logic
+#### 1. Callable logic
 
 Reused by engineers inside pipelines. Callable logic artifacts are consumed through code rather than exposed as services
 
-### 2. Queryable datasets
+#### 2. Queryable datasets
 
 Reused through SQL. Queryable datasets enable platform-level reuse through stable query interfaces. The reuse interface remains the same regardless of the access mechanism (direct access to a table or view in a warehouse, or an API or service endpoint exposing the same dataset)
 
-### 3. Semantic contracts
+#### 3. Semantic contracts
 
 Reused through governed business definitions. Semantic contracts provide one of the strongest mechanisms for enforcing shared business meaning across tools and teams
 
@@ -171,7 +171,7 @@ Reused through governed business definitions. Semantic contracts provide one of 
 
 #### 18 Common Platform Artifacts* Evaluated Across 3 Interface Types
 
-<table style="width:100%; table-layout:fixed">
+<table class="dry-icon-table dry-firstcol-lg" style="width:100%; table-layout:fixed">
   <colgroup>
     <col style="width:14%"/>
     <col style="width:23%"/>
@@ -285,7 +285,7 @@ Reused through governed business definitions. Semantic contracts provide one of 
   </tbody>
 </table>
 
-*Caveat: Execution frameworks and orchestration constructs (such as workflows, DAGs, and stored procedures) and application-level interfaces are intentionally excluded from this comparison, as they do not directly encode or enforce reusable logic or shared definitions.
+<p class="table-note"><em>Caveat: Execution frameworks and orchestration constructs (such as workflows, DAGs, and stored procedures) and application-level interfaces are intentionally excluded from this comparison, as they do not directly encode or enforce reusable logic or shared definitions.</em></p>
 
 ### Structural Reuse Strength Across Common Platform Artifacts
 
@@ -310,11 +310,41 @@ The detailed mapping of reuse interfaces to ML feature stores is provided in the
 
 
 ### Mapping Interface Types to DRY Layers and Beneficiaries
-| Interface Type | Executive Question It Answers | Primary Users | Primary DRY Enabler | Secondary DRY Enabler |
-| --- | --- | --- | --- | --- |
-| **Callable logic** | How do we prevent engineers from re-implementing the same logic? | Data Engineers, Analytics Engineers | **DRY in Code** | **DRY in Logic (if encoding business rules)**  |
-| **Queryable datasets** | What is the canonical dataset we expect teams to build on? | Analytics Engineers | **DRY in Logic** | **DRY in Materialization** |
-| **Semantic contracts** | How do we ensure the organization agrees on meaning? | BI Developers, Analytics Engineers | **DRY in Semantics** | **DRY in Materialization (via materialized metrics)** |
+
+<table class="dry-firstcol-lg dry-tall-rows" style="width:100%; table-layout:auto;">
+  <thead>
+    <tr>
+      <th>Interface Type</th>
+      <th>Executive Question It Answers</th>
+      <th>Primary Users</th>
+      <th>Primary DRY Enabler</th>
+      <th>Secondary DRY Enabler</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Callable logic</strong></td>
+      <td>How do we prevent engineers from re-implementing the same logic?</td>
+      <td>Data Engineers, Analytics Engineers</td>
+      <td><strong>DRY in Code</strong></td>
+      <td><strong>DRY in Logic (if encoding business rules)</strong></td>
+    </tr>
+    <tr>
+      <td><strong>Queryable datasets</strong></td>
+      <td>What is the canonical dataset we expect teams to build on?</td>
+      <td>Analytics Engineers</td>
+      <td><strong>DRY in Logic</strong></td>
+      <td><strong>DRY in Materialization</strong></td>
+    </tr>
+    <tr>
+      <td><strong>Semantic contracts</strong></td>
+      <td>How do we ensure the organization agrees on meaning?</td>
+      <td>BI Developers, Analytics Engineers</td>
+      <td><strong>DRY in Semantics</strong></td>
+      <td><strong>DRY in Materialization (via materialized metrics)</strong></td>
+    </tr>
+  </tbody>
+</table>
 
 Across all artifact types, the goal is not to enforce a specific implementation pattern, but to ensure that reusable interfaces are governed and consistently consumed, preventing uncontrolled reimplementation across code, transformation logic, and semantic definitions. 
 
@@ -322,6 +352,7 @@ Across all artifact types, the goal is not to enforce a specific implementation 
 ### 3.2. Reuse-Interface Governance and Data Contracts: Complementary Disciplines
 
 Reuse-interface governance and data contracts operate on overlapping interface surfaces, but they protect different concerns. 
+
 - **Reuse-interface governance** protects reuse consistency: transformation logic, grain, business meaning, and semantic stability.
 - **Data contract** protects producer-consumer reliability: schema, freshness, availability, and other operational guarantees. 
 While modern data-contract specifications increasingly include semantic descriptors, contract enforcement focuses on producer-consumer interface stability rather than cross-team interpretation alignment, which remains a reuse-interface governance concern.
@@ -336,7 +367,7 @@ The detailed compatibility model and breaking-change reference are provided in t
 --- 
 
 ### 3.3. DRY Quality Attributes
-### How DRY Is Evaluated
+#### How DRY Is Evaluated
 **Model navigation map**<br> 
 <img src="assets-diagrams/dry-model-phases-I-quality-attributes.jpg" width="500"/>
 
@@ -470,7 +501,7 @@ Companion references provide the detailed evaluation vocabulary: [DRY Quality At
 --- 
 
 ### 3.4. DRY Maturity Levels
-### From Expected Capability to Operational Reality
+#### From Expected Capability to Operational Reality
 
 **Model navigation map**<br> 
 <img src="assets-diagrams/dry-model-phases-I-operational-maturity.jpg" width="500"/>
@@ -480,7 +511,7 @@ Maturity describes how reuse behaves operationally in practice, not which tools 
 No explicit weights are assigned to individual DRY Quality Attributes. Required Maturity Levels depend on the specific use case, for example building shared transformation modules across platforms makes portability a must-have attribute.
 
 #### Maturity Levels For DRY Quality Attributes
-<img src="assets-diagrams/maturity-levels.jpg" width="800"/>
+<img src="assets-diagrams/maturity-levels.jpg" width="775" class="align-left"/>
 
 #### Maturity Assessment Scope
 
@@ -599,8 +630,8 @@ Maturity results should be interpreted using the following rules:
     <col style="width:14%">
     <col style="width:20%">
     <col style="width:12%">
-    <col style="width:34%">
-    <col style="width:20%">
+    <col style="width:28%">
+    <col style="width:26%">
   </colgroup>
   <thead>
     <tr>
@@ -643,13 +674,13 @@ Maturity results should be interpreted using the following rules:
   </tbody>
 </table>
 
-### Output of the Evaluation Phase
+#### Output of the Evaluation Phase
 Structural gaps and platform priorities are the output of Phase I. They identify which reuse weaknesses require attention and where to invest first, such as missing lifecycle controls, weak discoverability, duplicated logic, insufficient semantic enforcement, or lack of consumption visibility
 
 --- 
 
 ## 4. The Data Platform DRY Model - Phase II: Operationalization
-## How to Measure and Enforce Reuse at Scale
+### How to Measure and Enforce Reuse at Scale
 
 A platform can support reuse by design and still fail to achieve it in practice.
 
@@ -669,7 +700,7 @@ Operationalization combines a control plane (artifact registry), enforcement mec
 --- 
 
 ### 4.1. The Missing Control Plane For Reuse Measurement
-### What exists and how it is used
+#### What exists and how it is used
 
 **Model navigation map**<br> 
 <img src="assets-diagrams/dry-model-phases-II-artifact-registry.jpg" width="500"/>
@@ -680,14 +711,11 @@ What is missing is a control plane that makes these artifacts visible, comparabl
 
 ### DRY Artifact Registry
 
-The DRY Artifact Registry is best treated as an advanced operating pattern for a reuse governance control plane. It is **a logical metadata index over existing platform components**, such as transformation frameworks, catalogs, lineage systems, and warehouse signals, not a new system category or universal system of record. It is *logical* because each artifact's identity is independent of its physical implementations. The registry is lightweight at its core - a thin deployed store with a publishing and observation API, but the work around it is not. The connectors, identity normalization, and attribution that feed it are real engineering. While these components are widely used individually, integrating them into a coherent reuse control plane is still an emerging practice and should be adopted incrementally as a reference architecture. Leading catalog and warehouse vendors are already converging toward governed metric and semantic-model registration, and frameworks such as dbt Mesh add governed model access and cross-project references for the queryable dataset interface. These advances each address a single interface or vendor. The Model generalizes across all three reuse interfaces: callable logic, queryable datasets, and semantic contracts - as **a vendor-neutral target architecture**.
+The DRY Artifact Registry is best treated as an advanced operating pattern for a reuse governance control plane: **a logical metadata index over existing code repositories and platform components**, such as transformation frameworks, catalogs, lineage systems, and warehouse signals. It is not a new system category or universal system of record. Each reusable artifact has a stable logical identity independent of its physical implementations, allowing the registry to link the same definition across warehouses, dialects, and layers, and enrich it with structural and behavioral signals.
 
-The DRY Artifact Registry tracks whether datasets, transformation logic, and semantic contracts represent canonical, governed definitions: which artifact is canonical for a concept, what its lifecycle state is, and who is bypassing it. **This sets it apart from adjacent tooling:**
+Existing platform tools govern parts of this problem: catalogs track data assets and lineage, semantic layers manage metrics, and frameworks such as dbt Mesh support governed transformation models and cross-project references. **The DRY Model generalizes beyond any single tool or interface, covering callable logic, queryable datasets, and semantic contracts as a vendor-neutral reuse architecture.**
 
-- Data observability platforms monitor data quality: anomalies, schema drift, freshness, and pipeline reliability - that is, whether shared datasets are operationally reliable.
-- Data catalogs answer what data exists, its lineage, and who owns it. The Registry treats them as a signal source and adds a reuse-governance overlay.
-
-At its core, the registry is a minimal reuse-control index. 
+At its core, the registry is a minimal reuse-control index that records which definitions are canonical, their lifecycle state, and where consumers reuse or bypass them. 
 **It stores only the information required to understand and control reuse:**
 
 - **Artifact Identity**: a stable, unique logical identifier (namespace, logical name, interface type, and version)
@@ -702,11 +730,18 @@ At its core, the registry is a minimal reuse-control index.
 - **Derived Structural Signals**: duplication candidates and dependency edges derived from structural analysis
 - **Observed Behavioral Signals**: identified consumer-to-artifact usage edges, plus adoption and bypass aggregates, derived from behavioral feeds
 
-**Each reusable artifact must have a stable logical identity independent of physical implementation**, because the same definition is often realized in multiple warehouses, dialects, or layers (e.g., a transformation model and its materialized table). The registry links that logical identity to those physical bindings across systems and enriches it with Derived Structural Signals and Observed Behavioral Signals, making reuse measurable across repositories, warehouse objects, and semantic layers. 
 
 <img src="assets-diagrams/dry-artifact-registry.jpg" width="900"/>
 
-*The Registry is a reuse-governance control plane, not a query-runtime component: it ingests design-time and observed runtime signals but never sits in the query-execution path. It is built on top of existing code repositories, data catalogs, and lineage systems, adding a thin dedicated store for the reuse-governance metadata they do not hold. Its implementation ranges from an `INDEX` file for a single repository to a small relational database and API for cross-repository use, with a vector store only for advanced similarity detection. It is an integration effort, not the purchase of a specific product.*
+
+#### Implementation guidance
+The registry is built on top of existing code repositories, data catalogs, and lineage systems, adding a thin dedicated store for the **reuse-governance metadata** they do not hold, with a publishing and observation API. Its implementation ranges from an `INDEX` file for a single repository to a small relational database and API for cross-repository use, with a vector store only for advanced similarity detection. It is an integration effort, not the purchase of a specific product.
+The connectors, identity normalization, and attribution that feed it are real engineering. **While these components are widely used individually, integrating them into a coherent reuse control plane is still an emerging practice** and should be adopted incrementally as a reference architecture. 
+
+#### What the registry is *not*
+- **Not a query-runtime component:** it ingests design-time and observed runtime signals, but **never sits in the query-execution path**
+- **Not a distribution mechanism:** it does not distribute code or data assets; it surfaces canonical dependencies, such as packages, shared schema objects, or semantic definitions, so developers can adopt them instead of re-implementing logic
+
 
 #### Registry operates through complementary mechanisms:
 
@@ -730,13 +765,11 @@ At its core, the registry is a minimal reuse-control index.
 3. **Observed Behavioral Signals**  
   Captured from warehouse query history, access metadata, audit logs, and semantic-layer telemetry to surface adoption patterns, bypass behavior, and actively used artifacts that were not intentionally registered. 
 
-Together, these mechanisms make reuse visible and measurable by connecting declared intent, implementation structure, and actual consumption.
-
-The raw feeds shown above (DAG and lineage exports, catalog exports, semantic telemetry, query logs) are processed, not copied. The registry keeps only derived facts keyed to each artifact's logical identity: dependency edges and bindings from structural feeds, and adoption and bypass signals from behavioral feeds.
+Together, these mechanisms make reuse visible and measurable by connecting declared intent, implementation structure, and actual consumption. Raw feeds (DAG and lineage exports, catalog exports, semantic telemetry, query logs) are processed, not copied: the registry stores only derived facts keyed to each artifact's logical identity.
 
 #### Sources for Reuse Observation
 
-<table>
+<table class="dry-icon-table">
   <thead>
     <tr>
       <th width="40%">Source</th>
@@ -763,7 +796,7 @@ The raw feeds shown above (DAG and lineage exports, catalog exports, semantic te
   </tbody>
 </table>
 
-**Data warehouse catalogs provide limited lineage and dependency information inferred from view definitions, UDFs, and system metadata. Available scope depends on the warehouse platform. Where OpenLineage is adopted, transformation frameworks such as dbt and SQLMesh expose lineage natively.*
+*\* Data warehouse catalogs provide limited lineage and dependency information inferred from view definitions, UDFs, and system metadata. Available scope depends on the warehouse platform. Where OpenLineage is adopted, transformation frameworks such as dbt and SQLMesh expose lineage natively.*
 
 This control plane shifts DRY from a best practice to a governable platform property by enabling:
 
@@ -785,13 +818,6 @@ Broad observation is best implemented through passive metadata harvesting from t
 
 In practice, the observation layer can start with scheduled ingestion of dbt or SQLMesh manifests, warehouse metadata crawlers, and OpenLineage events directly or through metadata catalogs such as DataHub or OpenMetadata. AI-assisted repository scanning can enrich this layer by extracting candidate callable logic, SQL transformations, semantic summaries, signatures, and similarity clusters from domain repositories. These agents should flag candidates for promotion review, not assign lifecycle state automatically.
 
-
-#### How Teams Actually Reuse Artifacts
-
-The DRY Artifact Registry does not distribute code; it surfaces canonical dependencies, such as a package, shared schema object, or semantic definition, so developers can adopt them instead of re-implementing the logic.
-
-Shared utilities are commonly distributed as versioned packages for dbt or SQLMesh projects, Spark clusters, and managed notebook environments. Reuse therefore occurs through dependency management rather than manual coordination between teams.
-
 Companion implementation references expand these operating patterns: [Artifact Registry Specification](https://github.com/michalpru/data-platform-dry-model/blob/main/model-docs/05-artifact-registry-spec.md)
 
 --- 
@@ -807,13 +833,68 @@ The DRY Artifact Registry does not perform compatibility validation itself. It r
 
 #### Lifecycle Progression and State Definitions
 
-| State | Structural Guarantees | Governance Obligations | Authoring-Time Signals | Build-Time Gates | Runtime Guardrails |
-| --- | --- | --- | --- | --- | --- |
-| Local | None | Team-owned | None | None | None |
-| Shared | Stable interface; declared reuse intent | Owner declared; logical identity and versioned surface | Registry-backed reuse candidates surfaced automatically; advisory only | Blocking lifecycle and compatibility checks; high-confidence direct duplicates require review or exception; inferred similarity routes to review | Access guidance toward governed interfaces |
-| Certified | Backward compatibility contract; impact analysis | Version policy enforced; change approval required | Registry-backed canonical resolution; high-confidence duplicates flagged at authoring time | Blocking lifecycle, compatibility, and impact-analysis gates; high-confidence direct duplicates require review or exception; inferred similarity routes to review | Access control enforced; consumption guardrails restrict incorrect usage patterns |
-| Deprecated | Existing version contract preserved during declared sunset window | Owner declares `deprecated_since`, registered replacement version, `removal_after`, and consumer migration path | Authoring tools warn on new references; migration target surfaced | New adoption blocked; open consumers flagged via registry consumer graph | Existing consumers receive migration signals; new consumption is guided to successor |
-| Retired | Immutable historical record and successor link retained | Owner confirms migration or approved exception closure | Authoring tools block new references | Build blocked on any new reference | Runtime use blocked except for approved archival access |
+<table style="width:100%; table-layout:fixed;">
+  <colgroup>
+    <col style="width:12%">
+    <col style="width:17%">
+    <col style="width:17%">
+    <col style="width:18%">
+    <col style="width:22%">
+    <col style="width:14%">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>State</th>
+      <th>Structural Guarantees</th>
+      <th>Governance Obligations</th>
+      <th>Authoring-Time Signals</th>
+      <th>Build-Time Gates</th>
+      <th>Runtime Guardrails</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr style="height: 3.2rem;">
+      <td><strong>Local</strong></td>
+      <td>None</td>
+      <td>Team-owned</td>
+      <td>None</td>
+      <td>None</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <td><strong>Shared</strong></td>
+      <td>Stable interface; declared reuse intent</td>
+      <td>Owner declared; logical identity and versioned surface</td>
+      <td>Registry-backed reuse candidates surfaced automatically; advisory only</td>
+      <td>Blocking lifecycle and compatibility checks; high-confidence direct duplicates require review or exception; inferred similarity routes to review</td>
+      <td>Access guidance toward governed interfaces</td>
+    </tr>
+    <tr>
+      <td><strong>Certified</strong></td>
+      <td>Backward compatibility contract; impact analysis</td>
+      <td>Version policy enforced; change approval required</td>
+      <td>Registry-backed canonical resolution; high-confidence duplicates flagged at authoring time</td>
+      <td>Blocking lifecycle, compatibility, and impact-analysis gates; high-confidence direct duplicates require review or exception; inferred similarity routes to review</td>
+      <td>Access control enforced; consumption guardrails restrict incorrect usage patterns</td>
+    </tr>
+    <tr>
+      <td><strong>Deprecated</strong></td>
+      <td>Existing version contract preserved during declared sunset window</td>
+      <td>Owner declares <code>deprecated_since</code>, registered replacement version, <code>removal_after</code>, and consumer migration path</td>
+      <td>Authoring tools warn on new references; migration target surfaced</td>
+      <td>New adoption blocked; open consumers flagged via registry consumer graph</td>
+      <td>Existing consumers receive migration signals; new consumption is guided to successor</td>
+    </tr>
+    <tr>
+      <td><strong>Retired</strong></td>
+      <td>Immutable historical record and successor link retained</td>
+      <td>Owner confirms migration or approved exception closure</td>
+      <td>Authoring tools block new references</td>
+      <td>Build blocked on any new reference</td>
+      <td>Runtime use blocked except for approved archival access</td>
+    </tr>
+  </tbody>
+</table>
 
 **Lifecycle promotion criteria** require each reusable interface to be defined in a structured form, such as a function signature, schema, or semantic definition. Incompatible interface changes trigger version increments, while dependency and lineage metadata must be published and resolvable for impact analysis. Business-critical assets should be classified for certification before being treated as platform contracts.
 
@@ -862,15 +943,17 @@ Build-time enforcement applies only to artifacts declared as shared or certified
 - **Duplication signals** including high-confidence direct matches, do not block promotion by themselves; they route artifacts to required human review or exception approval, and promotion is blocked only when required review evidence or exception rationale is missing. This distinction is typically implemented through lightweight artifact classification, such as configuration files or directory conventions.
 
 #### Enforcing Compatibility and Versioning
-One of the primary barriers to DRY enforcement in enterprise environments is the fear of breaking downstream consumers. Without explicit compatibility governance, teams tend to bypass canonical artifacts to avoid unintended change propagation. Promotion gates must therefore enforce explicit compatibility contracts. Where lineage resolution is available, downstream impact can be evaluated before promotion. 
+One of the primary barriers to DRY enforcement in enterprise environments is the fear of **breaking downstream consumers**. Without explicit compatibility governance, teams tend to bypass canonical artifacts to avoid unintended change propagation. Promotion gates must therefore enforce explicit compatibility contracts. Where lineage resolution is available, downstream impact can be evaluated before promotion. 
 
 Version scopes (e.g., `shared.transforms.orders.completed_orders.v1`) define whether a change is backward-compatible or breaking. Breaking changes require adoption of a new version.
 
-Reuse artifact versioning should be distinguished from data contract versioning. Reuse versioning governs the semantic stability of a shared artifact (including transformation logic, grain, and business interpretation), not just its structural interface. Data contract versioning governs the producer-consumer interface, including schema compatibility, reliability expectations, and formal service commitments. A schema-preserving change that alters transformation logic or grain is compatible under a data contract but breaking under reuse versioning; the two version scopes should not be treated as interchangeable.
+Reuse artifact versioning should be distinguished from data contract versioning. **Reuse versioning governs the semantic stability of a shared artifact (including transformation logic, grain, and business interpretation), not just its structural interface.** Data contract versioning governs the producer-consumer interface, including schema compatibility, reliability expectations, and formal service commitments. A schema-preserving change that alters transformation logic or grain is compatible under a data contract but breaking under reuse versioning; the two version scopes should not be treated as interchangeable.
 
 #### 4.3.3. Duplication Prevention and Detection
 
-**Duplication Detection and Prevention Techniques** *(all detection signals route to review or exception approval and never block promotion by themselves)*
+**Duplication Detection and Prevention Techniques** 
+*All detection signals route to review or exception approval and never block promotion by themselves*
+
 | Technique | Stage | Type | Confidence | Enforcement Role |
 | --- | --- | --- | --- | --- |
 | AI workspace similarity search (code repositories available to the assistant) | Authoring time | Detection | Low–Medium | Informative only; no enforcement gate |
@@ -945,13 +1028,47 @@ Making DRY observable requires measurement at two complementary levels:
 
 With the measurement foundation in place, teams assess **portfolio-level structural balance** by examining how reusable artifacts are distributed across DRY layers and interfaces.
 
-| Indicator | What It Measures | Primary Signal Source |
-| --- | --- | --- |
-| Certified asset count by layer and interface | How many artifacts are governed or certified across layers and interfaces. Team-level counts make shared-asset contributions visible and create organizational incentives | Artifact registry |
-| Structural reuse concentration | Percentage of downstream dependencies served by the top N certified assets | Registry plus lineage dependency graph |
-| Similarity cluster count by DRY layer | Number of artifact groups per DRY layer where structural fingerprinting detects high similarity, flagging candidates for consolidation or canonical promotion | Registry structural fingerprints plus lineage |
-| Cross-layer propagation gap | Certified upstream datasets are reused in ETL/ELT but not exposed through corresponding governed downstream interfaces | Registry plus lineage dependency graph |
-| Ungoverned parallel definition count | Number of observed artifacts implementing the same concept outside governed paths | Registry observation plus structural similarity signals |
+<table style="width:100%; table-layout:fixed;">
+  <colgroup>
+    <col style="width:27%">
+    <col style="width:46%">
+    <col style="width:27%">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>Indicator</th>
+      <th>What It Measures</th>
+      <th>Primary Signal Source</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Certified asset count by layer and interface</td>
+      <td>How many artifacts are governed or certified across layers and interfaces. Team-level counts make shared-asset contributions visible and create organizational incentives</td>
+      <td>Artifact registry</td>
+    </tr>
+    <tr>
+      <td>Structural reuse concentration</td>
+      <td>Percentage of downstream dependencies served by the top N certified assets</td>
+      <td>Registry plus lineage dependency graph</td>
+    </tr>
+    <tr>
+      <td>Similarity cluster count by DRY layer</td>
+      <td>Number of artifact groups per DRY layer where structural fingerprinting detects high similarity, flagging candidates for consolidation or canonical promotion</td>
+      <td>Registry structural fingerprints plus lineage</td>
+    </tr>
+    <tr>
+      <td>Cross-layer propagation gap</td>
+      <td>Certified upstream datasets are reused in ETL/ELT but not exposed through corresponding governed downstream interfaces</td>
+      <td>Registry plus lineage dependency graph</td>
+    </tr>
+    <tr>
+      <td>Ungoverned parallel definition count</td>
+      <td>Number of observed artifacts implementing the same concept outside governed paths</td>
+      <td>Registry observation plus structural similarity signals</td>
+    </tr>
+  </tbody>
+</table>
 
 Interpreting these indicators requires moving from measurement signals to reuse diagnosis:
 
@@ -966,11 +1083,37 @@ A well-balanced DRY portfolio does not guarantee adoption, because consumers may
 
 Adoption is typically inferred rather than explicitly registered. Measurement therefore combines consumption-time signals from **semantic runtime telemetry, attributed warehouse query logs, and BI metadata APIs** to determine whether consumers use governed interfaces or bypass them through custom SQL, dashboard-local calculations, or parallel datasets. Semantic telemetry provides the strongest signal when consumption passes through a semantic layer, while attributed query logs and BI metadata help detect usage outside the semantic layer. Because attribution quality varies by tagging, service identity, and dashboard ownership metadata, adoption metrics should report coverage alongside adoption rates.
 
-| Indicator | What It Measures | Primary Signal Source |
-| --- | --- | --- |
-| Governed interface adoption rate | Percentage of attributed production consumption that uses certified semantic definitions, canonical datasets, or other controlled interfaces | Registry plus semantic runtime telemetry, BI metadata APIs, or attributed warehouse query logs |
-| Consumer coverage rate | Percentage of in-scope consumer groups, dashboards, applications, or workloads with enough attribution metadata to classify governed versus non-governed consumption | Service identities, workload tags, BI ownership metadata, and warehouse query logs |
-| Bypass pattern distribution | Breakdown of attributed non-governed consumption by consumer group, tool, and bypass pattern, such as custom SQL, dashboard-local calculations, or parallel datasets. | Registry comparison plus BI metadata APIs and warehouse query logs |
+<table style="width:100%; table-layout:fixed;">
+  <colgroup>
+    <col style="width:27%">
+    <col style="width:46%">
+    <col style="width:27%">
+  </colgroup>
+  <thead>
+    <tr>
+      <th>Indicator</th>
+      <th>What It Measures</th>
+      <th>Primary Signal Source</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Governed interface adoption rate</td>
+      <td>Percentage of attributed production consumption that uses certified semantic definitions, canonical datasets, or other controlled interfaces</td>
+      <td>Registry plus semantic runtime telemetry, BI metadata APIs, or attributed warehouse query logs</td>
+    </tr>
+    <tr>
+      <td>Consumer coverage rate</td>
+      <td>Percentage of in-scope consumer groups, dashboards, applications, or workloads with enough attribution metadata to classify governed versus non-governed consumption</td>
+      <td>Service identities, workload tags, BI ownership metadata, and warehouse query logs</td>
+    </tr>
+    <tr>
+      <td>Bypass pattern distribution</td>
+      <td>Breakdown of attributed non-governed consumption by consumer group, tool, and bypass pattern, such as custom SQL, dashboard-local calculations, or parallel datasets.</td>
+      <td>Registry comparison plus BI metadata APIs and warehouse query logs</td>
+    </tr>
+  </tbody>
+</table>
 
 Behavioral adoption measurement should follow structural visibility: first identify governed and parallel artifacts, then measure whether production consumption uses the governed interfaces or bypasses them.
 
@@ -1009,9 +1152,9 @@ DRY governance should be introduced incrementally, demonstrating the value of sh
 
 The governing principle across all three stages: make reuse visible before making it mandatory. At every stage, ask whether reuse is visibly easier than duplication for the teams doing the work. If not, the next investment is in discoverability, lifecycle guarantees, or tooling, not in tightening controls.
 
---- 
+<hr class="section-major">
 
-### When Duplication Is Justified
+## When Duplication Is Justified
 
 Not all duplication reflects a failure of reuse. Legitimate plurality takes two forms: multiple valid *definitions* of the same business concept across domains or analytical contexts, and multiple *materializations or implementations* of a single canonical definition. The goal of DRY is not to enforce one global definition or one physical asset, but to ensure each definition or code utility is explicit, governed, and reused within its intended scope. Effective platforms distinguish uncontrolled duplication from intentional plurality, where the alternative definitions or materializations are clearly named, owned, and contextually bounded.
 
@@ -1025,44 +1168,50 @@ Common categories of justified duplication include:
 
 In each case, the governance obligation is the same: the duplication is named, owned, and registered at its intended scope with explicit rationale. How it is registered depends on what is duplicated: duplicated definitions (domain-local scope, regulatory divergence) register as separate governed artifacts with bounded scope; alternative materializations or implementations of one definition (performance materialization, tool-bound consumption) register as Implementation Bindings of one canonical artifact. Undocumented parallel implementations are uncontrolled duplication regardless of their origin. The distinction is not whether duplication exists, but whether it is visible and intentional.
 
---- 
+<hr class="section-major">
 
-### Model Applicability
+## Model Applicability
 The Data Platform DRY Model is:
 
 - **Topology-neutral**: it can be applied to a centralized platform, a federated domain ownership model, or a domain-oriented data product topology. In federated and domain-oriented environments, Quality Attributes and Maturity Levels should be assessed at the relevant ownership boundary: per domain and per shared platform capability. The Model does not require central ownership of every reusable artifact.
 - **Execution-mode neutral**: reusable logic and semantic definitions may be implemented in batch pipelines, streaming pipelines, or hybrid architectures. The model focuses on reuse interfaces and reuse governance, not the processing mode.
 
---- 
+<hr class="section-major">
 
-### Contribution
-Many elements of the Data Platform DRY Model, such as consumption interfaces, data contracts, lifecycle management, metadata cataloging, CI/CD controls, access governance, and usage telemetry are **general data-platform architecture concerns**, applicable beyond reuse. The contribution is in applying these mechanisms **through a reuse-governance lens**: **assembling and adapting them into a coherent framework** for making reuse failure visible, assessable, and enforceable at scale.
+## Contribution
+Many elements of the Data Platform DRY Model, such as consumption interfaces, data contracts, lifecycle management, metadata cataloging, CI/CD controls, access governance, and usage telemetry are **general data-platform architecture concerns**, applicable beyond reuse. The contribution is in applying these mechanisms through a reuse-governance lens: **assembling and adapting them into a coherent framework** for making reuse failure visible, assessable, and enforceable at scale.
 
 The prerequisites and known challenges for these mechanisms are documented in [Known implementation risks and open questions](https://github.com/michalpru/data-platform-dry-model/blob/main/model-docs/00-overview.md#known-implementation-risks-and-open-questions).
 
---- 
+<hr class="section-major">
 
 ## Summary and Practical Applications
 
 The goal is not to eliminate all duplication. The goal is to make divergence intentional, visible, and economically rational. DRY does not fail because teams lack discipline or modern tools. It fails because reuse is rarely treated as a structural property of the platform.
 
 The Data Platform DRY Model provides the things practitioners consistently lack:
-- The 13 DRY Quality Attributes and M0–M3 Maturity Levels give a common language for assessing reuse - making it possible to compare platforms, identify bottlenecks, and define target states without relying on intuition.
-- The DRY Artifact Registry makes reuse visible for the first time: what reusable artifacts exist, who owns them, where they are bypassed, and where duplication has accumulated. The registry observes broadly; it enforces narrowly.
-- Lifecycle governance and CI/CD enforcement close the loop: turning visibility into accountability and making reuse the default path rather than the exception.
 
-**Common practical applications include**:
-- Platform and tool evaluation: score an existing platform (or a candidate data warehouse, transformation framework, or semantic layer) against the Quality Attributes and their Maturity Levels.
-- Operationalizing reuse governance: establish the operating model for reuse (defined ownership, lifecycle states, and enforcement policy), making reuse a governed discipline of the platform.
-- AI-assisted authoring: expose the DRY Artifact Registry as a context source to AI coding assistants, so discovering a canonical artifact is easier than re-implementing one, moving reuse enforcement upstream to authoring time.
-- Duplication detection in CI/CD: shift it from post-hoc review to a build-time platform property.
-- Reuse measurement baseline: establish structural and behavioral reuse metrics across layers and interfaces, turning "we have a canonical definition" into "we can prove it is actually used" and making cost reductions visible to leadership.
+- The **13 DRY Quality Attributes and M0–M3 Maturity Levels** give a common language for assessing reuse - making it possible to compare platforms, identify bottlenecks, and define target states without relying on intuition.
+- The **DRY Artifact Registry** makes reuse visible for the first time: what reusable artifacts exist, who owns them, where they are bypassed, and where duplication has accumulated. The registry observes broadly; it enforces narrowly.
+- **Lifecycle governance and CI/CD enforcement** close the loop: turning visibility into accountability and making reuse the default path rather than the exception.
 
-The model applies whether you are building a new platform, governing an existing one, or evaluating how a specific tool fits into your reuse architecture.
+Common practical applications include:
+
+- Platform and tool evaluation: **score an existing platform** (or a candidate data warehouse, transformation framework, or semantic layer) against the Quality Attributes and their Maturity Levels.
+- Operationalizing reuse governance: **establish the operating model for reuse** (defined ownership, lifecycle states, and enforcement policy), making reuse a governed discipline of the platform.
+- **AI-assisted authoring**: expose the DRY Artifact Registry as a context source to AI coding assistants, so discovering a canonical artifact is easier than re-implementing one, moving reuse enforcement upstream to authoring time.
+- **Duplication detection in CI/CD**: shift it from post-hoc review to a build-time platform property.
+- Reuse measurement baseline: **establish structural and behavioral reuse metrics** across layers and interfaces, turning "we have a canonical definition" into "we can prove it is actually used" and making cost reductions visible to leadership.
+
+**The model applies whether you are building a new platform, governing an existing one, or evaluating how a specific tool fits into your reuse architecture.**
 
 Implemented pragmatically, DRY stops being a coordination tax and becomes a structural advantage: changes propagate safely, semantics remain consistent, and data platforms scale without proportional increases in cost or complexity.
 
 ---
 
 *Author's note: This publication reflects my independent professional perspective. It is not written on behalf of, endorsed by, or based on the internal architecture of any current or former employer, client, or vendor. Scenarios, diagrams, and reference architectures are illustrative and should not be interpreted as describing a specific company's implementation. All text and diagrams in this publication are my own original work.*
+
+**Michal Pruszynski** · [LinkedIn](https://www.linkedin.com/in/michal-p-555b5749) · [Medium](https://medium.com/@pruszynski.michal)
+
+© 2026 · [Source](https://github.com/michalpru/data-platform-dry-model) · [License](https://github.com/michalpru/data-platform-dry-model/blob/main/LICENSE)
 
