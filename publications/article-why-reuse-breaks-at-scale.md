@@ -2,7 +2,7 @@
 
 *DRY is not only a coding principle. How duplicated logic, fragmented semantics, and uncontrolled materialization reveal that an operating model is missing.*
 
-*Version 1.0.0 · July 2026*
+*Version 1.0.1 · July 2026*
 
 The term "DRY", *Don't Repeat Yourself*, is a familiar principle in software development, where it primarily applies to code reuse. In data analytics platforms, DRY has a broader strategic role, often determining whether a platform succeeds or fails. That broader role is **a deliberate extension of DRY**, a unifying lens for reuse across data platform surfaces that code-level DRY does not address: **business logic, semantics, and physical materialization**. The extension is not a redefinition of DRY; it applies the same structural discipline: define once, reuse everywhere, change in one place.
 
