@@ -7,7 +7,7 @@ on:
       - publications/**
       - index.qmd
       - _quarto.yml
-      - theme.scss
+      - site-assets/**
       - .github/workflows/pages.yml
   workflow_dispatch:
 
