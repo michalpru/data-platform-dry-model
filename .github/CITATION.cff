@@ -9,8 +9,8 @@ type: report
 authors:
   - family-names: Pruszynski
     given-names: Michal
-version: "1.0.0"
-date-released: "2026-06-01"
+version: "1.0.1"
+date-released: "2026-07-03"
 url: "https://michalpru.github.io/data-platform-dry-model/"
 repository-code: "https://github.com/michalpru/data-platform-dry-model"
 license: CC-BY-4.0

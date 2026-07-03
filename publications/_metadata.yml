@@ -5,4 +5,4 @@
 pagetitle: "The Data Platform DRY Model"
 description-meta: "A structured model for evaluating and operationalizing reuse across the four layers of a data analytics platform — code, logic, semantics, and materialization — to eliminate duplication and semantic drift at scale."
 author-meta: "Michal Pruszynski"
-date-meta: "2026-06-01"
+date-meta: "2026-07-03"
