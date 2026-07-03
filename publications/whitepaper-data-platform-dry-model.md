@@ -829,7 +829,7 @@ Companion implementation references expand these operating patterns: [Artifact R
 **Model navigation map**<br> 
 <img src="assets-diagrams/dry-model-phases-II-lifecycle-governance.jpg" width="500"/>
 
-Compatibility reflects whether an artifact can evolve without breaking its consumers. At platform scale, lifecycle turns that compatibility expectation into an enforceable policy: it defines which artifacts may change freely, which expose stable reuse interfaces, which operate as platform contracts, and how consumers are migrated before retirement.
+Compatibility reflects **whether an artifact can evolve without breaking its consumers**. At platform scale, lifecycle turns that compatibility expectation into an enforceable policy: it defines which artifacts may change freely, which expose stable reuse interfaces, which operate as platform contracts, and how consumers are migrated before retirement.
 
 The DRY Artifact Registry does not perform compatibility validation itself. It records the metadata needed to determine which contracts, dependency checks, CI/CD gates, approvals, and runtime guardrails apply to each lifecycle state. Without those structural controls, labels such as "certified" or "canonical" remain descriptive rather than dependable.
 
