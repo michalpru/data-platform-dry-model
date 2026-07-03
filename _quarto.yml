@@ -12,7 +12,7 @@ website:
   description: "Evaluating and Operationalizing Reuse at Scale"
   site-url: https://michalpru.github.io/data-platform-dry-model/
   repo-url: https://github.com/michalpru/data-platform-dry-model
-  favicon: favicon.svg
+  favicon: site-assets/favicon.svg
   open-graph: true
   twitter-card: true
   navbar:
@@ -30,9 +30,9 @@ format:
   html:
     theme:
       - cosmo
-      - theme.scss
+      - site-assets/theme.scss
     css:
-      - fonts/public-sans.css
+      - site-assets/fonts/public-sans.css
     include-in-header:
       text: |
         <meta property="og:type" content="article">

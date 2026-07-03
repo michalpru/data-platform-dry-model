@@ -1,5 +1,22 @@
 # Quarto build output
 /_site/
 /.quarto/
+/index_files/
 
+# Quarto / Jupyter intermediates
 **/*.quarto_ipynb
+**/.ipynb_checkpoints/
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+*~
+*.swp
+*.tmp
+*.log
+
+# Local editor settings
+.vscode/
+.idea/
