@@ -2,14 +2,12 @@
 
 ## Order Completion Example Across The DRY Layers
 
-### Consider a simple recurring example determining when an order is "completed." The specific language or framework is irrelevant here. What matters is that at the organizational level, this is how the same concept often gets encoded differently across teams.
+**The specific language or framework is irrelevant here. What matters is that at the organizational level, this is how the same concept often gets encoded differently across teams.**
 
 
 #### DRY in Code: Reusable Technical Utilities (Necessary, Not Sufficient)
 
 This addresses the most familiar form of duplication: avoiding copy-pasted boilerplate logic and repeated technical patterns across pipelines and queries.
-
-![DRY in Code In Data Platform View](../publications/assets-diagrams/dry-in-code-platform-view.jpg)
 
 The following PySpark helper illustrates this technical reuse pattern. All PySpark examples below assume `from pyspark.sql import functions as F`.
 
@@ -34,9 +32,6 @@ The code is technically DRY: if enforced, no one is rewriting the flag logic. It
 **Where Business Rule Duplication Shrinks**
 
 DRY in Data Transformation Logic moves **one level up** the abstraction stack. This is where reuse starts to affect data correctness and consistency across teams. Instead of reusing generic helpers, it **centralizes business-specific transformations** that define canonical datasets or attributes.
-
-#### DRY in Logic: Centralizing Canonical Rules
-![DRY in Logic In Data Platform View](../publications/assets-diagrams/dry-in-logic-platform-view.jpg)
 
 In our example, rather than allowing each pipeline to define 'completed order,' the rule is encoded once as a shared transformation. This is essential for building governed data products. 
 
@@ -90,9 +85,6 @@ The root cause is simple: **neither a function nor a view is a metric**. One tea
 
 Even with perfect DRY in Logic, teams still disagree on numbers. The semantic contract removes this ambiguity: it makes the definition of a metric explicit and governed, so the aggregation function, filter population, grain, and time dimension are declared once and enforced consistently at query time.
 
-#### DRY in Semantics: Enforcing Consistent Meaning of Data
-![DRY in Semantics In Data Platform View](../publications/assets-diagrams/dry-in-semantics-platform-view.jpg)
-
 Organizations achieve DRY in Semantics by centralizing interpretation, most commonly through a semantic layer, or alternatively through strongly governed metric definitions embedded in canonical data products.
 
 A semantic layer allows embedding business meaning as governed, discoverable objects, instead of embedding meaning in views or functions:
@@ -128,4 +120,3 @@ A dedicated semantic layer is not the only way to achieve semantic consistency. 
 ---
 
 For patterns covering artifact registry manifests, CI/CD promotion gates, and behavioral telemetry, see the [DRY reference repository](../dry-reference-repository/README.md) and [templates](../templates/README.md).
-
