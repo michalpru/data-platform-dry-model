@@ -2,7 +2,7 @@
 
 ## Order Completion Example Across The DRY Layers
 
-**Consider a simple recurring example determining when an order is "completed." The specific language or framework is irrelevant here. What matters is that at the organizational level, this is how the same concept often gets encoded differently across teams.**
+**The specific language or framework is irrelevant here. What matters is that at the organizational level, this is how the same concept often gets encoded differently across teams.**
 
 
 #### DRY in Code: Reusable Technical Utilities (Necessary, Not Sufficient)

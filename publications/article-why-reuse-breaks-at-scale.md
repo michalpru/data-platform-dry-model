@@ -285,13 +285,11 @@ A critical governance gap often emerges at the foundation of the DRY Dependency 
 ### DRY Operating Model
 ![DRY Operating Model](assets-diagrams/dry-operating-model.jpg)
 
-The operating model separates four responsibilities: stewardship, implementation, platform operationalization, and organizational governance. Stewardship defines who is accountable for reusable assets over time, while implementation defines who builds and operates them across the DRY layers.
-
-Implementation ownership may be centralized, federated, or domain-oriented. Regardless of topology, platform operationalization is still needed to build reusable foundations and make reuse visible, measurable, and enforceable; organizational governance is still needed to coordinate lifecycle, compatibility, semantics, and reuse policies.
-
-Platform or Data Engineering Teams operationalize DRY across all reuse layers by building reusable foundations and making reuse discoverable, measurable, and enforceable through shared platform capabilities.
-
-At the organizational level, Data Architecture or Governance Councils govern the reuse operating model itself, defining the policies, standards, and accountability structures that coordinate reuse across teams and domains.
+The operating model separates four responsibilities:
+- **Stewardship**: defines who is accountable for reusable assets over time, including quality, lifecycle, and change management
+- **Implementation**: defines who builds, maintains, and operates reusable assets across the DRY layers. Implementation ownership may be centralized, federated, or domain-oriented
+- **Platform operationalization**: provides foundations and shared capabilities that make reuse discoverable, measurable, and enforceable 
+- **Organizational governance**: defines the policies, standards, and accountability structures through which the organization coordinates across teams and domains
 
 One effective pattern observed in practice is an **InnerSource** (internal open-source) **operating model**, where shared artifacts are centrally governed but openly contributed to. Platform or Data Engineering Teams steward repositories and documentation, approve contributions, and manage compatibility and versioning. This enables safe reuse and encourages analytics engineering teams to depend on shared packages rather than duplicating logic locally.
 
@@ -366,16 +364,18 @@ DRY requires explicit design strategy, operating models, clear contracts, owners
 - Accept that reuse cannot be governed by convention alone: if shared assets are hard to find, inconvenient to use, or easy to bypass, teams will re-implement logic by default. 
 - Define a data materialization strategy that reuses existing physical copies before creating new ones and traces each materialization to a canonical definition; DRY is about controlled materialization, not about never materializing data.
 
-If you are unsure whether DRY failures are limiting your platform today, consider these questions:
+**If you are unsure whether DRY failures are limiting your platform today, consider these questions:**
 - What structurally prevents teams from re-implementing the same business rules across pipelines, notebooks, and dashboards?
 - What is the actual adoption level of your governed, certified datasets and metrics, and how is that measured?
 - When numbers disagree, can you trace the exact logic and semantics behind them, or does reconciliation rely on tribal knowledge?
 
 If these questions are difficult to answer, the cost is already being paid: in rework, delayed decisions, and eroded confidence in data.
 
-**Reuse in data platforms does not emerge organically, but it must be designed and enforced.**
+To move beyond intent and best practices, leaders and architects need a structural approach to evaluating, measuring, and enforcing reuse at scale.
 
-To move beyond intent and best practices, leaders and architects need a structural approach for evaluating, measuring, and enforcing reuse at scale. The **[Data Platform DRY Model](whitepaper-data-platform-dry-model.md)** provides this: a reference for evaluating reuse with quality attributes, scoring it with operational maturity levels, and enforcing it through lifecycle governance, CI/CD controls, and an artifact registry.
+To take that next step, explore the **Data Platform DRY Model** — a practical framework for **evaluating reuse** with quality attributes, scoring it through operational maturity levels, and **enforcing it** with an artifact registry and CI/CD controls.
+
+👉 Read the whitepaper: [The Data Platform DRY Model](https://michalpru.github.io/data-platform-dry-model/)
 
 ---
 
