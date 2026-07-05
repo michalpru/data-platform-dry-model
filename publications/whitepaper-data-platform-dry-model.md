@@ -26,7 +26,7 @@ Reuse in data platforms operates across four distinct layers. Lower layers enabl
 
 *DRY layers represent reuse surfaces, not execution order.*
 
-The strategic context for these layers: why reuse breaks organizationally, how failure patterns manifest, and what operating models sustain reuse at scale, is covered in the companion article on Medium: "Why Reuse Breaks at Scale in Data Platforms" 
+The strategic context for these layers: why reuse breaks organizationally, how failure patterns manifest, and what operating models sustain reuse at scale, is covered in the companion article on Medium: ["Why Reuse Breaks at Scale in Data Platforms"](https://medium.com/@pruszynski.michal/why-reuse-breaks-at-scale-in-data-platforms-9b2d02d5926d) 
 
 However, understanding failure modes is not enough. To design and govern reuse, we need a more operational lens that allows us to evaluate concrete platform decisions.
 
