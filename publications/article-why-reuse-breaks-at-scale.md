@@ -113,7 +113,7 @@ Each surface is implemented through different platform artifacts, consumed by di
 | **Semantics**   | Meaning & aggregation logic                | Metrics / KPIs drift                            |
 | **Materialization *(Physical Data Assets)*** | Physical tables, files, materialized views | Uncontrolled duplication of physical outputs; rising cost, ambiguous canonical dataset |
 
-When we say duplication appears across code, logic, or semantics, all of these components are **ultimately implemented as code**, however they occur at **different layers of abstraction**. They are reuse surfaces, not data-state stages: medallion (bronze/silver/gold) and staging/intermediate/mart progressions describe how data matures; DRY layers describe what is reused.
+When we say duplication appears across code, logic, or semantics, all of these components are **ultimately implemented as code**, however they occur at **different layers of abstraction**. They are reuse surfaces, not data-state stages: medallion (bronze/silver/gold) progressions describe how data matures; DRY layers describe what is reused.
 
 Materialization is a different reuse surface: it governs **reusing an existing physical copy at the grain, or refresh frequency a consumer needs, instead of rebuilding it**, while keeping every copy traced to a single canonical source.
 
@@ -287,9 +287,9 @@ A critical governance gap often emerges at the foundation of the DRY Dependency 
 
 The operating model separates four responsibilities:
 - **Stewardship**: defines who is accountable for reusable assets over time, including quality, lifecycle, and change management
-- **Implementation**: defines who builds, maintains, and operates reusable assets across the DRY layers. Implementation ownership may be centralized, federated, or domain-oriented
+- **Implementation**: defines who builds, maintains, and operates reusable assets. Implementation ownership may be centralized, federated, or domain-oriented
 - **Platform operationalization**: provides foundations and shared capabilities that make reuse discoverable, measurable, and enforceable 
-- **Organizational governance**: defines the policies, standards, and accountability structures through which the organization coordinates across teams and domains
+- **Organizational governance**: defines the policies, standards, and accountability structures through which the organization coordinates reuse across teams and domains
 
 One effective pattern observed in practice is an **InnerSource** (internal open-source) **operating model**, where shared artifacts are centrally governed but openly contributed to. Platform or Data Engineering Teams steward repositories and documentation, approve contributions, and manage compatibility and versioning. This enables safe reuse and encourages analytics engineering teams to depend on shared packages rather than duplicating logic locally.
 
@@ -301,7 +301,7 @@ Contracts may include semantic descriptors, but by themselves they usually do no
 The risk appears when multiple domains independently define the same shared concept. In that case, **reconciliation still surfaces unless cross-domain interoperability rules govern shared logic and meaning**. DRY in Code remains a platform concern: generic technical utilities should still be provided once and reused across domains.
 
 
-Most enterprise organizations ultimately combine centralized, federated, and domain-oriented responsibilities across different reuse layers and platform capabilities. The purpose of the DRY Operating Model is not to prescribe a single organizational structure, but to show how stewardship, implementation, operationalization, and governance evolve across different operating models and reuse layers.
+Most enterprise organizations ultimately combine centralized, federated, and domain-oriented responsibilities across different reuse layers and platform capabilities. The purpose of the DRY Operating Model is not to prescribe a single organizational structure, but to show how stewardship, implementation, operationalization, and governance evolve across different organizational structures and reuse layers.
 
 
 ### 6.2. What Organizations Build to Sustain Reuse
@@ -339,7 +339,7 @@ Sustaining DRY at scale requires alignment between platform and data engineering
 ### AI Authoring Capabilities Cut Both Ways
 AI coding assistants, such as GitHub Copilot, Cursor, and emerging MCP-enabled tooling, have changed the economics of duplication in data platforms, and the direction depends on what reuse context those tools can see.
 
-Without reuse context, AI assistants are a duplication amplifier. They generate plausible SQL and Python transformations from local file context alone, with no awareness that a canonical model or metric may already exist elsewhere in the organization. That makes reimplementation easier than discovery. CI/CD gates still matter, but they act later in the lifecycle, after the logic has already been written.
+Without reuse context, AI assistants are a duplication amplifier. They generate plausible SQL and Python transformations from local context alone, with no awareness that a canonical model or metric may already exist elsewhere in the organization. That makes reimplementation easier than discovery. CI/CD gates still matter, but they act later in the lifecycle, after the logic has already been written.
 
 The same tools become a reuse accelerator when the platform surfaces *governed* canonical definitions (not just similar implementations of uncertain authority) directly in the authoring environment, so the assistant steers developers toward referencing the certified artifact rather than recreating it.
 
