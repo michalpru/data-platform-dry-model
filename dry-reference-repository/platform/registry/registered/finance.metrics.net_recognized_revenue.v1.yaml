@@ -33,6 +33,10 @@ spec:
     note: >
       Any change that alters historical metric values is breaking.
       Requires v2 with a CDO-acknowledged deprecation window for v1.
+  # Declared Dependencies: the semantic model / dataset this metric is defined on.
+  dependencies:
+    - fqn: finance.reporting.revenue_events.v1
+      relationship: defined_on_dataset
   knownConsumers:
     - fqn: enterprise.metrics.active_customer.v1
       relationship: co-reported_in_executive_dashboards

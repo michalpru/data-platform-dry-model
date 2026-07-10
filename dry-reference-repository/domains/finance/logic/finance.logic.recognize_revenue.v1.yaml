@@ -1,0 +1,63 @@
+# Source manifest (declaration layer) — finance-owned callable logic.
+# Declared in the finance domain repo; CI promotes it to
+# platform/registry/registered/finance.logic.recognize_revenue.v1.yaml on merge.
+
+apiVersion: dry.platform/v1
+kind: ReusableLogic
+metadata:
+  fqn: finance.logic.recognize_revenue.v1
+  title: Recognize Revenue
+  description: >
+    Canonical revenue-recognition rule for the Finance domain: orders->invoices mapping
+    plus the netting rule (gross minus refunds and credit notes). Currency-agnostic;
+    reporting-currency conversion is applied by finance.logic.normalize_reporting_currency.v1.
+    Registered as ONE logical identity with two Implementation Bindings (warehouse SQL UDF
+    and PySpark function) so cross-engine reuse is not mistaken for duplication.
+  owner:
+    team: finance-analytics
+    escalation: finance-data-oncall
+  lifecycle:
+    state: certified
+    certifiedSince: "2025-06"
+  registry:
+    publish: true
+    interfaceType: callable_logic
+spec:
+  dryLayer:
+    - logic
+  implementations:
+    - binding: warehouse-sql-udf
+      language: sql
+      framework: warehouse-native
+      objectType: udf
+      physicalRef: analytics.finance.fn_recognize_revenue
+      source: domains/finance/logic/udfs/finance.logic.recognize_revenue.v1.sql
+    - binding: spark-function
+      language: python
+      framework: spark
+      objectType: function
+      physicalRef: finance_revenue.recognition.recognize_revenue
+      source: domains/finance/logic/pyspark/recognize_revenue.py
+  compatibility:
+    policy: backward-compatible
+    deprecationWindowDays: 90
+    breakingChanges:
+      - orders_invoice_mapping_change
+      - netting_rule_change
+      - output_grain_or_column_change
+  dependencies:
+    declared:
+      - fqn: finance.raw.orders.v1
+        relationship: source_input
+      - fqn: finance.raw.invoices.v1
+        relationship: source_input
+      - fqn: finance.raw.refunds.v1
+        relationship: source_input
+  usage:
+    intendedConsumers:
+      - finance.reporting.revenue_events.v1
+    antiPatterns:
+      - re_deriving_revenue_from_raw_orders_or_invoices
+      - reimplementing_netting_in_a_domain_pipeline
+  links:
+    docs: ./README.md

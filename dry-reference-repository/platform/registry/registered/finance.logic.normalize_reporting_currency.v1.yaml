@@ -1,0 +1,42 @@
+# Registered by CI on merge to main.
+# Promoted from: domains/finance/logic/finance.logic.normalize_reporting_currency.v1.yaml
+#
+# Registry scope: shared callable logic (finance-owned SQL macro).
+apiVersion: dry.platform/v1
+kind: DryArtifact
+metadata:
+  fqn: finance.logic.normalize_reporting_currency.v1
+  title: Normalize Reporting Currency
+  description: >
+    Finance SQL macro implementing the currency rule: convert an amount from its source
+    currency to the enterprise reporting currency using the daily FX rate as-of the event
+    date. Centralizes FX source, join grain, and rounding convention.
+  owner:
+    team: finance-analytics
+    escalation: finance-data-oncall
+  lifecycle:
+    state: shared
+spec:
+  interfaceTypes:
+    - callable_logic
+  reuseScope: shared_utility
+  # Implementation Bindings: a macro symbol distributed in a package.
+  physicalImplementations:
+    - system: sql-macro-package
+      env: prod
+      objectType: package
+      ref: dry_finance_macros.normalize_reporting_currency
+      attributionKey: "macro:dry_finance_macros.normalize_reporting_currency"
+  compatibility:
+    policy: backward-compatible
+    breakingChanges:
+      - fx_source_table_change
+      - rounding_convention_change
+      - default_reporting_currency_change
+  dependencies:
+    - fqn: finance.raw.fx_rates.v1
+      relationship: source_input
+  knownConsumers:
+    - fqn: finance.reporting.revenue_events.v1
+      relationship: transformation_dependency
+  sourceManifest: domains/finance/logic/finance.logic.normalize_reporting_currency.v1.yaml
