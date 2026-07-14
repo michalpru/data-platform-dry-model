@@ -43,40 +43,113 @@ metrics (`finance.metrics.arpac.v1`).
 ```
 poc/
   README.md                     ← this file
-  registry/                     ← the DRY Artifact Registry engine (Task 4)
-    dry_registry/               ← Python package: manifests, SQLite store, AST fingerprint,
-                                   pluggable similarity backends, CLI
-    pyproject.toml              ← zero required ML deps; optional [sql] and [vector] extras
+  registry/                     ← the DRY Artifact Registry + Lookup & Compare Service
+    dry_registry/
+      manifests.py              ← load registered YAML (infers binding runtime/dialect)
+      store.py                  ← SQLite control plane + FTS5 search
+      models.py                 ← JSON-serialisable result shapes (shared by CLI + MCP)
+      comparison/               ← the ONE shared comparison core
+        normalizers/            ← SQL (sqlglot) + Python (ast) normalization
+        features/               ← language-neutral transformation profile
+        scorers/                ← ast (token-seq), feature (Jaccard), embedding (on-demand)
+        ranking.py, classification.py, engine.py
+      candidate_providers/      ← registry_provider + workspace_provider (same engine)
+      services/                 ← RegistryService, BindingService, ComparisonService
+      cli.py                    ← THIN client over the services (never uses MCP)
+      mcp_server.py             ← THIN stdio MCP proxy over the services (registry scope)
+    pyproject.toml              ← zero required ML deps; optional [sql] [vector] [mcp] extras
+    tests/                      ← invariant tests (offline)
   workspace-similarity/
-    scan.py                     ← Pattern 2 harness (AST baseline; embeddings pluggable)
+    scan.py                     ← Pattern-2 harness: a thin wrapper calling scope="workspace"
   demo/
     walkthrough.md              ← the three-pattern walkthrough with commands + real output
     arpac-authoring-scratch.sql ← the "from scratch" reimplementation (the duplicate candidate)
   RECOMMENDATIONS.md            ← Task 5 (improvements) + Task 6 (evaluation & the dbt objection)
+
+.github/agents/dry-reuse.agent.md         ← Copilot custom agent (registry-aware authoring)
+.github/prompts/search-registry.prompt.md ← intent-first workflow
+.github/prompts/compare-with-registry.prompt.md ← code-first workflow
+.vscode/mcp.json                          ← registers the local stdio MCP server
 ```
 
 The artifacts themselves live in `../dry-reference-repository/` (each top-level folder simulates
 a separate team repository).
 
-## Quick start (fully offline)
+## Architecture: three responsibilities
+
+> **Registry** knows *what exists* · **Comparison service** knows *what is similar* ·
+> **AI (Copilot)** knows *how to help the engineer use both*.
+
+The CLI and the MCP server are both **thin clients** of the same application services
+(`dry_registry.services`). Business logic — normalization, feature extraction, scoring,
+ranking, classification — lives **once** in the shared comparison core and is reused across
+scopes. Only the *candidate source* and the *governance metadata* differ:
+
+- **Registry scope** — candidates are governed logical artifacts (authority, lifecycle, owner,
+  reuse intent, recommended binding).
+- **Workspace scope** — candidates are files in the open repos; governance is `UNKNOWN` and the
+  result carries explicit coverage warnings (warehouse objects, other repos and uninstalled
+  packages were not searched).
+
+The Python services **never call an LLM**. They return structured evidence; Copilot reads that
+evidence and explains/acts. The model is taught the *workflow and the tools*, never the registry
+contents.
+
+## Two ways to run it
+
+**Scenario B — workspace, CLI only** (similarity without authority; no agent, no MCP):
 
 ```powershell
 # from poc/registry
-pip install -e .              # PyYAML only; add ".[sql]" for sqlglot, ".[vector]" for embeddings
+pip install -e ".[sql]"
+python -m dry_registry.cli compare ../demo/arpac-authoring-scratch.sql --scope workspace
+# or the Pattern-2 harness:
+python ../workspace-similarity/scan.py --query ../demo/arpac-authoring-scratch.sql
+```
+
+**Scenario C — registry-aware authoring through GitHub Copilot** (agent + MCP):
+
+```powershell
+# from poc/registry
+pip install -e ".[sql,mcp]"          # add ,vector for the embedding tier
+python -m dry_registry.cli ingest    # build the SQLite control plane once
+```
+
+Then in VS Code: reload so `.vscode/mcp.json` starts the `dry-registry` MCP server, open Copilot
+Chat, pick the **DRY Reuse** agent, and use `/search-registry` (intent-first) or
+`/compare-with-registry` (code-first).
+
+## Quick start (fully offline, CLI)
+
+```powershell
+# from poc/registry
+pip install -e .              # PyYAML only; add ".[sql]" for sqlglot, ".[vector]" for embeddings, ".[mcp]" for the server
 python -m dry_registry.cli ingest
-python -m dry_registry.cli resolve revenue
-python -m dry_registry.cli duplicates ../demo/arpac-authoring-scratch.sql --interface callable_logic --lang sql
+python -m dry_registry.cli search "recognize revenue"
+python -m dry_registry.cli resolve-binding finance.logic.recognize_revenue.v1 --runtime spark
+python -m dry_registry.cli compare ../demo/arpac-authoring-scratch.sql --scope registry
+python -m dry_registry.cli composables "net recognized revenue" "active customer"
 python -m dry_registry.cli impact finance.logic.recognize_revenue.v1
 ```
 
-See [demo/walkthrough.md](demo/walkthrough.md) for the full three-pattern narrative.
+Add `--json` to any command to get the raw structured payload the MCP tools also return.
+See [demo/walkthrough.md](demo/walkthrough.md) for the full narrative.
 
 ## Design choices
 
 - **Fully local, zero cloud.** SQLite control plane; AST/structural similarity via the Python
-  stdlib and `sqlglot`. No vector store is *required*.
-- **Vector store is optional and offline.** The `[vector]` extra adds a local
-  `sentence-transformers` model for semantic similarity — no API keys, no network at query time.
-- **Implementation Bindings are mocked** as env-normalized physical refs (warehouse tables/UDFs,
-  package symbols, semantic-layer metric ids). The registry never executes anything; it only
-  records the mapping from physical objects to one logical identity.
+  stdlib and `sqlglot`. No vector store, graph DB or remote service is required.
+- **Comparison returns logical artifacts, not bindings.** An artifact with several bindings
+  (a warehouse UDF *and* a PySpark function) is compared once and reported once; `resolve_binding`
+  then selects the physical object for the engineer's runtime/dialect.
+- **Similarity is described honestly** as "AST/parser-normalized token-sequence similarity" — not
+  full semantic equivalence or tree-edit distance. Cross-language pairs (SQL vs Python) have no
+  AST score and fall back to the language-neutral feature/embedding signal.
+- **Embeddings are optional, advisory and on-demand.** The `[vector]` extra computes code
+  embeddings per run and discards them — no vector database, no persistence. The model id is
+  recorded; if the extra is absent the engine falls back to the deterministic feature signal and
+  says so.
+- **dbt / SQLMesh / semantic-layer are not replaced.** They are represented as implementation
+  bindings on their runtimes (`runtime` = warehouse | spark | dbt | semantic, inferred from the
+  registry metadata). The registry is a thin overlay that records the mapping from physical
+  objects to one logical identity; it never executes anything.

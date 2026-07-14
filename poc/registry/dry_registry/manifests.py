@@ -24,6 +24,35 @@ class Binding:
     physical_ref: str
     attribution_key: str
     source_path: Optional[str] = None  # resolved from the domain source manifest
+    runtime: str = "unknown"           # inferred: warehouse | spark | dbt | semantic
+    dialect: Optional[str] = None      # inferred: snowflake | spark | None
+
+
+# Default SQL dialect for warehouse/dbt objects in this reference platform. Kept here (in
+# poc/) so the registry manifests stay untouched; override via DRY_DEFAULT_DIALECT.
+_DEFAULT_WAREHOUSE_DIALECT = os.environ.get("DRY_DEFAULT_DIALECT", "snowflake")
+
+
+def infer_runtime_dialect(system: str, object_type: str):
+    """Derive (runtime, dialect) from the existing system/objectType fields.
+
+    This lets resolve_binding() filter by runtime/dialect without editing the registry
+    YAML: dbt models/macros, SQLMesh models and semantic metrics are all just implementation
+    bindings on their respective runtimes.
+    """
+    s = (system or "").lower()
+    o = (object_type or "").lower()
+    if "spark" in s:
+        return "spark", "spark"
+    if "sqlmesh" in s:
+        return "sqlmesh", _DEFAULT_WAREHOUSE_DIALECT
+    if "dbt" in s or o in ("macro", "model"):
+        return "dbt", _DEFAULT_WAREHOUSE_DIALECT
+    if "semantic" in s or o in ("metric", "metric_definition", "semantic_model"):
+        return "semantic", None
+    if s == "warehouse" or o in ("udf", "table", "view", "function"):
+        return "warehouse", _DEFAULT_WAREHOUSE_DIALECT
+    return s or "unknown", None
 
 
 @dataclass
@@ -39,6 +68,24 @@ class Artifact:
     bindings: List[Binding] = field(default_factory=list)
     dependencies: List[Dict[str, str]] = field(default_factory=list)
     known_consumers: List[Dict[str, str]] = field(default_factory=list)
+    aliases: List[str] = field(default_factory=list)
+
+    def search_text(self) -> str:
+        """Combined lexical document for full-text search: identity, description, aliases,
+        dependencies, binding refs and consumer/entity names."""
+        parts: List[str] = [
+            self.fqn,
+            self.title,
+            self.description,
+            self.reuse_scope,
+            " ".join(self.interface_types),
+            " ".join(self.aliases),
+            " ".join(d.get("fqn", "") for d in self.dependencies),
+            " ".join(c.get("fqn", "") for c in self.known_consumers),
+            " ".join(b.physical_ref for b in self.bindings),
+            " ".join(b.object_type for b in self.bindings),
+        ]
+        return " ".join(p for p in parts if p)
 
 
 def find_repo_root(start: Optional[str] = None) -> str:
@@ -120,6 +167,9 @@ def load_registered(repo_root: str) -> List[Artifact]:
                     break
             if source_path is None and len(source_map) == 1:
                 source_path = next(iter(source_map.values()))
+            runtime, dialect = infer_runtime_dialect(
+                impl.get("system", ""), impl.get("objectType", "")
+            )
             bindings.append(
                 Binding(
                     system=impl.get("system", ""),
@@ -128,6 +178,8 @@ def load_registered(repo_root: str) -> List[Artifact]:
                     physical_ref=ref,
                     attribution_key=impl.get("attributionKey", ""),
                     source_path=source_path,
+                    runtime=runtime,
+                    dialect=dialect,
                 )
             )
 
@@ -144,6 +196,7 @@ def load_registered(repo_root: str) -> List[Artifact]:
                 bindings=bindings,
                 dependencies=spec.get("dependencies", []) or [],
                 known_consumers=spec.get("knownConsumers", []) or [],
+                aliases=meta.get("aliases", []) or spec.get("aliases", []) or [],
             )
         )
     return artifacts

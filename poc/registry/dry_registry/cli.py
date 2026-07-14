@@ -1,157 +1,236 @@
-"""Command-line interface for the DRY Artifact Registry PoC.
+"""Command-line client for the DRY Artifact Registry PoC.
+
+The CLI is a THIN client: it parses arguments, calls the application services in
+`dry_registry.services`, and renders the structured result. It never contains business
+logic and it never goes through the MCP server — the engineer runs it directly against the
+Lookup & Compare Service. Use `--json` on any command to get the raw service payload.
 
 Commands:
-  ingest      Build the SQLite control plane from the registered manifests.
-  search      Keyword search over registered artifacts (authoring-time discovery).
-  resolve     Registry-backed canonical resolution for a concept (returns authority).
-  impact      Declared-dependency impact analysis (dependencies + dependents).
-  duplicates  Fingerprint a candidate file and compare it to REGISTERED artifacts,
-              returning similarity AND governance authority (Pattern 3 advantage).
+  ingest          Build / refresh the SQLite control plane from the registered manifests.
+  search          Intent-first search over registered artifacts.
+  get             Fetch one registered artifact by id.
+  resolve         Canonical resolution for a concept (returns authority).
+  resolve-binding Recommended physical binding for a runtime (+ alternatives).
+  compare         Code-first comparison (scope=registry|workspace) with evidence.
+  composables     Resolve each named component to its canonical registered artifact.
+  impact          Declared-dependency impact analysis.
 
-Runs fully offline. Example:
+Runs fully offline. Examples:
     python -m dry_registry.cli ingest
-    python -m dry_registry.cli resolve revenue
-    python -m dry_registry.cli duplicates ../demo/arpac-authoring-scratch.sql
+    python -m dry_registry.cli search "recognize revenue"
+    python -m dry_registry.cli compare ../demo/arpac-authoring-scratch.sql
+    python -m dry_registry.cli compare selected.sql --scope workspace
 """
 
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import sys
 from typing import Optional
 
 from .manifests import find_repo_root, load_registered
-from .similarity import get_backend
-from .store import RegistryStore
-
-DEFAULT_DB = os.path.join(os.path.expanduser("~"), ".dry_registry.sqlite")
+from .services import DEFAULT_DB, build_services
 
 
-def _store(args) -> RegistryStore:
-    return RegistryStore(args.db)
+def _services(args):
+    return build_services(db=args.db, repo_root=args.repo_root)
 
 
-def _repo_root(args) -> str:
-    return args.repo_root or find_repo_root()
+def _emit(args, payload) -> None:
+    if getattr(args, "json", False):
+        print(json.dumps(payload, indent=2))
 
+
+# --- commands -------------------------------------------------------------
 
 def cmd_ingest(args) -> int:
-    root = _repo_root(args)
-    store = _store(args)
-    n = store.ingest(load_registered(root))
+    root = args.repo_root or find_repo_root()
+    svc = build_services(db=args.db, repo_root=root, ensure_ingested=False)
+    n = svc.store.ingest(load_registered(root))
+    svc.close()
     print(f"Ingested {n} registered artifacts from {root} into {args.db}")
     return 0
 
 
 def cmd_search(args) -> int:
-    store = _store(args)
-    rows = store.search(args.query, interface=args.interface)
-    if not rows:
-        print(f"No registered artifact matches '{args.query}'.")
-        return 0
-    print(f"Registered artifacts matching '{args.query}':\n")
-    for r in rows:
-        print(f"  {r['fqn']}")
-        print(f"      interface: {r['interface_types']} | lifecycle: {r['lifecycle_state']}"
-              f" | owner: {r['owner_team']} | scope: {r['reuse_scope']}")
+    svc = _services(args)
+    results = svc.registry.search_artifacts(
+        args.query, interface_type=args.interface, lifecycle=args.lifecycle, runtime=args.runtime
+    )
+    _emit(args, [a.to_dict() for a in results])
+    if not args.json:
+        if not results:
+            print(f"No registered artifact matches '{args.query}'.")
+        else:
+            print(f"Registered artifacts matching '{args.query}':\n")
+            for a in results:
+                g = a.governance
+                print(f"  {a.fqn}")
+                print(f"      {a.title}")
+                print(f"      lifecycle: {g.lifecycle} | owner: {g.owner} | "
+                      f"reuse: {g.reuse_intent} | interfaces: {','.join(a.interface_types)}")
+    svc.close()
+    return 0
+
+
+def cmd_get(args) -> int:
+    svc = _services(args)
+    art = svc.registry.get_artifact(args.artifact_id)
+    if art is None:
+        print(f"'{args.artifact_id}' is not registered.")
+        svc.close()
+        return 1
+    _emit(args, art.to_dict())
+    if not args.json:
+        g = art.governance
+        print(f"{art.fqn}  [{g.lifecycle}]")
+        print(f"  {art.title}")
+        print(f"  owner: {g.owner} | reuse: {g.reuse_intent} | authority: {g.authority}")
+        if art.bindings:
+            print("  bindings:")
+            for b in art.bindings:
+                d = f"/{b.dialect}" if b.dialect else ""
+                print(f"    - {b.runtime}{d} {b.env}: {b.ref} ({b.object_type})")
+        if art.dependencies:
+            print("  depends on:")
+            for dep in art.dependencies:
+                print(f"    - {dep['fqn']} ({dep['relationship']})")
+    svc.close()
     return 0
 
 
 def cmd_resolve(args) -> int:
-    store = _store(args)
-    rows = store.search(args.concept)
-    # Prefer certified, then shared; a canonical answer carries authority, not just similarity.
-    order = {"certified": 0, "shared": 1}
-    rows = sorted(rows, key=lambda r: order.get(r["lifecycle_state"], 9))
-    if not rows:
-        print(f"No canonical artifact registered for '{args.concept}'. "
-              f"Nothing to reuse — safe to author a new governed artifact.")
-        return 0
-    top = rows[0]
-    print(f"Canonical resolution for '{args.concept}':\n")
-    print(f"  ► {top['fqn']}  [{top['lifecycle_state'].upper()}]")
-    print(f"      {top['title']} — owned by {top['owner_team']}")
-    print(f"      interface: {top['interface_types']} | scope: {top['reuse_scope']}")
-    binds = store.bindings(top["fqn"])
-    if binds:
-        print("      Implementation Bindings:")
-        for b in binds:
-            print(f"        - {b['system']}/{b['env']}: {b['physical_ref']} ({b['object_type']})")
-    deps = store.dependencies_of(top["fqn"])
-    if deps:
-        print("      Reuses (declared dependencies):")
-        for d in deps:
-            print(f"        - {d['to_fqn']} ({d['relationship']})")
-    print("\n      → Reuse this artifact instead of re-implementing it.")
-    if len(rows) > 1:
-        print("\n      Other registered matches:")
-        for r in rows[1:]:
-            print(f"        - {r['fqn']} [{r['lifecycle_state']}]")
+    svc = _services(args)
+    results = svc.registry.search_artifacts(args.concept)
+    _emit(args, results[0].to_dict() if results else {})
+    if not args.json:
+        if not results:
+            print(f"No canonical artifact registered for '{args.concept}'. "
+                  f"Nothing to reuse — safe to author a new governed artifact.")
+        else:
+            top = results[0]
+            g = top.governance
+            print(f"Canonical resolution for '{args.concept}':\n")
+            print(f"  \u25ba {top.fqn}  [{g.lifecycle.upper()}]")
+            print(f"      {top.title} — owned by {g.owner}")
+            print(f"      reuse intent: {g.reuse_intent}")
+            if len(results) > 1:
+                print("\n      Other registered matches:")
+                for a in results[1:]:
+                    print(f"        - {a.fqn} [{a.governance.lifecycle}]")
+            print("\n      → Reuse this artifact instead of re-implementing it.")
+    svc.close()
+    return 0
+
+
+def cmd_resolve_binding(args) -> int:
+    svc = _services(args)
+    res = svc.binding.resolve_binding(args.artifact_id, runtime=args.runtime, dialect=args.dialect)
+    _emit(args, res.to_dict())
+    if not args.json:
+        print(f"Binding resolution for {res.artifact_fqn} "
+              f"(runtime={args.runtime}, dialect={args.dialect}):\n")
+        if res.recommended:
+            b = res.recommended
+            d = f"/{b.dialect}" if b.dialect else ""
+            print(f"  \u25ba recommended: {b.runtime}{d} {b.env}: {b.ref} ({b.object_type})")
+        else:
+            print("  \u25ba no matching binding")
+        if res.note:
+            print(f"  note: {res.note}")
+        if res.alternatives:
+            print("  alternatives:")
+            for b in res.alternatives:
+                d = f"/{b.dialect}" if b.dialect else ""
+                print(f"    - {b.runtime}{d} {b.env}: {b.ref}")
+    svc.close()
+    return 0
+
+
+def cmd_compare(args) -> int:
+    svc = _services(args)
+    with open(args.file, "r", encoding="utf-8") as fh:
+        code = fh.read()
+    result = svc.comparison.compare_code(
+        code,
+        language=args.language or "",
+        dialect=args.dialect,
+        scope=args.scope,
+        use_embeddings=not args.no_embeddings,
+        embedding_model=args.model,
+        top=args.top,
+    )
+    _emit(args, result.to_dict())
+    if not args.json:
+        print(f"Comparison for {os.path.basename(args.file)} "
+              f"(scope={result.scope}, method={result.method}):\n")
+        for m in result.matches:
+            s = m.similarity
+            sig = " ".join(
+                f"{k}={v:.2f}" for k, v in (
+                    ("ast", s.ast), ("feat", s.feature), ("emb", s.embedding)
+                ) if v is not None
+            )
+            print(f"  [{m.relationship}] {m.logical_id}")
+            print(f"      {sig} (combined={s.combined:.2f}) | "
+                  f"authority: {m.governance.authority} | lifecycle: {m.governance.lifecycle}")
+            if m.evidence.shared_concepts or m.evidence.shared_source_entities:
+                ev = ", ".join(m.evidence.shared_source_entities + m.evidence.shared_concepts)
+                print(f"      shared: {ev}")
+            print(f"      → {m.recommended_action}")
+        print(f"\n  {result.summary}")
+        if result.coverage_warnings:
+            print("\n  Coverage caveats:")
+            for w in result.coverage_warnings:
+                print(f"    - {w}")
+    svc.close()
+    return 0
+
+
+def cmd_composables(args) -> int:
+    svc = _services(args)
+    mapping = svc.registry.find_composable_artifacts(args.concepts)
+    _emit(args, {k: (v.to_dict() if v else None) for k, v in mapping.items()})
+    if not args.json:
+        print("Composable component resolution:\n")
+        for concept, art in mapping.items():
+            if art:
+                print(f"  {concept:<24} → {art.fqn} [{art.governance.lifecycle}]")
+            else:
+                print(f"  {concept:<24} → (no registered artifact — author + register)")
+    svc.close()
     return 0
 
 
 def cmd_impact(args) -> int:
-    store = _store(args)
-    art = store.get(args.fqn)
-    if not art:
+    svc = _services(args)
+    art = svc.registry.get_artifact(args.fqn)
+    if art is None:
         print(f"'{args.fqn}' is not registered.")
+        svc.close()
         return 1
-    print(f"Impact analysis for {args.fqn} [{art['lifecycle_state']}]\n")
-    deps = store.dependencies_of(args.fqn)
-    print("  Depends on (upstream):")
-    for d in deps or []:
-        print(f"    - {d['to_fqn']} ({d['relationship']})")
-    if not deps:
-        print("    (none declared)")
-    dependents = store.dependents_of(args.fqn)
-    print("  Consumed by (downstream — would break on an incompatible change):")
-    for d in dependents or []:
-        print(f"    - {d['from_fqn']} ({d['relationship']})")
-    if not dependents:
-        print("    (no registered downstream dependents)")
+    payload = {
+        "fqn": art.fqn,
+        "lifecycle": art.governance.lifecycle,
+        "depends_on": art.dependencies,
+        "consumed_by": art.known_consumers,
+    }
+    _emit(args, payload)
+    if not args.json:
+        print(f"Impact analysis for {art.fqn} [{art.governance.lifecycle}]\n")
+        print("  Depends on (upstream):")
+        for d in art.dependencies or [{"fqn": "(none declared)", "relationship": ""}]:
+            print(f"    - {d['fqn']} ({d.get('relationship','')})".rstrip(" ()"))
+        print("  Consumed by (downstream — would break on an incompatible change):")
+        for d in art.known_consumers or [{"fqn": "(no registered downstream dependents)", "relationship": ""}]:
+            print(f"    - {d['fqn']} ({d.get('relationship','')})".rstrip(" ()"))
+    svc.close()
     return 0
 
 
-def cmd_duplicates(args) -> int:
-    store = _store(args)
-    with open(args.file, "r", encoding="utf-8") as fh:
-        candidate = fh.read()
-    backend = get_backend(args.method, model=args.model)
-    results = []
-    for b in store.all_bindings_with_source():
-        if args.interface and args.interface not in (b["interface_types"] or ""):
-            continue
-        root = _repo_root(args)
-        src_abs = os.path.join(root, "dry-reference-repository", b["source_path"])
-        if not os.path.isfile(src_abs):
-            continue
-        with open(src_abs, "r", encoding="utf-8") as fh:
-            registered_src = fh.read()
-        score = backend.score(candidate, registered_src, lang_hint=args.lang or "")
-        results.append((score, b))
-    results.sort(key=lambda x: x[0], reverse=True)
-
-    print(f"Duplication check for {os.path.basename(args.file)} "
-          f"(method={backend.name}):\n")
-    if not results:
-        print("  No registered artifacts with source were available to compare.")
-        return 0
-    for score, b in results[: args.top]:
-        flag = "HIGH" if score >= args.threshold else "     "
-        print(f"  [{flag}] score={score:0.2f}  {b['artifact_fqn']}  "
-              f"[{b['lifecycle_state']}] via {b['physical_ref']}")
-    top_score, top_b = results[0]
-    print()
-    if top_score >= args.threshold:
-        print(f"  ⚠ Likely reimplementation of a governed artifact:")
-        print(f"    {top_b['artifact_fqn']} [{top_b['lifecycle_state']}] "
-              f"owned by {top_b['owner_team']}")
-        print(f"    → Route to review / reuse the canonical artifact instead of merging this.")
-    else:
-        print("  No high-confidence structural match among registered artifacts.")
-    return 0
-
+# --- parser ---------------------------------------------------------------
 
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="dry-registry", description=__doc__,
@@ -159,33 +238,52 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--db", default=DEFAULT_DB, help=f"SQLite path (default: {DEFAULT_DB})")
     p.add_argument("--repo-root", default=None,
                    help="Repo root containing dry-reference-repository (auto-detected).")
+    p.add_argument("--json", action="store_true", help="Emit the raw structured JSON payload.")
     sub = p.add_subparsers(dest="command", required=True)
 
     sp = sub.add_parser("ingest", help="Build the control plane from registered manifests.")
     sp.set_defaults(func=cmd_ingest)
 
-    sp = sub.add_parser("search", help="Keyword search over registered artifacts.")
+    sp = sub.add_parser("search", help="Intent-first search over registered artifacts.")
     sp.add_argument("query")
     sp.add_argument("--interface", choices=["callable_logic", "queryable_dataset", "semantic_contract"])
+    sp.add_argument("--lifecycle", default=None)
+    sp.add_argument("--runtime", default=None)
     sp.set_defaults(func=cmd_search)
 
-    sp = sub.add_parser("resolve", help="Registry-backed canonical resolution for a concept.")
+    sp = sub.add_parser("get", help="Fetch one registered artifact by id.")
+    sp.add_argument("artifact_id")
+    sp.set_defaults(func=cmd_get)
+
+    sp = sub.add_parser("resolve", help="Canonical resolution for a concept.")
     sp.add_argument("concept")
     sp.set_defaults(func=cmd_resolve)
+
+    sp = sub.add_parser("resolve-binding", help="Recommended physical binding for a runtime.")
+    sp.add_argument("artifact_id")
+    sp.add_argument("--runtime", default=None, help="warehouse | spark | dbt | semantic")
+    sp.add_argument("--dialect", default=None, help="snowflake | spark | ...")
+    sp.set_defaults(func=cmd_resolve_binding)
+
+    sp = sub.add_parser("compare", aliases=["compare-code", "duplicates"],
+                        help="Code-first comparison with evidence (scope=registry|workspace).")
+    sp.add_argument("file")
+    sp.add_argument("--scope", default="registry", choices=["registry", "workspace"])
+    sp.add_argument("--language", default=None, choices=["sql", "python"])
+    sp.add_argument("--dialect", default=None)
+    sp.add_argument("--no-embeddings", action="store_true",
+                    help="Skip the optional embedding tier (structural + feature only).")
+    sp.add_argument("--model", default=None, help="Embedding model id (embedding tier).")
+    sp.add_argument("--top", type=int, default=5)
+    sp.set_defaults(func=cmd_compare)
+
+    sp = sub.add_parser("composables", help="Resolve each named component to its canonical artifact.")
+    sp.add_argument("concepts", nargs="+")
+    sp.set_defaults(func=cmd_composables)
 
     sp = sub.add_parser("impact", help="Declared-dependency impact analysis.")
     sp.add_argument("fqn")
     sp.set_defaults(func=cmd_impact)
-
-    sp = sub.add_parser("duplicates", help="Fingerprint a file vs registered artifacts.")
-    sp.add_argument("file")
-    sp.add_argument("--method", default="ast", choices=["ast", "embedding"])
-    sp.add_argument("--model", default=None, help="Embedding model (embedding method only).")
-    sp.add_argument("--interface", choices=["callable_logic", "queryable_dataset", "semantic_contract"])
-    sp.add_argument("--lang", default=None, choices=["sql", "python"])
-    sp.add_argument("--threshold", type=float, default=0.60)
-    sp.add_argument("--top", type=int, default=5)
-    sp.set_defaults(func=cmd_duplicates)
 
     return p
 

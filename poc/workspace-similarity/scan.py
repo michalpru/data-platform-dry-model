@@ -1,25 +1,23 @@
-"""Pattern 2 harness: AI workspace similarity search (no registry).
+"""Pattern 2 harness: AI workspace similarity search (no registry authority).
 
-Simulates what an AI assistant with workspace-level similarity search can do: scan the
-repositories open in the workspace, and rank existing code by structural/semantic similarity
-to a candidate the engineer is authoring.
+This is a THIN wrapper over the same Lookup & Compare Service the registry scope uses — it
+just calls `compare_code(..., scope="workspace")`. That is the whole point of the refactor:
+normalization, feature extraction, scoring, ranking and classification live once in the
+shared comparison core; only the candidate source (workspace files) and the (missing)
+governance metadata differ.
 
 What this DELIBERATELY cannot do (the Pattern-2 limitation the PoC demonstrates):
-  - It ranks by SIMILARITY, not AUTHORITY. It has no idea which match is certified,
-    who owns it, or whether it is safe to reuse.
-  - It only sees what is in the workspace. Artifacts in other repos, or realized only as
-    warehouse objects (UDFs, tables), are invisible.
+  - It ranks by SIMILARITY, not AUTHORITY. Every match reports authority=UNKNOWN,
+    lifecycle=UNKNOWN, reuse_intent=UNKNOWN.
+  - It only sees the workspace. Warehouse objects, other repos and uninstalled packages are
+    invisible — the result spells this out in its coverage warnings.
 
-Two backends, selected with --method:
-  ast        structural fingerprint (default; offline, deterministic)
-  embedding  local sentence-transformers model (optional 'vector' extra)
-
-The engine itself lives in poc/registry/dry_registry; this harness reuses its fingerprint
-and similarity code so the AST baseline is identical to the registry's.
+The workspace scenario uses NO Copilot agent and NO MCP: the CLI / this harness is the
+integration surface. Registry-aware authoring (agent + MCP) is the separate registry scope.
 
 Usage (from poc/workspace-similarity):
-    python scan.py --query ../demo/arpac-authoring-scratch.sql --method ast
-    python scan.py --query ../demo/arpac-authoring-scratch.sql --method embedding
+    python scan.py --query ../demo/arpac-authoring-scratch.sql
+    python scan.py --query ../demo/arpac-authoring-scratch.sql --embeddings
 """
 
 from __future__ import annotations
@@ -32,68 +30,51 @@ import sys
 _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(_HERE, "..", "registry"))
 
-from dry_registry.similarity import get_backend  # noqa: E402
-
-# Folders that stand in for the "repositories open in the workspace".
-WORKSPACE_GLOBS = ["domains", "enterprise", "platform"]
-CODE_EXTENSIONS = (".sql", ".py")
-# Skip packaging / test noise.
-SKIP_DIRS = {"__pycache__", ".git", "node_modules"}
-
-
-def find_repo_root(start: str) -> str:
-    cur = os.path.abspath(start)
-    while True:
-        if os.path.isdir(os.path.join(cur, "dry-reference-repository")):
-            return cur
-        parent = os.path.dirname(cur)
-        if parent == cur:
-            raise FileNotFoundError("Could not locate dry-reference-repository.")
-        cur = parent
-
-
-def collect_candidates(repo_root: str):
-    base = os.path.join(repo_root, "dry-reference-repository")
-    for top in WORKSPACE_GLOBS:
-        for dirpath, dirnames, filenames in os.walk(os.path.join(base, top)):
-            dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
-            for fn in filenames:
-                if fn.endswith(CODE_EXTENSIONS) and "__init__" not in fn:
-                    yield os.path.join(dirpath, fn)
+from dry_registry.services import build_services  # noqa: E402
 
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--query", required=True, help="File the engineer is authoring.")
-    ap.add_argument("--method", default="ast", choices=["ast", "embedding"])
-    ap.add_argument("--model", default=None, help="Embedding model (embedding method only).")
-    ap.add_argument("--lang", default=None, choices=["sql", "python"])
+    ap.add_argument("--language", default=None, choices=["sql", "python"])
+    ap.add_argument("--embeddings", action="store_true",
+                    help="Use the on-demand embedding tier (optional 'vector' extra).")
+    ap.add_argument("--model", default=None, help="Embedding model id (embedding tier).")
     ap.add_argument("--top", type=int, default=8)
     ap.add_argument("--repo-root", default=None)
+    ap.add_argument("--db", default=":memory:")
     args = ap.parse_args(argv)
 
-    repo_root = args.repo_root or find_repo_root(_HERE)
+    svc = build_services(db=args.db, repo_root=args.repo_root)
     with open(args.query, "r", encoding="utf-8") as fh:
         query = fh.read()
 
-    backend = get_backend(args.method, model=args.model)
-    scored = []
-    for path in collect_candidates(repo_root):
-        with open(path, "r", encoding="utf-8") as fh:
-            text = fh.read()
-        score = backend.score(query, text, lang_hint=args.lang or "")
-        rel = os.path.relpath(path, repo_root)
-        scored.append((score, rel))
-    scored.sort(key=lambda x: x[0], reverse=True)
+    result = svc.comparison.compare_code(
+        query,
+        language=args.language or "",
+        scope="workspace",
+        use_embeddings=args.embeddings,
+        embedding_model=args.model,
+        top=args.top,
+    )
 
     print(f"Workspace similarity search for {os.path.basename(args.query)} "
-          f"(method={backend.name})\n")
-    print("  Ranked by SIMILARITY ONLY — no lifecycle, ownership, or canonical status:\n")
-    for score, rel in scored[: args.top]:
-        print(f"    {score:0.2f}  {rel}")
+          f"(method={result.method})\n")
+    print("  Ranked by SIMILARITY ONLY — no lifecycle, ownership or canonical status:\n")
+    for m in result.matches:
+        s = m.similarity
+        sig = " ".join(f"{k}={v:.2f}" for k, v in (
+            ("ast", s.ast), ("feat", s.feature), ("emb", s.embedding)) if v is not None)
+        print(f"    {s.combined:0.2f}  [{m.relationship}]  {m.logical_id}")
+        print(f"          {sig} | authority: {m.governance.authority}")
     print("\n  ⚠ The top match may be a certified canonical, a local copy, or a test fixture —")
     print("    this method cannot tell. That authority gap is what the registry closes (Pattern 3).")
+    if result.coverage_warnings:
+        print("\n  Coverage caveats:")
+        for w in result.coverage_warnings:
+            print(f"    - {w}")
+    svc.close()
     return 0
 
 

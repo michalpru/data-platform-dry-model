@@ -32,6 +32,8 @@ CREATE TABLE IF NOT EXISTS implementation_binding (
     physical_ref    TEXT,
     attribution_key TEXT,
     source_path     TEXT,
+    runtime         TEXT,
+    dialect         TEXT,
     FOREIGN KEY (artifact_fqn) REFERENCES artifact(fqn)
 );
 CREATE TABLE IF NOT EXISTS dependency_edge (
@@ -41,16 +43,30 @@ CREATE TABLE IF NOT EXISTS dependency_edge (
     source       TEXT DEFAULT 'declared'
 );
 CREATE VIRTUAL TABLE IF NOT EXISTS artifact_fts USING fts5(
-    fqn, title, description, interface_types
+    fqn, title, description, body
 );
 """
 
 
 class RegistryStore:
+    # Bump when the schema changes so stale on-disk databases are rebuilt automatically.
+    SCHEMA_VERSION = 2
+
     def __init__(self, db_path: str = ":memory:"):
         self.conn = sqlite3.connect(db_path)
         self.conn.row_factory = sqlite3.Row
+        self._migrate()
         self.conn.executescript(SCHEMA)
+        self.conn.execute(f"PRAGMA user_version = {self.SCHEMA_VERSION}")
+        self.conn.commit()
+
+    def _migrate(self) -> None:
+        """Drop and recreate tables when an older-schema database is opened."""
+        version = self.conn.execute("PRAGMA user_version").fetchone()[0]
+        if version and version < self.SCHEMA_VERSION:
+            for tbl in ("artifact", "implementation_binding", "dependency_edge", "artifact_fts"):
+                self.conn.execute(f"DROP TABLE IF EXISTS {tbl}")
+            self.conn.commit()
 
     # ---- ingestion -------------------------------------------------------
     def reset(self) -> None:
@@ -75,13 +91,13 @@ class RegistryStore:
                 ),
             )
             self.conn.execute(
-                "INSERT INTO artifact_fts (fqn, title, description, interface_types) "
+                "INSERT INTO artifact_fts (fqn, title, description, body) "
                 "VALUES (?,?,?,?)",
-                (a.fqn, a.title, a.description, ",".join(a.interface_types)),
+                (a.fqn, a.title, a.description, a.search_text()),
             )
             for b in a.bindings:
                 self.conn.execute(
-                    "INSERT INTO implementation_binding VALUES (?,?,?,?,?,?,?)",
+                    "INSERT INTO implementation_binding VALUES (?,?,?,?,?,?,?,?,?)",
                     (
                         a.fqn,
                         b.system,
@@ -90,6 +106,8 @@ class RegistryStore:
                         b.physical_ref,
                         b.attribution_key,
                         b.source_path,
+                        b.runtime,
+                        b.dialect,
                     ),
                 )
             for dep in a.dependencies:
@@ -108,7 +126,10 @@ class RegistryStore:
             fts_q = " OR ".join(f"{t}*" for t in query.split())
             rows = self.conn.execute(
                 "SELECT a.* FROM artifact_fts f JOIN artifact a ON a.fqn = f.fqn "
-                "WHERE artifact_fts MATCH ? ORDER BY a.lifecycle_state DESC",
+                # Weight identity columns (title, fqn) above description/body so intent
+                # search resolves to the artifact whose *name* matches, not one that merely
+                # mentions the term. Column order: fqn, title, description, body.
+                "WHERE artifact_fts MATCH ? ORDER BY bm25(artifact_fts, 4.0, 8.0, 1.0, 0.5)",
                 (fts_q,),
             ).fetchall()
         except sqlite3.OperationalError:
@@ -127,6 +148,9 @@ class RegistryStore:
         return self.conn.execute(
             "SELECT * FROM artifact WHERE fqn = ?", (fqn,)
         ).fetchone()
+
+    def all_artifacts(self) -> List[sqlite3.Row]:
+        return self.conn.execute("SELECT * FROM artifact ORDER BY fqn").fetchall()
 
     def bindings(self, fqn: str) -> List[sqlite3.Row]:
         return self.conn.execute(

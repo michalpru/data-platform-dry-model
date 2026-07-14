@@ -1,17 +1,17 @@
 """Minimal local DRY Artifact Registry control plane (PoC).
 
-Two-layer architecture from model-docs/05-artifact-registry-spec.md:
-  Layer 1 (declaration): YAML manifests in source control (the reference repo).
-  Layer 2 (control plane): this package ingests those manifests into a small SQLite
-           store and answers search / resolve / impact / duplicates queries.
+Layered architecture (see poc/README.md):
+  Registry (knows what exists)      -> YAML manifests + SQLite control plane
+  Comparison service (what's alike) -> shared normalize/feature/score/rank/classify core
+  AI (how to help)                  -> Copilot custom agent + prompts over thin MCP tools
 
-Runs fully offline. SQL AST normalization uses sqlglot when installed and degrades
-gracefully to a regex normalizer otherwise. Semantic (vector) similarity is an optional
-pluggable tier.
+The CLI and the MCP server are both thin clients of the application services in
+`dry_registry.services`. Runs fully offline; optional embedding tier is on-demand only.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 from .store import RegistryStore  # noqa: F401
 from .fingerprint import fingerprint, normalize  # noqa: F401
 from .similarity import get_backend  # noqa: F401
+from .services import build_services, Services  # noqa: F401

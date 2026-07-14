@@ -1,32 +1,42 @@
 [project]
 name = "dry-registry"
-version = "0.1.0"
-description = "Minimal local DRY Artifact Registry control plane for the duplication-detection PoC."
+version = "0.2.0"
+description = "Local DRY Artifact Registry + Lookup & Compare Service for registry-aware authoring (PoC)."
 requires-python = ">=3.9"
 dependencies = [
   "PyYAML>=6.0",
 ]
 
-# Optional tiers. The PoC runs fully offline with ZERO optional deps:
+# Optional tiers. The PoC runs fully offline; the CLI and services need ZERO optional deps:
 #   - AST/structural similarity uses the Python stdlib (ast, difflib).
-#   - SQL normalization uses sqlglot when present and falls back to a regex
-#     normalizer when it is not.
+#   - SQL normalization + feature extraction use sqlglot when present and fall back to a
+#     regex normalizer when it is not.
 [project.optional-dependencies]
-# Better SQL AST normalization (recommended, still fully offline).
+# Better SQL AST normalization + feature extraction (recommended, still fully offline).
 sql = ["sqlglot>=25.0"]
-# Optional local vector-similarity tier for Pattern 2's "3 models" comparison.
-# Fully offline once the model is downloaded once; no API keys.
+# On-demand code-embedding tier for cross-language comparison. Vectors are computed per run
+# and discarded — no vector database, no persistence. Fully offline once the model is cached.
 vector = [
   "sentence-transformers>=3.0",
-  "chromadb>=0.5",
 ]
+# Thin local MCP stdio server for GitHub Copilot (registry-aware authoring).
+mcp = ["mcp>=1.2"]
 
 [project.scripts]
 dry-registry = "dry_registry.cli:main"
+dry-registry-mcp = "dry_registry.mcp_server:main"
 
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["dry_registry"]
+packages = [
+  "dry_registry",
+  "dry_registry.comparison",
+  "dry_registry.comparison.normalizers",
+  "dry_registry.comparison.features",
+  "dry_registry.comparison.scorers",
+  "dry_registry.candidate_providers",
+  "dry_registry.services",
+]
