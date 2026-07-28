@@ -5,12 +5,14 @@ small set of discoverable, invokable tools. It contains NO business logic — ev
 validates its input, calls an application service, and returns the service's structured JSON.
 The LLM (Copilot) reads that evidence; it is never taught the registry contents here.
 
-Tools exposed (registry scope only — the workspace scope is CLI-only by design):
-  search_artifacts          intent-first discovery
-  get_artifact              fetch one artifact by id
+Tools exposed (registry scope only — the workspace scope is CLI-only by design).
+Intent-first discovery leads; code comparison is the verification step:
+  search_artifacts          intent-first discovery (start here)
+  recommend_composition     one-call reuse plan for a request (search + compose + bind)
   find_composable_artifacts resolve each named component to its canonical artifact
+  get_artifact              fetch one artifact by id
   resolve_binding           recommended physical binding for a runtime
-  compare_code              code-first comparison with evidence
+  compare_code              code-first verification with evidence
 
 Run:  python -m dry_registry.mcp_server
 Requires the optional 'mcp' extra:  pip install -e 'poc/registry[mcp]'
@@ -70,6 +72,22 @@ def find_composable_artifacts(concepts: List[str]) -> dict:
 
 
 @mcp.tool()
+def recommend_composition(
+    intent: str,
+    components: List[str],
+    runtime: Optional[str] = None,
+    dialect: Optional[str] = None,
+) -> dict:
+    """Intent-first "hero" call: one request in, a ready reuse plan out. Given a business
+    intent and its named components, returns any whole-request match, each component resolved
+    to its canonical artifact with a recommended binding for the runtime, and the parts that
+    are genuinely new work. Prefer this over orchestrating search + compose + bind by hand."""
+    return _SERVICES.registry.recommend_composition(
+        intent, components, runtime=runtime, dialect=dialect
+    ).to_dict()
+
+
+@mcp.tool()
 def resolve_binding(
     artifact_id: str,
     runtime: Optional[str] = None,
@@ -89,10 +107,12 @@ def compare_code(
     scope: str = "registry",
     top: int = 5,
 ) -> dict:
-    """Code-first comparison of a snippet against registered artifacts. Returns similarity
-    signals, shared entities/operations, governance, an advisory relationship label and a
-    recommended action — evidence for you to explain and act on. Does not decide for you."""
-    return _SERVICES.comparison.compare_code(
+    """Code-first comparison of a snippet against registered artifacts. Use this to *verify*
+    that authored code did not re-implement a governed artifact — reach for search_artifacts /
+    recommend_composition first. Returns similarity signals, shared entities/operations,
+    governance, an advisory relationship label and a recommended action — evidence for you to
+    explain and act on. Does not decide for you."""
+    return _SERVICES.reuse_detection.compare_code(
         code, language=language or "", dialect=dialect, scope=scope, top=top).to_dict()
 
 

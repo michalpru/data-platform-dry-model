@@ -1,6 +1,6 @@
 # Template: DRY Artifact Manifest
 # Declares artifact identity, ownership, lifecycle, registry intent, interfaces,
-# dependencies, and physical implementations.
+# dependencies, and implementation bindings.
 
 apiVersion: dry.platform/v1
 kind: DryArtifact
@@ -22,10 +22,14 @@ metadata:
     interfaceTypes:
       - queryable_dataset
 spec:
+  # Entry role in the registry: producer (registers a reusable artifact) is the default.
+  entryRole: producer
+  # Reuse intent (whitepaper vocabulary): enterprise_canonical | domain_canonical | shared_utility.
+  reuseIntent: domain_canonical
   dryLayer:
     - logic
     - physical_data_assets
-  physicalImplementations:
+  implementationBindings:
     - system: warehouse
       env: prod
       ref: "analytics.finance.revenue_events"

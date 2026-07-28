@@ -3,9 +3,9 @@
 Both the CLI and the MCP server are thin clients over these three services. Business logic
 lives here exactly once:
 
-  RegistryService    knows what exists   (search_artifacts, get_artifact, find_composable_artifacts)
-  BindingService     resolves a runtime  (resolve_binding)
-  ComparisonService  knows what is similar (compare_code, scope=registry|workspace)
+  RegistryService        knows what exists     (search_artifacts, get_artifact, find_composable_artifacts, recommend_composition)
+  BindingService         resolves a runtime    (resolve_binding)
+  ReuseDetectionService  knows what is similar  (compare_code, scope=registry|workspace)
 
 `build_services()` wires them to a SQLite store, ingesting the registered manifests if the
 store is empty so callers never have to remember a separate setup step.
@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from ..manifests import find_repo_root, load_registered
 from ..store import RegistryStore
 from .binding_service import BindingService
-from .comparison_service import ComparisonService
+from .reuse_detection_service import ReuseDetectionService
 from .registry_service import RegistryService
 
 DEFAULT_DB = os.path.join(os.path.expanduser("~"), ".dry_registry.sqlite")
@@ -29,9 +29,14 @@ DEFAULT_DB = os.path.join(os.path.expanduser("~"), ".dry_registry.sqlite")
 class Services:
     registry: RegistryService
     binding: BindingService
-    comparison: ComparisonService
+    reuse_detection: ReuseDetectionService
     store: RegistryStore
     repo_root: str
+
+    @property
+    def comparison(self) -> ReuseDetectionService:
+        """Backwards-compatible alias for the reuse-detection service."""
+        return self.reuse_detection
 
     def close(self) -> None:
         self.store.close()
@@ -49,7 +54,7 @@ def build_services(
     return Services(
         registry=RegistryService(store),
         binding=BindingService(store),
-        comparison=ComparisonService(store, root),
+        reuse_detection=ReuseDetectionService(store, root),
         store=store,
         repo_root=root,
     )
@@ -60,6 +65,6 @@ __all__ = [
     "build_services",
     "RegistryService",
     "BindingService",
-    "ComparisonService",
+    "ReuseDetectionService",
     "DEFAULT_DB",
 ]

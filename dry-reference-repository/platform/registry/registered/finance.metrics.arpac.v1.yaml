@@ -19,10 +19,11 @@ metadata:
   lifecycle:
     state: shared
 spec:
+  entryRole: producer
   interfaceTypes:
     - semantic_contract
-  reuseScope: domain_canonical
-  physicalImplementations:
+  reuseIntent: domain_canonical
+  implementationBindings:
     - system: semantic-layer
       env: prod
       objectType: metric_definition

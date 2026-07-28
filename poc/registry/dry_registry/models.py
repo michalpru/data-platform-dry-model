@@ -17,7 +17,7 @@ UNKNOWN = "UNKNOWN"
 
 # Relationship classification (fixed set — advisory signal for the LLM, not a verdict).
 DIRECT_MATCH = "DIRECT_MATCH"
-NEAR_MATCH = "NEAR_MATCH"
+STRUCTURAL_SIMILARITY = "STRUCTURAL_SIMILARITY"
 PARTIAL_REIMPLEMENTATION = "PARTIAL_REIMPLEMENTATION"
 VALID_ALTERNATE_BINDING = "VALID_ALTERNATE_BINDING"
 POSSIBLE_DOMAIN_VARIANT = "POSSIBLE_DOMAIN_VARIANT"
@@ -25,7 +25,7 @@ INSUFFICIENT_EVIDENCE = "INSUFFICIENT_EVIDENCE"
 
 RELATIONSHIPS = (
     DIRECT_MATCH,
-    NEAR_MATCH,
+    STRUCTURAL_SIMILARITY,
     PARTIAL_REIMPLEMENTATION,
     VALID_ALTERNATE_BINDING,
     POSSIBLE_DOMAIN_VARIANT,
@@ -210,6 +210,65 @@ class Candidate:
     recommended_binding: Optional[Binding] = None
     coverage: str = COVERAGE_REGISTRY
     is_registered: bool = True
+
+
+COMPONENT_REUSE = "REUSE_REGISTERED"
+COMPONENT_AUTHOR = "AUTHOR_AND_REGISTER"
+
+
+@dataclass
+class CompositionComponent:
+    """One decomposed part of a business request, resolved to a canonical artifact."""
+
+    concept: str
+    status: str = COMPONENT_AUTHOR          # REUSE_REGISTERED | AUTHOR_AND_REGISTER
+    artifact: Optional[ArtifactSummary] = None
+    recommended_binding: Optional[Binding] = None
+    note: str = ""
+
+    def to_dict(self) -> Dict[str, Any]:
+        return _clean(
+            {
+                "concept": self.concept,
+                "status": self.status,
+                "artifact": self.artifact.to_dict() if self.artifact else None,
+                "recommended_binding": self.recommended_binding.to_dict()
+                if self.recommended_binding
+                else None,
+                "note": self.note,
+            }
+        )
+
+
+@dataclass
+class CompositionRecommendation:
+    """recommend_composition(): the intent-first "hero" result.
+
+    Answers 'what should I reuse to build this?' in one call: an optional whole-request
+    match, each named component resolved to its canonical artifact + binding, and the parts
+    that are genuinely new work to author and register.
+    """
+
+    intent: str
+    runtime: Optional[str] = None
+    dialect: Optional[str] = None
+    direct_match: Optional[ArtifactSummary] = None
+    components: List[CompositionComponent] = field(default_factory=list)
+    missing: List[str] = field(default_factory=list)
+    summary: str = ""
+
+    def to_dict(self) -> Dict[str, Any]:
+        return _clean(
+            {
+                "intent": self.intent,
+                "runtime": self.runtime,
+                "dialect": self.dialect,
+                "direct_match": self.direct_match.to_dict() if self.direct_match else None,
+                "components": [c.to_dict() for c in self.components],
+                "missing": self.missing,
+                "summary": self.summary,
+            }
+        )
 
 
 @dataclass

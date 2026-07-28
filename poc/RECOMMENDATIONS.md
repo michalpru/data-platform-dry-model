@@ -1,5 +1,56 @@
 # Recommendations & evaluation
 
+> **Note on numbering.** The "Task 5 / Task 6" sections below come from an **earlier** review
+> prompt (improve-the-use-case / anticipate-the-dbt-criticism). They are unrelated to the
+> later 8-task refinement list, whose decisions are recorded in **Phase 4** immediately below.
+
+---
+
+## Phase 4 — refinement decisions (the 8-task list)
+
+A later review proposed eight refinements plus a large alternative rebuild. Here is what was
+adopted, what was adapted, and what was deliberately **not** done, with rationale.
+
+### Adopted as requested
+
+| # | Task | What changed |
+|---|---|---|
+| 1 | Directory per workspace | Added [`scenarios/`](scenarios/): `scenario-1a` (base warehouse tables), `scenario-1b` (+ finance & marketing domain repos), `scenario-2` (registry-aware). Each has a `workspace/`, an `expected-output/` and a README, all ANSI SQL. |
+| 2 | Proper artifacts in the mocked registry | The composition artifacts were already registered; added the **retired** `finance.reporting.invoice_revenue.v1` (source contract + registered manifest) so the registry can *demonstrate rejecting a superseded artifact*. The marketing variant stays **intentionally unregistered** (domain-local) — the registry rejects it by absence. |
+| 3 | Business-language service name | Renamed `ComparisonService` → `ReuseDetectionService` (`reuse_detection_service.py`). A back-compat alias/property is kept so nothing breaks. Reuse detection is framed as a *verification* step, not the entry point. |
+| 4 | Whitepaper manifest vocabulary | Every registered manifest now uses **Entry Role (Producer)**, **Reuse Intent**, **Implementation Bindings**, **Dependencies**, **Ownership**, **Lifecycle**, **Interface Type**. The loader reads the new keys with fallback to the old ones, so existing manifests keep loading. |
+| 5 | Search before compare | `search_artifacts` / `recommend_composition` are now the demo hero (intent-first); `compare_code` is explicitly a later verification step in the agent, prompts, README and walkthrough. |
+| 6 | `recommend_composition()` | Added as a service method, an MCP tool, and a CLI `recommend` command. It resolves each named component to a registered artifact + binding in one call. |
+| 7 | Rename `NEAR_MATCH` | Renamed to `STRUCTURAL_SIMILARITY` across models, classifier, prompts, agent, tests and the walkthrough ("near match" wrongly implied search). |
+| 8 | ANSI SQL, dialect bindings | All authored example SQL is portable **ANSI SQL**; dialect-specific objects live only as **implementation bindings**. `recognize_revenue` now exposes Snowflake, Databricks *and* Spark bindings behind one identity, and `resolve_binding` picks the right one. |
+
+### Deliberately **not** done — the full Snowflake artifact-rename rebuild
+
+The same review also proposed replacing the current artifact model with a large Snowflake-based
+rebuild (new artifact names, scenario-scoped `1A/1B/2` folders wired into the engine, dialect-
+specific SQL throughout). This was **declined**, for reasons that reduce — not increase — the risk
+of criticism:
+
+1. **It would break a validated PoC.** The current engine, services, CLI, MCP and tests pass
+   (10 passed, 1 skipped, offline). A rename-everything rebuild discards that evidence for no new
+   lesson.
+2. **It mixes two naming models** — the coherent existing model (`recognize_revenue`,
+   `net_recognized_revenue`, `active_customer`, `revenue_events`) and the rebuild's parallel names
+   (`fact_billable_events`, `invoice_revenue`, `commercial_customer_status_90d`). The proposal's
+   own notes warn against exactly this double-model confusion.
+3. **The valuable ideas were extracted without the rebuild.** Scenario clarity (Task 1), the
+   retired-artifact rejection story (Task 2), whitepaper vocabulary (Task 4), intent-first framing
+   (Task 5), `recommend_composition` (Task 6), and ANSI-SQL-plus-dialect-bindings (Task 8) were all
+   adopted **on top of** the existing coherent model.
+
+Recommended future work, if the rebuild is ever revisited: add positive relationship
+classifications (`AUTHORIZED_REUSE_REFERENCE`, `NEW_COMPOSITION`) so the classifier can *affirm*
+correct reuse, not only flag duplication — a smaller, additive change than a full rename.
+
+---
+
+# Earlier review (improve the use case & the dbt objection)
+
 Covers **Task 5** (how to improve the use case and steps) and **Task 6** (practical value and the
 likely "we already do this with dbt" criticism).
 

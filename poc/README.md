@@ -54,7 +54,7 @@ poc/
         scorers/                ← ast (token-seq), feature (Jaccard), embedding (on-demand)
         ranking.py, classification.py, engine.py
       candidate_providers/      ← registry_provider + workspace_provider (same engine)
-      services/                 ← RegistryService, BindingService, ComparisonService
+      services/                 ← RegistryService, BindingService, ReuseDetectionService
       cli.py                    ← THIN client over the services (never uses MCP)
       mcp_server.py             ← THIN stdio MCP proxy over the services (registry scope)
     pyproject.toml              ← zero required ML deps; optional [sql] [vector] [mcp] extras
@@ -64,7 +64,11 @@ poc/
   demo/
     walkthrough.md              ← the three-pattern walkthrough with commands + real output
     arpac-authoring-scratch.sql ← the "from scratch" reimplementation (the duplicate candidate)
-  RECOMMENDATIONS.md            ← Task 5 (improvements) + Task 6 (evaluation & the dbt objection)
+  scenarios/                    ← Task 1: the three workspaces Copilot "sees" (ANSI SQL fixtures)
+    scenario-1a/                ← base warehouse tables only
+    scenario-1b/                ← base tables + finance & marketing domain repos
+    scenario-2/                 ← registry-aware (resolves the DRY Artifact Registry)
+  RECOMMENDATIONS.md            ← design rationale, adopted vs. rejected refinements
 
 .github/agents/dry-reuse.agent.md         ← Copilot custom agent (registry-aware authoring)
 .github/prompts/search-registry.prompt.md ← intent-first workflow
@@ -77,13 +81,15 @@ a separate team repository).
 
 ## Architecture: three responsibilities
 
-> **Registry** knows *what exists* · **Comparison service** knows *what is similar* ·
-> **AI (Copilot)** knows *how to help the engineer use both*.
+> **Registry** knows *what exists* (start here) · the **reuse-detection service** *verifies* what
+> is similar · **AI (Copilot)** knows *how to help the engineer use both*.
 
 The CLI and the MCP server are both **thin clients** of the same application services
 (`dry_registry.services`). Business logic — normalization, feature extraction, scoring,
 ranking, classification — lives **once** in the shared comparison core and is reused across
-scopes. Only the *candidate source* and the *governance metadata* differ:
+scopes. Intent-first discovery (`search_artifacts` / `recommend_composition`) is the primary
+path; reuse detection (`compare_code`) is a verification step. Only the *candidate source* and
+the *governance metadata* differ:
 
 - **Registry scope** — candidates are governed logical artifacts (authority, lifecycle, owner,
   reuse intent, recommended binding).
@@ -126,6 +132,7 @@ Chat, pick the **DRY Reuse** agent, and use `/search-registry` (intent-first) or
 pip install -e .              # PyYAML only; add ".[sql]" for sqlglot, ".[vector]" for embeddings, ".[mcp]" for the server
 python -m dry_registry.cli ingest
 python -m dry_registry.cli search "recognize revenue"
+python -m dry_registry.cli recommend "ARPAC" --component "net recognized revenue" --component "active customer"
 python -m dry_registry.cli resolve-binding finance.logic.recognize_revenue.v1 --runtime spark
 python -m dry_registry.cli compare ../demo/arpac-authoring-scratch.sql --scope registry
 python -m dry_registry.cli composables "net recognized revenue" "active customer"

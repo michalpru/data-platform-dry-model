@@ -7,12 +7,13 @@ Lookup & Compare Service. Use `--json` on any command to get the raw service pay
 
 Commands:
   ingest          Build / refresh the SQLite control plane from the registered manifests.
-  search          Intent-first search over registered artifacts.
+  search          Intent-first search over registered artifacts (start here).
+  recommend       One-call reuse plan for a request (search + compose + bind).
   get             Fetch one registered artifact by id.
   resolve         Canonical resolution for a concept (returns authority).
   resolve-binding Recommended physical binding for a runtime (+ alternatives).
-  compare         Code-first comparison (scope=registry|workspace) with evidence.
   composables     Resolve each named component to its canonical registered artifact.
+  compare         Code-first verification (scope=registry|workspace) with evidence.
   impact          Declared-dependency impact analysis.
 
 Runs fully offline. Examples:
@@ -153,7 +154,7 @@ def cmd_compare(args) -> int:
     svc = _services(args)
     with open(args.file, "r", encoding="utf-8") as fh:
         code = fh.read()
-    result = svc.comparison.compare_code(
+    result = svc.reuse_detection.compare_code(
         code,
         language=args.language or "",
         dialect=args.dialect,
@@ -200,6 +201,33 @@ def cmd_composables(args) -> int:
                 print(f"  {concept:<24} → {art.fqn} [{art.governance.lifecycle}]")
             else:
                 print(f"  {concept:<24} → (no registered artifact — author + register)")
+    svc.close()
+    return 0
+
+
+def cmd_recommend(args) -> int:
+    svc = _services(args)
+    rec = svc.registry.recommend_composition(
+        args.intent, args.components, runtime=args.runtime, dialect=args.dialect
+    )
+    _emit(args, rec.to_dict())
+    if not args.json:
+        print(f"Composition recommendation for '{args.intent}':\n")
+        if rec.direct_match:
+            dm = rec.direct_match
+            print(f"  \u25ba Whole request already registered: {dm.fqn} "
+                  f"[{dm.governance.lifecycle}] — reuse it.\n")
+        for c in rec.components:
+            if c.status == "REUSE_REGISTERED" and c.artifact:
+                g = c.artifact.governance
+                print(f"  reuse  {c.concept:<22} → {c.artifact.fqn} [{g.lifecycle}]")
+                if c.recommended_binding:
+                    b = c.recommended_binding
+                    d = f"/{b.dialect}" if b.dialect else ""
+                    print(f"         binding: {b.runtime}{d} {b.env}: {b.ref}")
+            else:
+                print(f"  author {c.concept:<22} → (no registered artifact — author + register)")
+        print(f"\n  {rec.summary}")
     svc.close()
     return 0
 
@@ -280,6 +308,14 @@ def build_parser() -> argparse.ArgumentParser:
     sp = sub.add_parser("composables", help="Resolve each named component to its canonical artifact.")
     sp.add_argument("concepts", nargs="+")
     sp.set_defaults(func=cmd_composables)
+
+    sp = sub.add_parser("recommend", help="One-call reuse plan for a request (search + compose + bind).")
+    sp.add_argument("intent", help="The whole business request, e.g. 'ARPAC'.")
+    sp.add_argument("--component", dest="components", action="append", default=[],
+                    metavar="CONCEPT", help="A named component to resolve (repeatable).")
+    sp.add_argument("--runtime", default=None, help="warehouse | spark | dbt | semantic")
+    sp.add_argument("--dialect", default=None, help="snowflake | spark | ...")
+    sp.set_defaults(func=cmd_recommend)
 
     sp = sub.add_parser("impact", help="Declared-dependency impact analysis.")
     sp.add_argument("fqn")

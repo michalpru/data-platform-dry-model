@@ -50,7 +50,7 @@ def main(argv=None) -> int:
     with open(args.query, "r", encoding="utf-8") as fh:
         query = fh.read()
 
-    result = svc.comparison.compare_code(
+    result = svc.reuse_detection.compare_code(
         query,
         language=args.language or "",
         scope="workspace",

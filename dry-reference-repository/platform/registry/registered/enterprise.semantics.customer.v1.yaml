@@ -19,6 +19,8 @@ metadata:
     state: certified
 
 spec:
+  entryRole: producer
+  reuseIntent: enterprise_canonical
   interfaceTypes:
     - semantic_contract
   compatibility:

@@ -10,7 +10,7 @@ from __future__ import annotations
 from ..models import (
     DIRECT_MATCH,
     INSUFFICIENT_EVIDENCE,
-    NEAR_MATCH,
+    STRUCTURAL_SIMILARITY,
     PARTIAL_REIMPLEMENTATION,
     POSSIBLE_DOMAIN_VARIANT,
     VALID_ALTERNATE_BINDING,
@@ -19,7 +19,7 @@ from ..models import (
 
 # Thresholds on the AST / token-sequence signal (same-language pairs).
 _DIRECT = 0.85
-_NEAR = 0.62
+_STRUCTURAL = 0.62
 # Thresholds on the language-neutral feature/embedding signal (cross-language pairs).
 _STRONG_FEATURE = 0.55
 _WEAK_FEATURE = 0.30
@@ -38,8 +38,8 @@ def classify(
     if same_language and sig.ast is not None:
         if sig.ast >= _DIRECT:
             return DIRECT_MATCH
-        if sig.ast >= _NEAR:
-            return NEAR_MATCH
+        if sig.ast >= _STRUCTURAL:
+            return STRUCTURAL_SIMILARITY
         # Same language but low token overlap — fall through to feature reasoning.
 
     # Cross-language (AST unsupported) or same-language-but-restructured: use the neutral
@@ -70,7 +70,7 @@ def recommend_action(relationship: str, is_registered: bool, lifecycle: str = ""
     tag = f" ({lifecycle})" if lifecycle else ""
     return {
         DIRECT_MATCH: f"Reuse the registered artifact{tag} instead of re-implementing it.",
-        NEAR_MATCH: f"Very likely a re-implementation of the registered artifact{tag}; review and reuse it.",
+        STRUCTURAL_SIMILARITY: f"Structurally very close to the registered artifact{tag}; review and reuse it rather than maintaining a copy.",
         PARTIAL_REIMPLEMENTATION: f"Overlaps a registered artifact{tag}; reuse the shared parts rather than copying logic.",
         VALID_ALTERNATE_BINDING: f"This is a valid runtime binding of a registered artifact{tag}; resolve the binding for your runtime.",
         POSSIBLE_DOMAIN_VARIANT: f"May be a domain variant of a registered artifact{tag}; confirm intent before diverging.",

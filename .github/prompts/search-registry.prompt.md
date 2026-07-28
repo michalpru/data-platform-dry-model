@@ -1,7 +1,7 @@
 ---
 mode: agent
 description: Intent-first registry search — find and reuse governed artifacts for what the engineer wants to build, composing from registered components when there is no single match.
-tools: ['search_artifacts', 'get_artifact', 'find_composable_artifacts', 'resolve_binding']
+tools: ['search_artifacts', 'get_artifact', 'find_composable_artifacts', 'recommend_composition', 'resolve_binding']
 ---
 
 # Intent-first: find what to reuse
@@ -16,7 +16,9 @@ Steps:
    (e.g. the metric name). If a single clear match exists, `get_artifact` it and recommend
    reuse — stop here.
 2. **No single match? Decompose.** Break the request into the components the engineer named.
-   Call `find_composable_artifacts([component, ...])`, or `search_artifacts` each component
+   Call `recommend_composition(intent, [component, ...])` — it resolves each named component
+   to a registered artifact + binding and flags anything that must be authored. You may also
+   call `find_composable_artifacts([component, ...])`, or `search_artifacts` each component
    **separately**. Do not infer a composition the engineer did not describe.
 3. **Report gaps honestly.** For any component with no registered artifact, say so and treat
    it as new work to author and register — do not force an unrelated match to fit.

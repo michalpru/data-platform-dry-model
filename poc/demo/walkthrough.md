@@ -65,7 +65,7 @@ Workspace similarity search for arpac-authoring-scratch.sql (method=ast)
 
   Ranked by SIMILARITY ONLY — no lifecycle, ownership or canonical status:
 
-    0.65  [NEAR_MATCH]  dry-reference-repository\domains\finance\logic\udfs\finance.logic.recognize_revenue.v1.sql
+    0.65  [STRUCTURAL_SIMILARITY]  dry-reference-repository\domains\finance\logic\udfs\finance.logic.recognize_revenue.v1.sql
           ast=0.66 feat=0.62 | authority: UNKNOWN
     0.44  [PARTIAL_REIMPLEMENTATION]  dry-reference-repository\domains\finance\logic\pyspark\recognize_revenue.py
           feat=0.44 | authority: UNKNOWN
@@ -84,7 +84,7 @@ Workspace similarity search for arpac-authoring-scratch.sql (method=ast)
 ```
 
 **What worked:** the search *did* surface the certified recognition rule as the top structural
-match (0.65, `NEAR_MATCH`) — and even related the **PySpark** binding cross-language via the
+match (0.65, `STRUCTURAL_SIMILARITY`) — and even related the **PySpark** binding cross-language via the
 language-neutral feature signal. Accidental re-implementation is now less likely.
 
 **What is still missing — the three Pattern-2 gaps the whitepaper names:**
@@ -104,7 +104,7 @@ language-neutral feature signal. Accidental re-implementation is now less likely
 The whitepaper places three detection techniques — **structural fingerprinting (AST)**,
 **embedding-based similarity**, and **LLM-based analysis** — at **build time**, in the CI/CD flow.
 This PoC runs those same techniques *at authoring time* as the engine behind the workspace search.
-The harness is now a thin wrapper over the shared **Comparison service** (`scope="workspace"`), so
+The harness is now a thin wrapper over the shared **reuse-detection service** (`scope="workspace"`), so
 the AST baseline, the language-neutral feature signal and the optional embedding tier are the
 **same code** the registry scope uses:
 
@@ -117,8 +117,8 @@ python scan.py --query ../demo/arpac-authoring-scratch.sql --embeddings
 ```
 
 The **LLM tier stays in Copilot**: the service returns structured evidence (signals + shared
-entities/operations), and the model explains and decides. The point of the comparison is not
-which signal wins, but that **all of them return similarity, none returns authority.**
+entities/operations), and the model explains and decides. The point of the reuse-detection check is
+not which signal wins, but that **all of them return similarity, none returns authority.**
 
 ---
 
@@ -138,6 +138,32 @@ governed metric, so the engineer is cleared to build it. (In this snapshot the f
 `finance.metrics.arpac.v1` is already registered as the *shared candidate* outcome of this very
 exercise.)
 
+### Step 1b — Ask the registry how to compose it (the intent-first hero)
+
+Rather than hand-decomposing the metric, the engineer asks the registry for a composition plan.
+This is the **intent-first** path — search and composition come first; code comparison is only a
+later verification step.
+
+```powershell
+python -m dry_registry.cli recommend "ARPAC" --component "net recognized revenue" --component "active customer"
+```
+
+```
+Composition recommendation for 'ARPAC':
+
+  ► Whole request already registered: finance.metrics.arpac.v1 [shared] — reuse it.
+
+  reuse  net recognized revenue → finance.metrics.net_recognized_revenue.v1 [certified]
+  reuse  active customer        → enterprise.metrics.active_customer.v1 [certified]
+
+  A registered artifact already matches the whole request: finance.metrics.arpac.v1 [shared]. Reuse it instead of re-composing.
+```
+
+One call resolves every named component to a **certified** registered artifact (and, with a
+runtime, its binding) and flags anything that must still be authored. In the MCP/agent flow this is
+the `recommend_composition` tool — it makes intent-first authoring a single step instead of a
+manual search-per-component loop.
+
 ### Step 2 — Resolve the certified building blocks and their bindings
 
 ```powershell
@@ -150,7 +176,15 @@ Canonical resolution for 'active customer':
 
   ► enterprise.metrics.active_customer.v1  [CERTIFIED]
       Active Customer — owned by data-governance
-      reuse intent: UNKNOWN
+      reuse intent: enterprise_canonical
+
+      Other registered matches:
+        - finance.metrics.arpac.v1 [shared]
+        - enterprise.reporting.customer.v1 [certified]
+        - enterprise.semantics.customer.v1 [certified]
+        - finance.metrics.net_recognized_revenue.v1 [certified]
+        - finance.reporting.invoice_revenue.v1 [retired]
+        - finance.reporting.revenue_events.v1 [certified]
 
       → Reuse this artifact instead of re-implementing it.
 
@@ -160,12 +194,15 @@ Binding resolution for finance.logic.recognize_revenue.v1 (runtime=spark, dialec
   alternatives:
     - warehouse/snowflake prod: analytics.finance.fn_recognize_revenue
     - warehouse/snowflake uat: analytics_uat.finance.fn_recognize_revenue
+    - warehouse/databricks prod: main.finance.fn_recognize_revenue
 ```
 
 Unlike Pattern 2, this answer carries **authority**: lifecycle state (`CERTIFIED`), owner
-(`data-governance`), and the **recommended physical binding for the engineer's runtime** — the
-Spark function for a Spark pipeline, with the warehouse UDFs offered as alternatives. The engineer
-now knows *which* definition is canonical and exactly how to reference it.
+(`data-governance`), reuse intent (`enterprise_canonical`), and the **recommended physical binding
+for the engineer's runtime** — the Spark function for a Spark pipeline, with the Snowflake and
+Databricks warehouse UDFs offered as alternatives. The author writes **portable ANSI SQL**; the
+registry maps it to the correct dialect binding (Task 8: one ANSI composition, many dialect
+bindings). The engineer now knows *which* definition is canonical and exactly how to reference it.
 
 ### Step 3 — Detect the re-implementation before it merges
 
@@ -179,16 +216,16 @@ python -m dry_registry.cli compare ../demo/arpac-authoring-scratch.sql --scope r
 ```
 Comparison for arpac-authoring-scratch.sql (scope=registry, method=ast):
 
-  [NEAR_MATCH] finance.logic.recognize_revenue.v1
+  [STRUCTURAL_SIMILARITY] finance.logic.recognize_revenue.v1
       ast=0.66 feat=0.42 (combined=0.61) | authority: REGISTERED_CANONICAL | lifecycle: certified
       shared: amount, credit, currency, customer, gross, invoice, net, netting, order, recogniz, refund, reporting, revenue
-      → Very likely a re-implementation of the registered artifact (certified); review and reuse it.
+      → Structurally very close to the registered artifact (certified); review and reuse it rather than maintaining a copy.
   [INSUFFICIENT_EVIDENCE] finance.logic.normalize_reporting_currency.v1
       ast=0.15 feat=0.15 (combined=0.15) | authority: REGISTERED_CANONICAL | lifecycle: shared
       shared: fx_rates, amount, currency, fx, reporting
       → No strong match; safe to author, but register the new artifact.
 
-  Closest match: finance.logic.recognize_revenue.v1 [NEAR_MATCH] — Very likely a re-implementation ...
+  Closest match: finance.logic.recognize_revenue.v1 [STRUCTURAL_SIMILARITY] — Structurally very close ...
 ```
 
 ### Step 4 — Compose, and check impact
@@ -244,23 +281,25 @@ open Copilot Chat, and select the **DRY Reuse** agent
 
 - **`/search-registry`** (intent-first) — the engineer describes what they want to build. The
   agent calls `search_artifacts`; if there is no single match it decomposes the request and calls
-  `find_composable_artifacts`, then `resolve_binding` for each component before writing any
-  reference. *ARPAC example:* search "ARPAC" → absent → search "net recognized revenue" and
-  "active customer" separately → resolve bindings → write only the ratio.
-- **`/compare-with-registry`** (code-first) — the engineer has code selected. The agent calls
-  `compare_code`, reads the relationship label + shared entities, explains *why* it matches, and
-  recommends reuse or registration.
+  `recommend_composition` (which resolves each named component to a registered artifact + binding
+  and flags what must be authored), then `resolve_binding` for each component before writing any
+  reference. *ARPAC example:* search "ARPAC" → absent → `recommend_composition("ARPAC", ["net
+  recognized revenue", "active customer"])` → resolve bindings → write only the ratio.
+- **`/compare-with-registry`** (code-first) — a **verification step** when the engineer already
+  has code selected. The agent calls `compare_code`, reads the relationship label + shared
+  entities, explains *why* it matches, and recommends reuse or registration. Prefer intent-first
+  when the engineer can describe what they want to build.
 
 The division of responsibility is deliberate:
 
-> **Registry** knows what exists · **Comparison service** knows what is similar ·
-> **AI (Copilot)** knows how to help the engineer use both.
+> **Registry** knows what exists (start here) · **Reuse-detection service** verifies what is
+> similar · **AI (Copilot)** knows how to help the engineer use both.
 
-The MCP tools (`search_artifacts`, `get_artifact`, `find_composable_artifacts`, `resolve_binding`,
-`compare_code`) return the *same structured JSON* the CLI's `--json` flag prints. The model is
-taught the **workflow and the tools**, never the registry contents — and the Python services
-**never call an LLM**. The LLM reasoning stays in Copilot, acting on the evidence the services
-return.
+The MCP tools (`search_artifacts`, `get_artifact`, `find_composable_artifacts`,
+`recommend_composition`, `resolve_binding`, `compare_code`) return the *same structured JSON* the
+CLI's `--json` flag prints. The model is taught the **workflow and the tools**, never the registry
+contents — and the Python services **never call an LLM**. The LLM reasoning stays in Copilot,
+acting on the evidence the services return.
 
 ---
 

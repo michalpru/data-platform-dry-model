@@ -65,6 +65,7 @@ class Artifact:
     reuse_scope: str
     owner_team: str
     source_manifest: str
+    entry_role: str = "producer"
     bindings: List[Binding] = field(default_factory=list)
     dependencies: List[Dict[str, str]] = field(default_factory=list)
     known_consumers: List[Dict[str, str]] = field(default_factory=list)
@@ -156,8 +157,22 @@ def load_registered(repo_root: str) -> List[Artifact]:
         source_manifest = spec.get("sourceManifest", "")
         source_map = _resolve_source_paths(repo_root, source_manifest)
 
+        # Whitepaper-aligned vocabulary (Implementation Bindings / Declared Dependencies /
+        # Reuse Intent / Entry Role) with fallback to the earlier key names so older
+        # manifests keep loading unchanged.
+        binding_specs = (
+            spec.get("implementationBindings")
+            or spec.get("physicalImplementations")
+            or []
+        )
+        dependency_specs = (
+            spec.get("declaredDependencies") or spec.get("dependencies") or []
+        )
+        reuse_intent = spec.get("reuseIntent") or spec.get("reuseScope") or ""
+        entry_role = spec.get("entryRole") or "producer"
+
         bindings: List[Binding] = []
-        for impl in spec.get("physicalImplementations", []) or []:
+        for impl in binding_specs:
             ref = impl.get("ref", "")
             # Best-effort source resolution: match by physical ref suffix or symbol.
             source_path = None
@@ -170,6 +185,13 @@ def load_registered(repo_root: str) -> List[Artifact]:
             runtime, dialect = infer_runtime_dialect(
                 impl.get("system", ""), impl.get("objectType", "")
             )
+            # An explicit runtime/dialect on the binding overrides inference. This lets one
+            # logical artifact expose portable ANSI + dialect-specific bindings (e.g. Snowflake
+            # and Databricks) so resolve_binding can pick the right one for the target engine.
+            if impl.get("runtime"):
+                runtime = impl.get("runtime")
+            if impl.get("dialect"):
+                dialect = impl.get("dialect")
             bindings.append(
                 Binding(
                     system=impl.get("system", ""),
@@ -190,11 +212,12 @@ def load_registered(repo_root: str) -> List[Artifact]:
                 description=(meta.get("description", "") or "").strip(),
                 interface_types=spec.get("interfaceTypes", []) or [],
                 lifecycle_state=(meta.get("lifecycle", {}) or {}).get("state", ""),
-                reuse_scope=spec.get("reuseScope", ""),
+                reuse_scope=reuse_intent,
                 owner_team=(meta.get("owner", {}) or {}).get("team", ""),
                 source_manifest=source_manifest,
+                entry_role=entry_role,
                 bindings=bindings,
-                dependencies=spec.get("dependencies", []) or [],
+                dependencies=dependency_specs,
                 known_consumers=spec.get("knownConsumers", []) or [],
                 aliases=meta.get("aliases", []) or spec.get("aliases", []) or [],
             )

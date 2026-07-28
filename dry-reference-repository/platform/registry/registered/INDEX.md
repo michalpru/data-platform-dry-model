@@ -35,6 +35,7 @@ Search by concept keyword (advisory — imprecise):
 | `finance.logic.recognize_revenue.v1` | callable_logic | finance-analytics | certified |
 | `finance.logic.normalize_reporting_currency.v1` | callable_logic | finance-analytics | shared |
 | `finance.reporting.revenue_events.v1` | queryable_dataset | finance-analytics | certified |
+| `finance.reporting.invoice_revenue.v1` | queryable_dataset | finance-analytics | **retired** |
 | `finance.metrics.net_recognized_revenue.v1` | semantic_contract | finance-analytics | certified |
 | `finance.metrics.arpac.v1` | semantic_contract | revenue-analytics | shared |
 | `enterprise.reporting.customer.v1` | queryable_dataset, semantic_contract | data-governance | certified |
@@ -45,6 +46,12 @@ Search by concept keyword (advisory — imprecise):
 with three bindings — a warehouse SQL UDF (`analytics.finance.fn_recognize_revenue`, prod + uat)
 and a PySpark function (`finance_revenue.recognition.recognize_revenue`). Cross-engine reuse of
 this artifact is recorded as one governed definition, not as duplication.
+
+**Retired artifacts note:** `finance.reporting.invoice_revenue.v1` is registered with
+`lifecycle: retired` on purpose. It is a legacy revenue view (skips refunds, no recognition
+rules) that was superseded by the certified recognized-revenue path. Workspace similarity search
+(scenario 1B) surfaces it as "reusable" with no lifecycle signal; only the registry records that
+it must not be reused. This is the registry demonstrating **rejection of a retired artifact**.
 
 **Not registered (domain-local artifacts — intentionally excluded):**
 

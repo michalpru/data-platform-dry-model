@@ -9,7 +9,15 @@ from __future__ import annotations
 
 from typing import Dict, List, Optional
 
-from ..models import ArtifactSummary, Binding, Governance
+from ..models import (
+    ArtifactSummary,
+    Binding,
+    COMPONENT_AUTHOR,
+    COMPONENT_REUSE,
+    CompositionComponent,
+    CompositionRecommendation,
+    Governance,
+)
 from ..store import RegistryStore
 
 
@@ -92,3 +100,69 @@ class RegistryService:
             matches = self.search_artifacts(concept)
             out[concept] = matches[0] if matches else None
         return out
+
+    def recommend_composition(
+        self,
+        intent: str,
+        components: List[str],
+        runtime: Optional[str] = None,
+        dialect: Optional[str] = None,
+    ) -> CompositionRecommendation:
+        """Intent-first "hero" call: one request in, a ready reuse plan out.
+
+        Wraps `find_composable_artifacts` and adds (a) an optional whole-request match, (b) a
+        resolved recommended binding per component for the engineer's runtime, and (c) the
+        list of parts that are genuinely new work. The demo — and Copilot — get a single,
+        actionable answer instead of orchestrating four calls by hand.
+        """
+        # Lazy import avoids a circular import (binding_service imports _binding_model here).
+        from .binding_service import BindingService
+
+        binder = BindingService(self.store)
+        rec = CompositionRecommendation(intent=intent, runtime=runtime, dialect=dialect)
+
+        whole = self.search_artifacts(intent)
+        rec.direct_match = whole[0] if whole else None
+
+        for concept in components:
+            matches = self.search_artifacts(concept)
+            art = matches[0] if matches else None
+            if art is None:
+                rec.components.append(
+                    CompositionComponent(
+                        concept=concept,
+                        status=COMPONENT_AUTHOR,
+                        note="No registered artifact — author and register a new one.",
+                    )
+                )
+                rec.missing.append(concept)
+                continue
+            resolution = binder.resolve_binding(art.fqn, runtime=runtime, dialect=dialect)
+            rec.components.append(
+                CompositionComponent(
+                    concept=concept,
+                    status=COMPONENT_REUSE,
+                    artifact=art,
+                    recommended_binding=resolution.recommended,
+                    note=resolution.note,
+                )
+            )
+
+        reuse_n = sum(1 for c in rec.components if c.status == COMPONENT_REUSE)
+        if rec.direct_match is not None:
+            rec.summary = (
+                f"A registered artifact already matches the whole request: "
+                f"{rec.direct_match.fqn} [{rec.direct_match.governance.lifecycle}]. "
+                f"Reuse it instead of re-composing."
+            )
+        elif reuse_n:
+            rec.summary = (
+                f"Reuse {reuse_n} registered component(s); author only the "
+                f"{len(rec.missing)} missing part(s) and the small composition that joins them."
+            )
+        else:
+            rec.summary = (
+                "No registered components matched — this is new work; author and register it."
+            )
+        return rec
+

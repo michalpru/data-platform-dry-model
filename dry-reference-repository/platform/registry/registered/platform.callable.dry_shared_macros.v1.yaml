@@ -32,6 +32,8 @@ metadata:
     sharedSince: "2025-01"
 
 spec:
+  entryRole: producer
+  reuseIntent: shared_utility
   interfaceTypes:
     - callable_logic
   distribution:

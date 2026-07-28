@@ -1,0 +1,39 @@
+apiVersion: dry.platform/v1
+kind: DatasetContract
+metadata:
+  fqn: finance.reporting.invoice_revenue.v1
+  # LEGACY, RETIRED dataset. Retained only for lineage/history. Superseded by the certified
+  # recognized-revenue path (finance.logic.recognize_revenue.v1 -> revenue_events ->
+  # finance.metrics.net_recognized_revenue.v1). Must NOT be used for new reporting.
+  owner:
+    team: finance-analytics
+  lifecycle:
+    state: retired
+    retiredSince: "2024-11"
+    supersededBy: finance.metrics.net_recognized_revenue.v1
+  registry:
+    publish: true
+    interfaceType: queryable_dataset
+spec:
+  grain:
+    - invoice_id
+  dependencies:
+    - fqn: finance.logic.normalize_reporting_currency.v1
+      relationship: transformation_dependency
+  # Known defects that motivated retirement:
+  knownIssues:
+    - "Computes revenue from POSTED invoices only; does not net refunds/credit notes."
+    - "Uses invoice_date; applies no revenue-recognition-timing rules."
+  schema:
+    - name: invoice_id
+      type: string
+      nullable: false
+    - name: customer_id
+      type: string
+      nullable: false
+    - name: invoice_revenue_usd
+      type: decimal(18,2)
+      nullable: false
+  semanticNotes:
+    definitions:
+      invoice_revenue_usd: "Gross invoice revenue in USD (NOT net; refunds excluded)."

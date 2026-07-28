@@ -22,22 +22,33 @@ metadata:
   lifecycle:
     state: certified
 spec:
+  entryRole: producer
   interfaceTypes:
     - callable_logic
-  reuseScope: domain_canonical
+  reuseIntent: domain_canonical
   # Implementation Bindings: physical objects that realize the logical identity,
   # plus the key used to attribute behavioral signals to this artifact.
-  physicalImplementations:
+  # ONE logical identity, MULTIPLE dialect/engine bindings: authors write portable ANSI SQL
+  # and resolve_binding maps it to the Snowflake, Databricks or Spark object for their runtime.
+  implementationBindings:
     - system: warehouse
       env: prod
       objectType: udf
+      dialect: snowflake
       ref: analytics.finance.fn_recognize_revenue
-      attributionKey: "warehouse:analytics.finance.fn_recognize_revenue"
+      attributionKey: "warehouse:snowflake:analytics.finance.fn_recognize_revenue"
     - system: warehouse
       env: uat
       objectType: udf
+      dialect: snowflake
       ref: analytics_uat.finance.fn_recognize_revenue
-      attributionKey: "warehouse:analytics_uat.finance.fn_recognize_revenue"
+      attributionKey: "warehouse:snowflake:analytics_uat.finance.fn_recognize_revenue"
+    - system: warehouse
+      env: prod
+      objectType: udf
+      dialect: databricks
+      ref: main.finance.fn_recognize_revenue
+      attributionKey: "warehouse:databricks:main.finance.fn_recognize_revenue"
     - system: spark-package
       env: prod
       objectType: function

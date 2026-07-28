@@ -16,9 +16,11 @@ metadata:
   lifecycle:
     state: certified
 spec:
+  entryRole: producer
+  reuseIntent: domain_canonical
   interfaceTypes:
     - queryable_dataset
-  physicalImplementations:
+  implementationBindings:
     - system: warehouse
       env: prod
       ref: analytics.finance.revenue_events

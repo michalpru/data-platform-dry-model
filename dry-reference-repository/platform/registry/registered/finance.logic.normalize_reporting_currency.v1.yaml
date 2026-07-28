@@ -17,11 +17,12 @@ metadata:
   lifecycle:
     state: shared
 spec:
+  entryRole: producer
   interfaceTypes:
     - callable_logic
-  reuseScope: shared_utility
+  reuseIntent: shared_utility
   # Implementation Bindings: a macro symbol distributed in a package.
-  physicalImplementations:
+  implementationBindings:
     - system: sql-macro-package
       env: prod
       objectType: package
