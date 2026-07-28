@@ -43,9 +43,11 @@ Search by concept keyword (advisory — imprecise):
 | `enterprise.metrics.active_customer.v1` | semantic_contract | data-governance | certified |
 
 **Implementation Bindings note:** `finance.logic.recognize_revenue.v1` is one logical identity
-with three bindings — a warehouse SQL UDF (`analytics.finance.fn_recognize_revenue`, prod + uat)
-and a PySpark function (`finance_revenue.recognition.recognize_revenue`). Cross-engine reuse of
-this artifact is recorded as one governed definition, not as duplication.
+with two bindings on the Snowflake stack — a native warehouse SQL UDF
+(`analytics.finance.fn_recognize_revenue`) and a dbt macro (`dry_finance_macros.recognize_revenue`)
+that calls it. Reuse through either surface is recorded as one governed definition, not as
+duplication: dbt solves reuse *inside* dbt, and the registry records that the macro and the UDF
+are the same certified capability.
 
 **Retired artifacts note:** `finance.reporting.invoice_revenue.v1` is registered with
 `lifecycle: retired` on purpose. It is a legacy revenue view (skips refunds, no recognition

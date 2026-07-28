@@ -64,7 +64,7 @@ poc/
   demo/
     walkthrough.md              ← the three-pattern walkthrough with commands + real output
     arpac-authoring-scratch.sql ← the "from scratch" reimplementation (the duplicate candidate)
-  scenarios/                    ← Task 1: the three workspaces Copilot "sees" (ANSI SQL fixtures)
+  scenarios/                    ← Task 1: the three workspaces Copilot "sees" (dialect-realistic fixtures)
     scenario-1a/                ← base warehouse tables only
     scenario-1b/                ← base tables + finance & marketing domain repos
     scenario-2/                 ← registry-aware (resolves the DRY Artifact Registry)

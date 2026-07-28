@@ -16,6 +16,9 @@ feels like the right thing to do. But it reuses the wrong ones.
    enterprise active-customer contract may live in repos not checked out here — invisible to the scan.
 3. **Similarity ≠ semantics.** The revenue-vs-net-revenue and marketing-vs-enterprise divergences
    barely register structurally, yet they are the consequential errors.
+4. **Cross-engine blindness.** The Snowflake revenue view and the Databricks/PySpark active-customer
+   rule live on different engines; joining them needs a cross-warehouse export that no workspace
+   scan flags.
 
 **Detection available in this scenario:** workspace similarity search (Pattern 2) — informative,
 low/medium confidence, **no governance**. It can say "this looks like existing code"; it cannot say

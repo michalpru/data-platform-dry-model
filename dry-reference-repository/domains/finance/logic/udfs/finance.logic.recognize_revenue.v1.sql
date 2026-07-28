@@ -3,7 +3,7 @@
 --
 -- Canonical revenue-recognition rule for the Finance domain. This is one of the
 -- Implementation Bindings of the logical identity finance.logic.recognize_revenue.v1;
--- the equivalent PySpark binding lives in ../pyspark/recognize_revenue.py.
+-- the dbt macro binding that calls this UDF lives in ../macros/finance.logic.recognize_revenue.v1.sql.
 --
 -- Encapsulates two business rules that must not diverge across teams:
 --   1. Orders -> Invoices mapping: a revenue event exists only where an order has

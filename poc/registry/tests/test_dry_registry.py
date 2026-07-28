@@ -89,20 +89,21 @@ def test_cross_language_ast_unsupported():
 def test_bindings_grouped_under_one_logical_artifact(svc):
     res = svc.reuse_detection.compare_code(SCRATCH_SQL, scope="registry", use_embeddings=False)
     ids = [m.logical_id for m in res.matches]
-    assert ids.count(RECOGNIZE) == 1  # despite 3 physical implementations
+    assert ids.count(RECOGNIZE) == 1  # despite multiple physical bindings (UDF + dbt macro)
 
 
 # 6. Binding resolution respects runtime (and dialect).
 def test_resolve_binding_respects_runtime(svc):
-    spark = svc.binding.resolve_binding(RECOGNIZE, runtime="spark")
-    assert spark.recommended is not None
-    assert spark.recommended.runtime == "spark"
+    dbt = svc.binding.resolve_binding(RECOGNIZE, runtime="dbt")
+    assert dbt.recommended is not None
+    assert dbt.recommended.runtime == "dbt"
+    assert dbt.recommended.object_type == "macro"
 
     wh = svc.binding.resolve_binding(RECOGNIZE, runtime="warehouse", dialect="snowflake")
     assert wh.recommended is not None
     assert wh.recommended.runtime == "warehouse"
     assert wh.recommended.dialect == "snowflake"
-    assert wh.recommended.env == "prod"  # prod preferred over uat
+    assert wh.recommended.env == "prod"
 
 
 # 7. Embeddings are computed in ONE batched call over all candidates.

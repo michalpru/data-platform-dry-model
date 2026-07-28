@@ -186,8 +186,8 @@ def load_registered(repo_root: str) -> List[Artifact]:
                 impl.get("system", ""), impl.get("objectType", "")
             )
             # An explicit runtime/dialect on the binding overrides inference. This lets one
-            # logical artifact expose portable ANSI + dialect-specific bindings (e.g. Snowflake
-            # and Databricks) so resolve_binding can pick the right one for the target engine.
+            # logical artifact expose multiple bindings (e.g. a warehouse UDF and a dbt macro)
+            # so resolve_binding can pick the right one for the target engine.
             if impl.get("runtime"):
                 runtime = impl.get("runtime")
             if impl.get("dialect"):

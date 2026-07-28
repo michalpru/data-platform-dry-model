@@ -1,14 +1,10 @@
--- shared.dim_customers — customer dimension (central data warehouse)
--- ANSI SQL DDL.
---
--- GOVERNANCE WARNING: `is_active` here is a LOCAL warehouse-convenience flag. It marks any
--- customer who placed at least one order in the trailing 12 months. It is NOT the enterprise
--- "active customer" definition used for executive reporting (that is the certified 90-day
--- commercial-activity classification — see scenario-2 and the DRY Artifact Registry).
-CREATE TABLE shared.dim_customers (
-    customer_id      BIGINT        NOT NULL,
+-- shared.dim_customers — customer dimension (central data warehouse: Snowflake)
+-- Snowflake SQL DDL.
+
+CREATE OR REPLACE TABLE shared.dim_customers (
+    customer_id      NUMBER(38,0)  NOT NULL,
     customer_name    VARCHAR(200),
-    is_active        BOOLEAN,       -- placed >= 1 order in the last 12 months (NOT enterprise-grade)
+    is_active        BOOLEAN,       -- placed >= 1 order in the last 12 months
     last_order_date  DATE,
     PRIMARY KEY (customer_id)
 );

@@ -168,7 +168,7 @@ manual search-per-component loop.
 
 ```powershell
 python -m dry_registry.cli resolve "active customer"
-python -m dry_registry.cli resolve-binding finance.logic.recognize_revenue.v1 --runtime spark
+python -m dry_registry.cli resolve-binding finance.logic.recognize_revenue.v1 --runtime dbt
 ```
 
 ```
@@ -188,21 +188,21 @@ Canonical resolution for 'active customer':
 
       → Reuse this artifact instead of re-implementing it.
 
-Binding resolution for finance.logic.recognize_revenue.v1 (runtime=spark, dialect=None):
+Binding resolution for finance.logic.recognize_revenue.v1 (runtime=dbt, dialect=None):
 
-  ► recommended: spark/spark prod: finance_revenue.recognition.recognize_revenue (function)
+  ► recommended: dbt/snowflake prod: dry_finance_macros.recognize_revenue (macro)
   alternatives:
     - warehouse/snowflake prod: analytics.finance.fn_recognize_revenue
-    - warehouse/snowflake uat: analytics_uat.finance.fn_recognize_revenue
-    - warehouse/databricks prod: main.finance.fn_recognize_revenue
 ```
 
-Unlike Pattern 2, this answer carries **authority**: lifecycle state (`CERTIFIED`), owner
-(`data-governance`), reuse intent (`enterprise_canonical`), and the **recommended physical binding
-for the engineer's runtime** — the Spark function for a Spark pipeline, with the Snowflake and
-Databricks warehouse UDFs offered as alternatives. The author writes **portable ANSI SQL**; the
-registry maps it to the correct dialect binding (Task 8: one ANSI composition, many dialect
-bindings). The engineer now knows *which* definition is canonical and exactly how to reference it.
+Unlike Pattern 2, this answer carries **authority**: lifecycle state (`CERTIFIED`), owner, reuse
+intent, and the **recommended physical binding for the engineer's runtime** — the dbt macro for a
+dbt project, with the native Snowflake UDF as the alternative (ask for `--runtime warehouse` and the
+recommendation flips). Reuse is not limited to raw SQL: `recognize_revenue` is one certified identity
+with two Snowflake-stack bindings, so a dbt model reuses it with `{{ recognize_revenue(...) }}` while
+a raw-SQL author calls the UDF — the *same* governed logic (Task 8: one logical identity, many
+bindings). dbt solves reuse *inside* dbt; the registry records that the macro and the UDF are one
+capability. The engineer now knows *which* definition is canonical and exactly how to reference it.
 
 ### Step 3 — Detect the re-implementation before it merges
 
@@ -255,11 +255,11 @@ Impact analysis for finance.logic.recognize_revenue.v1 [certified]
 re-implemented. Reuse of the canonical artifact is the lowest-friction path — the whitepaper's
 *"AI assistant as reuse accelerator."*
 
-> **Comparison returns logical artifacts, not bindings.** `recognize_revenue` has three physical
-> implementations (two warehouse envs + a Spark package), but the comparison reports it **once**
-> as a single logical identity. `resolve_binding` then picks the physical object for the
-> engineer's runtime. Reusing the Spark binding in a Spark pipeline is therefore *not* flagged as
-> duplication — only the re-derivation from raw tables is.
+> **Comparison returns logical artifacts, not bindings.** `recognize_revenue` has two physical
+> bindings (a Snowflake UDF and a dbt macro), but the comparison reports it **once** as a single
+> logical identity. `resolve_binding` then picks the physical object for the engineer's runtime.
+> Reusing the dbt macro in a dbt model is therefore *not* flagged as duplication — only the
+> re-derivation from raw tables is.
 
 ---
 

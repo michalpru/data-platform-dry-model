@@ -15,17 +15,33 @@ run with real command output is [`../demo/walkthrough.md`](../demo/walkthrough.m
 
 | Scenario | What the workspace exposes | What Copilot does | Failure / success |
 |---|---|---|---|
-| [`scenario-1a`](scenario-1a/) | Base warehouse tables only (`dim_customers`, `fact_invoices`, `fact_refunds`) | Authors ARPAC from first principles | Re-implements revenue recognition; ignores currency; uses the wrong (12-month) active flag |
-| [`scenario-1b`](scenario-1b/) | Base tables **+** finance & marketing domain repos | Reuses the most *similar* artifacts it finds | Reuses a **retired** invoice-revenue view (skips refunds) and a **marketing** active-customer rule (logins) — similarity ≠ authority |
+| [`scenario-1a`](scenario-1a/) | Base warehouse tables only — Snowflake (`dim_customers`, `fact_invoices`, `fact_refunds`) | Authors ARPAC from first principles | Re-implements revenue recognition; ignores currency; uses the wrong (12-month) active flag |
+| [`scenario-1b`](scenario-1b/) | Base tables (Snowflake) **+** finance (Snowflake) & marketing (Databricks) domain repos | Reuses the most *similar* artifacts it finds | Reuses a **retired** invoice-revenue view (skips refunds) and a **marketing** active-customer rule (logins) on a **different engine** — similarity ≠ authority |
 | [`scenario-2`](scenario-2/) | The **DRY Artifact Registry** (via CLI / MCP agent) | Searches by intent, checks lifecycle & ownership, resolves bindings, composes | Reuses the certified revenue + active-customer definitions; authors only the ratio |
 
 ## SQL dialect convention (Task 8)
 
-All authored example SQL in these scenarios is **portable ANSI SQL**. Dialect-specific objects
-(Databricks SQL, Snowflake SQL, Spark) are *not* shown inline — they exist only as
-**implementation bindings** inside the registry. `resolve_binding` maps the ANSI composition to
-the correct physical object for the engineer's runtime. This demonstrates portability without
-drowning the reader in four SQL dialects.
+The scenarios simulate **heterogeneous warehouse technologies**, because cross-engine duplication is
+exactly the problem the registry exists to govern:
+
+| Repository / domain | Engine & dialect |
+|---|---|
+| `shared` DWH | Snowflake |
+| `finance-domain` | Snowflake |
+| `marketing-domain` | Databricks (PySpark + Spark SQL) |
+| `enterprise-analytics` (the ARPAC author) | Snowflake |
+
+Two rules keep this realistic without becoming noise:
+
+1. **Existing source artifacts are written in their home engine's dialect** — finance marts in
+   Snowflake, marketing logic in PySpark. Each file is single-dialect and internally consistent
+   (never four dialects mixed in one query).
+2. **Authored ARPAC uses the consumer's single dialect.** Enterprise-analytics runs Snowflake, so
+   the generated ARPAC is Snowflake SQL calling the resolved Snowflake bindings directly — that is
+   what makes it *executable*. The *logical* composition is dialect-neutral: because the certified
+   `recognize_revenue` also has Databricks and Spark bindings, a Databricks consumer would resolve a
+   different physical object and render the same ARPAC in Spark SQL. Portability is demonstrated by
+   the **binding set in the registry**, not by writing un-executable ANSI.
 
 ## The intended contrasts
 

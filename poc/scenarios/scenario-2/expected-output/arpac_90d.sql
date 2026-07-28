@@ -1,29 +1,36 @@
--- arpac_90d.sql — SCENARIO 2 expected output (registry-aware, portable ANSI SQL)
+-- arpac_90d.sql — SCENARIO 2 expected output (registry-aware; Snowflake SQL)
 -- =========================================================================
--- The DRY Reuse agent resolved certified artifacts from the registry BEFORE authoring:
+-- The enterprise-analytics domain runs on Snowflake. The DRY Reuse agent resolved certified
+-- artifacts from the registry BEFORE authoring, and resolve_binding returned the SNOWFLAKE
+-- binding of each component (native path — no cross-engine hop):
 --   * net recognized revenue -> finance.metrics.net_recognized_revenue.v1
 --       (built on finance.logic.recognize_revenue.v1 — recognition rules + refund netting +
---        currency normalization, owner: finance-analytics, lifecycle: certified)
+--        currency normalization; Snowflake UDF analytics.finance.fn_recognize_revenue)
 --   * active customer        -> enterprise.metrics.active_customer.v1
 --       (the enterprise 90-day commercial-activity definition, owner: data-governance)
 --
--- Only the ratio itself is new. The referenced relations below are LOGICAL identities; the
--- physical objects come from resolve_binding for the target runtime/dialect. This SQL is ANSI
--- and portable — the registry maps it to the Snowflake / Databricks / Spark binding.
+-- Only the ratio itself is new. It is authored in the consumer's single dialect (Snowflake).
+-- Reuse is not limited to raw SQL: recognize_revenue is one certified identity with two Snowflake
+-- bindings — the native UDF above and a dbt macro (dry_finance_macros.recognize_revenue). A dbt
+-- model would `{{ recognize_revenue(...) }}` and reuse the exact same governed logic. dbt gives
+-- reuse inside dbt; the registry records that the macro and the UDF are the same certified capability.
 -- =========================================================================
 WITH recognized_revenue AS (
-    -- finance.metrics.net_recognized_revenue.v1  (certified; nets refunds, normalizes to USD)
+    -- net_recognized_revenue.v1 via the certified Snowflake UDF (nets refunds, normalizes to USD)
     SELECT
         customer_id,
         SUM(recognized_revenue_usd) AS net_recognized_revenue_usd
-    FROM finance.net_recognized_revenue_90d      -- resolved binding of net_recognized_revenue.v1
+    FROM TABLE(analytics.finance.fn_recognize_revenue(
+        DATEADD(day, -90, CURRENT_DATE()),
+        CURRENT_DATE()
+    ))
     GROUP BY customer_id
 ),
 active_customers AS (
-    -- enterprise.metrics.active_customer.v1  (certified; enterprise 90-day commercial activity)
+    -- enterprise.metrics.active_customer.v1 — resolved Snowflake binding
     SELECT customer_id
-    FROM enterprise.active_customer_90d          -- resolved binding of active_customer.v1
-    WHERE reporting_date = CURRENT_DATE
+    FROM analytics.enterprise.active_customer_90d
+    WHERE reporting_date = CURRENT_DATE()
       AND is_active_commercial_90d = TRUE
 )
 SELECT

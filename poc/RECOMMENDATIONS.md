@@ -15,14 +15,14 @@ adopted, what was adapted, and what was deliberately **not** done, with rational
 
 | # | Task | What changed |
 |---|---|---|
-| 1 | Directory per workspace | Added [`scenarios/`](scenarios/): `scenario-1a` (base warehouse tables), `scenario-1b` (+ finance & marketing domain repos), `scenario-2` (registry-aware). Each has a `workspace/`, an `expected-output/` and a README, all ANSI SQL. |
+| 1 | Directory per workspace | Added [`scenarios/`](scenarios/): `scenario-1a` (base warehouse tables), `scenario-1b` (+ finance & marketing domain repos), `scenario-2` (registry-aware). Each has a `workspace/`, an `expected-output/` and a README, each file in its repo's **native dialect** (Snowflake marts, Databricks/PySpark marketing). |
 | 2 | Proper artifacts in the mocked registry | The composition artifacts were already registered; added the **retired** `finance.reporting.invoice_revenue.v1` (source contract + registered manifest) so the registry can *demonstrate rejecting a superseded artifact*. The marketing variant stays **intentionally unregistered** (domain-local) — the registry rejects it by absence. |
 | 3 | Business-language service name | Renamed `ComparisonService` → `ReuseDetectionService` (`reuse_detection_service.py`). A back-compat alias/property is kept so nothing breaks. Reuse detection is framed as a *verification* step, not the entry point. |
 | 4 | Whitepaper manifest vocabulary | Every registered manifest now uses **Entry Role (Producer)**, **Reuse Intent**, **Implementation Bindings**, **Dependencies**, **Ownership**, **Lifecycle**, **Interface Type**. The loader reads the new keys with fallback to the old ones, so existing manifests keep loading. |
 | 5 | Search before compare | `search_artifacts` / `recommend_composition` are now the demo hero (intent-first); `compare_code` is explicitly a later verification step in the agent, prompts, README and walkthrough. |
 | 6 | `recommend_composition()` | Added as a service method, an MCP tool, and a CLI `recommend` command. It resolves each named component to a registered artifact + binding in one call. |
 | 7 | Rename `NEAR_MATCH` | Renamed to `STRUCTURAL_SIMILARITY` across models, classifier, prompts, agent, tests and the walkthrough ("near match" wrongly implied search). |
-| 8 | ANSI SQL, dialect bindings | All authored example SQL is portable **ANSI SQL**; dialect-specific objects live only as **implementation bindings**. `recognize_revenue` now exposes Snowflake, Databricks *and* Spark bindings behind one identity, and `resolve_binding` picks the right one. |
+| 8 | Consumer-dialect SQL, multi-surface bindings | Authored SQL uses the **consumer's single dialect** (enterprise-analytics = Snowflake), so the output is executable; existing source artifacts stay in their home-engine dialect (Snowflake marts, Databricks/PySpark marketing). `recognize_revenue` exposes a native Snowflake UDF **and** a dbt macro behind one certified identity, and `resolve_binding` picks the surface for the runtime (`--runtime dbt` → macro, `--runtime warehouse` → UDF). dbt solves reuse *inside* dbt; the registry records that the macro and the UDF are one capability. |
 
 ### Deliberately **not** done — the full Snowflake artifact-rename rebuild
 
@@ -40,7 +40,7 @@ of criticism:
    own notes warn against exactly this double-model confusion.
 3. **The valuable ideas were extracted without the rebuild.** Scenario clarity (Task 1), the
    retired-artifact rejection story (Task 2), whitepaper vocabulary (Task 4), intent-first framing
-   (Task 5), `recommend_composition` (Task 6), and ANSI-SQL-plus-dialect-bindings (Task 8) were all
+   (Task 5), `recommend_composition` (Task 6), and consumer-dialect-plus-dialect-bindings (Task 8) were all
    adopted **on top of** the existing coherent model.
 
 Recommended future work, if the rebuild is ever revisited: add positive relationship
@@ -105,9 +105,9 @@ likely "we already do this with dbt" criticism).
    to run the demo.
 
 8. **Mock Implementation Bindings the way this PoC does.** Env-normalized physical refs
-   (`analytics.finance.fn_recognize_revenue` prod/uat, `finance_revenue.recognition.recognize_revenue`
-   spark), each with an `attributionKey`. That is enough to demonstrate physical→logical resolution
-   and to *stub* where behavioral signals would later attach — without standing up a warehouse.
+   (`analytics.finance.fn_recognize_revenue` warehouse UDF, `dry_finance_macros.recognize_revenue`
+   dbt macro), each with an `attributionKey`. That is enough to demonstrate physical→logical
+   resolution and to *stub* where behavioral signals would later attach — without standing up a warehouse.
 
 9. **Add authoring-time delivery, not just a CLI.** The CLI proves the logic; the whitepaper's
    value lands at authoring time. The natural next step is a thin **MCP server** wrapping

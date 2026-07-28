@@ -21,13 +21,15 @@ spec:
   interfaceTypes:
     - callable_logic
   reuseIntent: shared_utility
-  # Implementation Bindings: a macro symbol distributed in a package.
+  # Implementation Bindings: a dbt macro (SQL) distributed in a package. dbt is the reuse
+  # surface *inside* dbt projects; the registry records it as one binding of this shared identity.
   implementationBindings:
-    - system: sql-macro-package
+    - system: dbt
       env: prod
-      objectType: package
+      objectType: macro
+      dialect: snowflake
       ref: dry_finance_macros.normalize_reporting_currency
-      attributionKey: "macro:dry_finance_macros.normalize_reporting_currency"
+      attributionKey: "dbt:dry_finance_macros.normalize_reporting_currency"
   compatibility:
     policy: backward-compatible
     breakingChanges:

@@ -1,22 +1,23 @@
 # Finance callable logic (DRY in Code / DRY in Logic)
 
 Finance-owned **callable logic** artifacts that encode revenue business rules once and are
-reused by transformation models and Spark pipelines. These are published to the DRY Artifact
+reused by transformation models (raw SQL and dbt). These are published to the DRY Artifact
 Registry so consumers resolve the canonical definition instead of re-deriving it.
 
 | FQN | Interface | Kind | Lifecycle | Bindings |
 |---|---|---|---|---|
-| `finance.logic.recognize_revenue.v1` | callable_logic | table-valued SQL UDF **+** PySpark function | certified | `analytics.finance.fn_recognize_revenue` (warehouse), `finance_revenue.recognition.recognize_revenue` (spark package) |
-| `finance.logic.normalize_reporting_currency.v1` | callable_logic | SQL macro | shared | `dry_finance_macros.normalize_reporting_currency` (macro symbol) |
+| `finance.logic.recognize_revenue.v1` | callable_logic | Snowflake SQL UDF **+** dbt macro | certified | `analytics.finance.fn_recognize_revenue` (warehouse UDF), `dry_finance_macros.recognize_revenue` (dbt macro) |
+| `finance.logic.normalize_reporting_currency.v1` | callable_logic | dbt SQL macro | shared | `dry_finance_macros.normalize_reporting_currency` (dbt macro) |
 
 ## Why two bindings for `recognize_revenue`
 
-The revenue-recognition rule (orders→invoices mapping + netting) must be identical whether it
-runs in the warehouse (SQL UDF) or in a Spark pipeline. Both physical objects are registered as
-**Implementation Bindings of one logical identity**. This is the registry mechanism that
-distinguishes *"the same governed definition on two engines"* from *"two duplicate
-implementations"* — the exact ambiguity Portability M0 caused in the whitepaper worked example,
-where Finance rebuilt the revenue UDF on a different vendor warehouse.
+The revenue-recognition rule (orders→invoices mapping + netting) must be identical whether a
+consumer calls it as a native warehouse **SQL UDF** or reuses it inside a **dbt** project via the
+macro. Both physical objects are registered as **Implementation Bindings of one logical identity**.
+This is the registry mechanism that distinguishes *"the same governed definition, reused through
+two surfaces"* from *"two duplicate implementations"*. dbt already solves reuse *inside* dbt; the
+registry additionally records that the dbt macro and the UDF are the **same certified capability**,
+and spans the runtimes dbt never sees (semantic layers, notebooks, other engines).
 
 ## Composition
 

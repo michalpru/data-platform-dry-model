@@ -1,6 +1,6 @@
 # Scenario 1A — expected outcome
 
-**What Copilot produces:** [`arpac_90d.sql`](arpac_90d.sql) — a single ANSI SQL query that runs
+**What Copilot produces:** [`arpac_90d.sql`](arpac_90d.sql) — a single Snowflake SQL query that runs
 and looks correct.
 
 **Why it is wrong (three silent governance defects):**

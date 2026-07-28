@@ -1,6 +1,6 @@
 # Scenario 2 — expected outcome
 
-**What Copilot produces:** [`arpac_90d.sql`](arpac_90d.sql) — a small, portable ANSI SQL ratio that
+**What Copilot produces:** [`arpac_90d.sql`](arpac_90d.sql) — a small **Snowflake SQL** ratio that
 composes two **certified** definitions resolved from the registry. No revenue-recognition rule, no
 netting rule, no currency rule and no activity window is re-implemented.
 

@@ -1,5 +1,5 @@
--- finance.invoice_revenue — LEGACY revenue view (finance domain repo)
--- ANSI SQL.
+-- finance.invoice_revenue — LEGACY revenue view (finance domain repo: Snowflake)
+-- Snowflake SQL.
 -- =========================================================================
 -- Registry lifecycle: RETIRED. Superseded by finance.logic.recognize_revenue.
 --
@@ -11,7 +11,7 @@
 -- It is deliberately left in the repository to demonstrate a failure mode: workspace
 -- similarity search will surface it as "reusable", but it is NOT the authoritative definition.
 -- =========================================================================
-CREATE VIEW finance.invoice_revenue AS
+CREATE OR REPLACE VIEW finance.invoice_revenue AS
 SELECT
     i.invoice_id,
     i.customer_id,

@@ -5,8 +5,9 @@
 # Ownership: Finance Analytics team owns the definition; the registry records it.
 #
 # NOTE: this is the demo's key example of ONE logical identity with MULTIPLE
-# Implementation Bindings (a warehouse SQL UDF and a PySpark function). The registry
-# treats them as the same governed definition on two engines — not as duplicates.
+# Implementation Bindings on the SAME Snowflake stack — a native warehouse SQL UDF and a
+# dbt macro that calls it. The registry treats them as the same governed definition, so
+# reuse via dbt is not mistaken for duplication of the raw-SQL UDF.
 apiVersion: dry.platform/v1
 kind: DryArtifact
 metadata:
@@ -28,8 +29,9 @@ spec:
   reuseIntent: domain_canonical
   # Implementation Bindings: physical objects that realize the logical identity,
   # plus the key used to attribute behavioral signals to this artifact.
-  # ONE logical identity, MULTIPLE dialect/engine bindings: authors write portable ANSI SQL
-  # and resolve_binding maps it to the Snowflake, Databricks or Spark object for their runtime.
+  # ONE logical identity, TWO Snowflake-stack bindings: the native UDF, and a dbt macro that
+  # calls it. dbt is the reuse surface *inside* dbt; resolve_binding returns the macro for a
+  # dbt runtime and the UDF for a raw-warehouse runtime.
   implementationBindings:
     - system: warehouse
       env: prod
@@ -37,23 +39,12 @@ spec:
       dialect: snowflake
       ref: analytics.finance.fn_recognize_revenue
       attributionKey: "warehouse:snowflake:analytics.finance.fn_recognize_revenue"
-    - system: warehouse
-      env: uat
-      objectType: udf
+    - system: dbt
+      env: prod
+      objectType: macro
       dialect: snowflake
-      ref: analytics_uat.finance.fn_recognize_revenue
-      attributionKey: "warehouse:snowflake:analytics_uat.finance.fn_recognize_revenue"
-    - system: warehouse
-      env: prod
-      objectType: udf
-      dialect: databricks
-      ref: main.finance.fn_recognize_revenue
-      attributionKey: "warehouse:databricks:main.finance.fn_recognize_revenue"
-    - system: spark-package
-      env: prod
-      objectType: function
-      ref: finance_revenue.recognition.recognize_revenue
-      attributionKey: "spark:finance_revenue.recognition.recognize_revenue"
+      ref: dry_finance_macros.recognize_revenue
+      attributionKey: "dbt:dry_finance_macros.recognize_revenue"
   compatibility:
     policy: backward-compatible
     breakingChanges:

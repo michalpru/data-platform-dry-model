@@ -1,6 +1,8 @@
 # Scenario 1B — Standard Copilot authoring, warehouse **+** domain repos
 
 **Workspace exposed to Copilot:** the base warehouse tables *and* two domain repositories.
+**Engines:** the shared DWH and the finance-domain run on **Snowflake**; the marketing-domain runs
+on **Databricks (PySpark + Spark SQL)** — so reusing the marketing rule means crossing warehouses.
 
 ```
 workspace/
@@ -20,7 +22,7 @@ workspace/
 └── marketing-domain/
     └── marketing/
         └── logic/
-            └── active_customer.py       ← marketing rule (portal logins, NOT enterprise)
+            └── active_customer.py       ← Databricks PySpark rule (portal logins, NOT enterprise)
 ```
 
 **What happens.** Copilot can now discover reusable implementations across the workspace and, quite
@@ -38,6 +40,11 @@ Both artifacts are discoverable and look reusable. **Similarity and availability
 authority** — this is the core Pattern-2 failure the whitepaper names. Workspace search can rank by
 resemblance, but it cannot tell you that `invoice_revenue` is *retired* or that the marketing rule
 is *not enterprise-approved*. Only the registry (scenario 2) carries lifecycle and ownership.
+
+Worse, the two picks live on **different engines**: the revenue view is Snowflake, the
+active-customer rule is a Databricks PySpark job. Composing them forces the engineer to export the
+Databricks output and land it in Snowflake — a brittle cross-warehouse hop that similarity search
+never surfaces.
 
 See [`expected-output/arpac_90d.sql`](expected-output/arpac_90d.sql) and
 [`expected-output/NOTES.md`](expected-output/NOTES.md).

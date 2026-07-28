@@ -29,17 +29,27 @@ under `platform/registry/registered/`). There is no separate `workspace/` folder
    active-customer rule is **domain-local and never registered**, so registry-aware authoring
    never surfaces it at all. Either way the engineer lands on the certified definition.
 4. **Resolve bindings.** `resolve_binding(...)` returns the physical object for the engineer's
-   runtime/dialect. The authored SQL stays **ANSI**; the registry maps it to the dialect binding.
+   runtime/dialect. Enterprise-analytics runs **Snowflake**, so the authored ARPAC is Snowflake SQL
+   that calls the resolved Snowflake bindings directly (native path — no cross-engine hop).
 5. **Author only what is missing** — the ARPAC ratio itself.
 6. **(Optional) verify.** `compare_code` the generated SQL against the registry to confirm it does
    not re-implement governed logic.
 
 ## SQL dialect (Task 8)
 
-The composition in [`expected-output/arpac_90d.sql`](expected-output/arpac_90d.sql) is **portable
-ANSI SQL**. The registry holds the dialect-specific **implementation bindings** (e.g. Snowflake
-SQL, Databricks SQL, Spark). `resolve_binding` selects the right one — portability without four
-dialects on screen.
+The enterprise-analytics domain runs on **Snowflake**, so the composition in
+[`expected-output/arpac_90d.sql`](expected-output/arpac_90d.sql) is authored in **Snowflake SQL**
+and calls the resolved Snowflake bindings directly. Authoring in the consumer's single dialect is
+what makes the output *executable* — a pure-ANSI query cannot natively invoke a Snowflake
+table-valued function.
+
+Portability is not lost; it moves into the registry. `recognize_revenue` is one certified identity
+with two bindings on the Snowflake stack — the native UDF and a **dbt macro**
+(`dry_finance_macros.recognize_revenue`). A dbt model reuses it with `{{ recognize_revenue(...) }}`;
+a raw-SQL author calls the UDF; both are the *same* governed definition. `resolve_binding … --runtime
+dbt` returns the macro, `--runtime warehouse` the UDF. dbt solves reuse *inside* dbt; the registry
+records that the macro and the UDF are one capability — and spans the engines dbt never sees (the
+marketing active-customer rule lives on Databricks).
 
 See [`expected-output/NOTES.md`](expected-output/NOTES.md). The full narrated run with real command
 output is [`../../demo/walkthrough.md`](../../demo/walkthrough.md) (Pattern 3).

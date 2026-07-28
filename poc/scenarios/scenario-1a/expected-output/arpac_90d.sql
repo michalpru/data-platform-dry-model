@@ -1,7 +1,7 @@
--- arpac_90d.sql — SCENARIO 1A expected Copilot output (illustrative, ANSI SQL)
+-- arpac_90d.sql — SCENARIO 1A expected Copilot output (illustrative, Snowflake SQL)
 -- =========================================================================
--- Copilot sees ONLY the base warehouse tables. With no enterprise definitions available it
--- authors ARPAC "from first principles" and makes three governance mistakes:
+-- Copilot sees ONLY the base warehouse tables (Snowflake). With no enterprise definitions
+-- available it authors ARPAC "from first principles" and makes three governance mistakes:
 --   1. Revenue = raw POSTED invoice amounts — no revenue-recognition rules and refunds
 --      (shared.fact_refunds) are never netted, so revenue is overstated.
 --   2. Currency is ignored — there is no exchange-rate table in this workspace, so
@@ -18,5 +18,5 @@ FROM shared.fact_invoices AS i
 JOIN shared.dim_customers  AS c
   ON c.customer_id = i.customer_id
 WHERE i.invoice_status = 'POSTED'
-  AND i.invoice_date >= CURRENT_DATE - INTERVAL '90' DAY
+  AND i.invoice_date >= DATEADD(day, -90, CURRENT_DATE())
   AND c.is_active = TRUE;

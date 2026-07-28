@@ -11,8 +11,9 @@ metadata:
     Canonical revenue-recognition rule for the Finance domain: orders->invoices mapping
     plus the netting rule (gross minus refunds and credit notes). Currency-agnostic;
     reporting-currency conversion is applied by finance.logic.normalize_reporting_currency.v1.
-    Registered as ONE logical identity with two Implementation Bindings (warehouse SQL UDF
-    and PySpark function) so cross-engine reuse is not mistaken for duplication.
+    Registered as ONE logical identity with two Implementation Bindings on the Snowflake stack
+    (a native SQL UDF and a dbt macro that calls it) so reuse via dbt is not mistaken for
+    duplication of the UDF.
   owner:
     team: finance-analytics
     escalation: finance-data-oncall
@@ -32,12 +33,12 @@ spec:
       objectType: udf
       physicalRef: analytics.finance.fn_recognize_revenue
       source: domains/finance/logic/udfs/finance.logic.recognize_revenue.v1.sql
-    - binding: spark-function
-      language: python
-      framework: spark
-      objectType: function
-      physicalRef: finance_revenue.recognition.recognize_revenue
-      source: domains/finance/logic/pyspark/recognize_revenue.py
+    - binding: dbt-macro
+      language: sql
+      framework: dbt
+      objectType: macro
+      physicalRef: dry_finance_macros.recognize_revenue
+      source: domains/finance/logic/macros/finance.logic.recognize_revenue.v1.sql
   compatibility:
     policy: backward-compatible
     deprecationWindowDays: 90
