@@ -1,6 +1,4 @@
--- shared.fact_refunds — refunds and credit notes fact (central data warehouse: Snowflake)
--- Snowflake SQL DDL. The legacy invoice_revenue view in this scenario IGNORES this table — that is
--- exactly why reusing it silently overstates revenue.
+-- Snowflake SQL DDL
 CREATE OR REPLACE TABLE shared.fact_refunds (
     refund_id       NUMBER(38,0)  NOT NULL,
     invoice_id      NUMBER(38,0)  NOT NULL,

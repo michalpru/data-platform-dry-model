@@ -1,13 +1,3 @@
--- finance.normalize_currency — shared currency-normalization logic (finance domain repo: Snowflake)
--- Snowflake SQL (table-valued function).
--- =========================================================================
--- Registry lifecycle: SHARED. A business-agnostic utility that converts an amount from a
--- source currency to a target currency using the exchange-rate table. It is consumed by both
--- the legacy invoice_revenue view and the certified recognize_revenue logic.
---
--- Implemented here as a Snowflake table-valued function. The registry records the per-runtime
--- bindings (this Snowflake TVF, plus a Databricks SQL UDF for Spark consumers).
--- =========================================================================
 CREATE OR REPLACE FUNCTION finance.normalize_currency(
     amount           NUMBER(18,2),
     source_currency  VARCHAR,

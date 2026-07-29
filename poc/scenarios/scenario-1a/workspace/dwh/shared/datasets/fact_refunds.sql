@@ -1,8 +1,4 @@
--- shared.fact_refunds — refunds and credit notes fact (central data warehouse: Snowflake)
 -- Snowflake SQL DDL.
---
--- Note: net recognized revenue must subtract approved refunds/credit notes from gross invoice
--- amounts. A "from scratch" ARPAC that ignores this table overstates revenue.
 CREATE OR REPLACE TABLE shared.fact_refunds (
     refund_id       NUMBER(38,0)  NOT NULL,
     invoice_id      NUMBER(38,0)  NOT NULL,

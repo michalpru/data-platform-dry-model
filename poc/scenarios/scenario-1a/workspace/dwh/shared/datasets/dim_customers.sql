@@ -1,6 +1,4 @@
--- shared.dim_customers — customer dimension (central data warehouse: Snowflake)
 -- Snowflake SQL DDL.
-
 CREATE OR REPLACE TABLE shared.dim_customers (
     customer_id      NUMBER(38,0)  NOT NULL,
     customer_name    VARCHAR(200),

@@ -1,99 +1,97 @@
 -- =============================================================================
--- Metric: arpac_trailing_90d
--- Average Revenue Per Active Customer — Trailing 90-Day Window
--- Target platform: Snowflake SQL
--- Output schema:  shared   (same schema as source datasets)
+-- Metric: ARPAC – Average Revenue per Active Customer (Trailing 90 Days)
+-- Purpose: Executive reporting
+-- Dialect: Snowflake SQL
 --
--- REUSE SUMMARY
--- ─────────────────────────────────────────────────────────────────────────────
--- 1. shared.dim_customers.is_active  [REUSED — no change]
---      Active-customer definition from the existing customer dimension.
---      Flag semantics: customer placed ≥ 1 order in the last 12 months.
---      This is the same definition used in other executive dashboards, so
---      the ARPAC denominator is aligned with those reports.
+-- Definition:
+--   ARPAC = Net Recognized Revenue (USD) / Active Customers
 --
--- 2. shared.fact_invoices  [REUSED — filtered, not duplicated]
---      Source of gross invoice amounts. Only POSTED invoices are included
---      (DRAFT and VOID are excluded), consistent with revenue-recognition
---      practice implied by the status vocabulary in the DDL.
+-- Reused definitions (see README.md for full reuse inventory):
+--   • shared.dim_customers.is_active  — active-customer flag already used in
+--     other executive dashboards; defined as "placed >= 1 order in the last
+--     12 months" (comment in dim_customers DDL).
+--   • shared.fact_invoices            — canonical invoice fact table.
+--   • shared.fact_refunds             — canonical refund fact table.
 --
--- 3. shared.fact_refunds  [REUSED — filtered, not duplicated]
---      Source of credit-note/refund adjustments. Per the DDL comment
---      ("net recognized revenue must subtract approved refunds/credit notes
---      from gross invoice amounts"), only APPROVED refunds are subtracted.
---      PENDING and REJECTED refunds are excluded.
---
--- CURRENCY ASSUMPTION
--- ─────────────────────────────────────────────────────────────────────────────
--- fact_invoices documents that invoices are NOT necessarily in USD.
--- No FX-rate lookup table is present in this workspace, so this
--- implementation conservatively includes only rows where currency_code = 'USD'.
--- To support multi-currency revenue, join an FX-rates table and convert
--- each amount to USD before aggregating; that table is not available here.
---
--- METRIC WINDOW
--- ─────────────────────────────────────────────────────────────────────────────
--- Trailing 90 days: invoice_date in [CURRENT_DATE - 90, CURRENT_DATE].
--- Refunds are scoped to invoices within that same window (i.e., approved
--- refunds on invoices that were posted in the trailing period), so the
--- net revenue figure reflects the period's own transactions.
+-- Assumptions / constraints:
+--   • Only USD-denominated invoices and refunds are included.  No FX-conversion
+--     table is available in the workspace; multi-currency rows are excluded and
+--     should be addressed in a follow-up if they are material.
+--   • "Net recognized revenue" = POSTED invoices minus APPROVED refunds whose
+--     transaction date falls within the trailing-90-day window.
+--   • Refund window is based on refund_date (when the refund was approved),
+--     not on the originating invoice_date.
+--   • Returns NULL for ARPAC when there are no active customers (avoids
+--     divide-by-zero).
 -- =============================================================================
 
 WITH
 
--- ── 1. Active customer count ────────────────────────────────────────────────
--- Reuses dim_customers.is_active (existing executive-dashboard definition).
-active_customers AS (
+-- ── 1. Trailing-90-day window boundary ───────────────────────────────────────
+window_boundary AS (
     SELECT
-        COUNT(*)  AS active_customer_count
-    FROM shared.dim_customers
-    WHERE is_active = TRUE
+        DATEADD(DAY, -90, CURRENT_DATE) AS window_start,
+        CURRENT_DATE                    AS window_end
 ),
 
--- ── 2. Gross revenue: POSTED invoices in the trailing 90-day window ─────────
--- Reuses fact_invoices; filters to POSTED status and USD currency.
+-- ── 2. Gross revenue: POSTED invoices in USD within the 90-day window ────────
+--   Reuses: shared.fact_invoices
 gross_revenue AS (
     SELECT
-        COALESCE(SUM(invoice_amount), 0)  AS gross_revenue_usd
-    FROM shared.fact_invoices
-    WHERE invoice_status = 'POSTED'
-      AND invoice_date   >= DATEADD('day', -90, CURRENT_DATE)
-      AND currency_code  = 'USD'
+        COALESCE(SUM(i.invoice_amount), 0) AS total_gross_revenue_usd
+    FROM shared.fact_invoices  AS i
+    CROSS JOIN window_boundary AS w
+    WHERE i.invoice_status = 'POSTED'
+      AND i.currency_code  = 'USD'
+      AND i.invoice_date  >= w.window_start
+      AND i.invoice_date  <= w.window_end
 ),
 
--- ── 3. Approved refunds on invoices in the trailing 90-day window ───────────
--- Reuses fact_refunds; joins to fact_invoices to scope refunds to the
--- same trailing window and to the same USD-only currency filter.
+-- ── 3. Approved refunds in USD within the 90-day window ──────────────────────
+--   Reuses: shared.fact_refunds
 approved_refunds AS (
     SELECT
-        COALESCE(SUM(fr.refund_amount), 0)  AS total_refunds_usd
-    FROM shared.fact_refunds   fr
-    INNER JOIN shared.fact_invoices fi
-        ON fr.invoice_id    = fi.invoice_id
-    WHERE fr.refund_status = 'APPROVED'
-      AND fi.invoice_date  >= DATEADD('day', -90, CURRENT_DATE)
-      AND fr.currency_code = 'USD'
+        COALESCE(SUM(r.refund_amount), 0) AS total_refunds_usd
+    FROM shared.fact_refunds   AS r
+    CROSS JOIN window_boundary AS w
+    WHERE r.refund_status = 'APPROVED'
+      AND r.currency_code = 'USD'
+      AND r.refund_date  >= w.window_start
+      AND r.refund_date  <= w.window_end
 ),
 
--- ── 4. Net recognized revenue ────────────────────────────────────────────────
+-- ── 4. Net recognized revenue ─────────────────────────────────────────────────
 net_revenue AS (
     SELECT
-        g.gross_revenue_usd - r.total_refunds_usd  AS net_revenue_usd
-    FROM       gross_revenue    g
+        g.total_gross_revenue_usd - r.total_refunds_usd AS total_net_revenue_usd
+    FROM gross_revenue   g
     CROSS JOIN approved_refunds r
+),
+
+-- ── 5. Active-customer count ──────────────────────────────────────────────────
+--   Reuses: shared.dim_customers.is_active
+--   Definition (from DDL): placed >= 1 order in the last 12 months.
+--   This is the same definition used in other executive dashboards.
+active_customers AS (
+    SELECT
+        COUNT(customer_id) AS total_active_customers
+    FROM shared.dim_customers
+    WHERE is_active = TRUE
 )
 
--- ── 5. ARPAC ─────────────────────────────────────────────────────────────────
+-- ── 6. Final ARPAC output ─────────────────────────────────────────────────────
 SELECT
-    CURRENT_DATE                                          AS metric_date,
-    DATEADD('day', -90, CURRENT_DATE)                    AS window_start,
-    CURRENT_DATE                                         AS window_end,
-    nr.net_revenue_usd,
-    ac.active_customer_count,
+    w.window_start                                      AS window_start_date,
+    w.window_end                                        AS window_end_date,
+    nr.total_net_revenue_usd,
+    ac.total_active_customers,
     CASE
-        WHEN ac.active_customer_count = 0 THEN NULL
-        ELSE ROUND(nr.net_revenue_usd / ac.active_customer_count, 2)
-    END                                                  AS arpac_usd
-FROM       net_revenue       nr
-CROSS JOIN active_customers  ac
-;
+        WHEN ac.total_active_customers = 0 THEN NULL
+        ELSE ROUND(
+                 nr.total_net_revenue_usd / ac.total_active_customers,
+                 2
+             )
+    END                                                 AS arpac_usd
+FROM net_revenue     nr
+CROSS JOIN active_customers ac
+CROSS JOIN window_boundary  w;

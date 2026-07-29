@@ -1,5 +1,4 @@
--- finance.dim_exchange_rates — currency conversion rates (finance domain repo: Snowflake)
--- Snowflake SQL DDL. Consumed by normalize_currency and the legacy invoice_revenue view.
+-- Snowflake SQL DDL
 CREATE OR REPLACE TABLE finance.dim_exchange_rates (
     from_currency   VARCHAR(3)    NOT NULL,
     to_currency     VARCHAR(3)    NOT NULL,

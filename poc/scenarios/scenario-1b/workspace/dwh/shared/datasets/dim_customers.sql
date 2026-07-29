@@ -1,9 +1,8 @@
--- shared.dim_customers — customer dimension (central data warehouse: Snowflake)
--- Snowflake SQL DDL. See scenario-1a for the governance note on `is_active`.
+-- Snowflake SQL DDL
 CREATE OR REPLACE TABLE shared.dim_customers (
     customer_id      NUMBER(38,0)  NOT NULL,
     customer_name    VARCHAR(200),
-    is_active        BOOLEAN,       -- placed >= 1 order in the last 12 months (NOT enterprise-grade)
+    is_active        BOOLEAN,       -- placed >= 1 order in the last 12 months
     last_order_date  DATE,
     PRIMARY KEY (customer_id)
 );

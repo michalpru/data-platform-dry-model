@@ -1,105 +1,75 @@
--- Trailing-90-day ARPAC (Average Revenue per Active Customer)
--- Target warehouse: Snowflake
+-- Trailing-90-day ARPAC (Average Revenue per Active Customer) for executive reporting.
 --
--- Reused workspace artifacts:
---   * shared.fact_invoices for posted invoice revenue
---   * shared.fact_refunds for approved refund / credit-note offsets
---   * shared.dim_customers.is_active for the executive active-customer definition
+-- Reused local workspace artifacts:
+-- - shared.dim_customers: source of the active-customer definition. The local DDL defines
+--   is_active as customers that placed >= 1 order in the last 12 months, which aligns this
+--   metric with the active-customer definition already available to executive dashboards.
+-- - shared.fact_invoices: source of recognized gross revenue. POSTED invoices are treated
+--   as recognized revenue events.
+-- - shared.fact_refunds: source of revenue offsets. APPROVED refunds are subtracted from
+--   recognized invoice revenue.
 --
--- USD handling:
---   The allowed workspace contains currency_code fields but no FX rate table or
---   conversion function. This view computes a numeric ARPAC only when every
---   trailing-window revenue event is already denominated in USD. If non-USD
---   recognized revenue exists, arpac_90d_usd is NULL and metric_status explains
---   the missing reusable FX artifact instead of silently reporting a wrong metric.
+-- Currency handling:
+-- The local workspace has currency_code columns but no FX-rate or currency-conversion
+-- artifact, so this implementation reports USD ARPAC by including only USD invoice and
+-- refund events.
 
-CREATE SCHEMA IF NOT EXISTS executive;
-
-CREATE OR REPLACE VIEW executive.arpac_trailing_90_day AS
-WITH reporting_window AS (
+CREATE OR REPLACE VIEW shared.arpac_trailing_90_day AS
+WITH active_customers AS (
     SELECT
-        CURRENT_DATE() AS as_of_date,
-        DATEADD(day, -89, CURRENT_DATE()) AS window_start_date
-),
-
-posted_invoice_revenue AS (
-    SELECT
-        i.invoice_id,
-        i.customer_id,
-        i.invoice_date AS recognized_date,
-        i.invoice_amount AS recognized_amount,
-        i.currency_code,
-        'POSTED_INVOICE' AS revenue_event_type
-    FROM shared.fact_invoices AS i
-    CROSS JOIN reporting_window AS w
-    WHERE i.invoice_status = 'POSTED'
-      AND i.invoice_date BETWEEN w.window_start_date AND w.as_of_date
-),
-
-approved_refund_offsets AS (
-    SELECT
-        r.invoice_id,
-        i.customer_id,
-        r.refund_date AS recognized_date,
-        -r.refund_amount AS recognized_amount,
-        r.currency_code,
-        'APPROVED_REFUND' AS revenue_event_type
-    FROM shared.fact_refunds AS r
-    INNER JOIN shared.fact_invoices AS i
-        ON i.invoice_id = r.invoice_id
-    CROSS JOIN reporting_window AS w
-    WHERE r.refund_status = 'APPROVED'
-      AND r.refund_date BETWEEN w.window_start_date AND w.as_of_date
-),
-
-recognized_revenue_events AS (
-    SELECT * FROM posted_invoice_revenue
-    UNION ALL
-    SELECT * FROM approved_refund_offsets
-),
-
-revenue_rollup AS (
-    SELECT
-        COALESCE(SUM(IFF(currency_code = 'USD', recognized_amount, 0)), 0) AS net_recognized_revenue_usd,
-        COALESCE(SUM(IFF(currency_code <> 'USD', 1, 0)), 0) AS non_usd_revenue_event_count
-    FROM recognized_revenue_events
-),
-
-non_usd_currency_rollup AS (
-    SELECT
-        LISTAGG(currency_code, ', ') WITHIN GROUP (ORDER BY currency_code) AS non_usd_currency_codes
-    FROM (
-        SELECT DISTINCT currency_code
-        FROM recognized_revenue_events
-        WHERE currency_code <> 'USD'
-    )
-),
-
-active_customer_rollup AS (
-    SELECT
-        COUNT(*) AS active_customer_count
+        customer_id
     FROM shared.dim_customers
     WHERE is_active = TRUE
+),
+recognized_invoice_revenue AS (
+    SELECT
+        invoice_id,
+        customer_id,
+        invoice_amount AS recognized_revenue_usd
+    FROM shared.fact_invoices
+    WHERE invoice_status = 'POSTED'
+      AND currency_code = 'USD'
+      AND invoice_date >= DATEADD(day, -89, CURRENT_DATE())
+      AND invoice_date <= CURRENT_DATE()
+),
+recognized_refunds AS (
+    SELECT
+        invoices.customer_id,
+        refunds.refund_amount AS recognized_refund_usd
+    FROM shared.fact_refunds AS refunds
+    INNER JOIN shared.fact_invoices AS invoices
+        ON refunds.invoice_id = invoices.invoice_id
+    INNER JOIN active_customers
+        ON invoices.customer_id = active_customers.customer_id
+    WHERE refunds.refund_status = 'APPROVED'
+      AND refunds.currency_code = 'USD'
+      AND refunds.refund_date >= DATEADD(day, -89, CURRENT_DATE())
+      AND refunds.refund_date <= CURRENT_DATE()
+),
+net_recognized_revenue AS (
+    SELECT
+        COALESCE(SUM(invoices.recognized_revenue_usd), 0) AS invoice_revenue_usd,
+        COALESCE((SELECT SUM(recognized_refund_usd) FROM recognized_refunds), 0) AS refund_revenue_usd,
+        COALESCE(SUM(invoices.recognized_revenue_usd), 0)
+            - COALESCE((SELECT SUM(recognized_refund_usd) FROM recognized_refunds), 0)
+            AS net_recognized_revenue_usd
+    FROM recognized_invoice_revenue AS invoices
+    INNER JOIN active_customers
+        ON invoices.customer_id = active_customers.customer_id
+),
+active_customer_count AS (
+    SELECT
+        COUNT(*) AS active_customers
+    FROM active_customers
 )
-
 SELECT
-    w.as_of_date,
-    w.window_start_date,
-    r.net_recognized_revenue_usd,
-    a.active_customer_count,
-    CASE
-        WHEN r.non_usd_revenue_event_count = 0
-            THEN r.net_recognized_revenue_usd / NULLIF(a.active_customer_count, 0)
-        ELSE NULL
-    END AS arpac_90d_usd,
-    r.non_usd_revenue_event_count,
-    c.non_usd_currency_codes,
-    CASE
-        WHEN a.active_customer_count = 0 THEN 'BLOCKED_NO_ACTIVE_CUSTOMERS'
-        WHEN r.non_usd_revenue_event_count > 0 THEN 'BLOCKED_MISSING_FX_REUSE'
-        ELSE 'READY'
-    END AS metric_status
-FROM reporting_window AS w
-CROSS JOIN revenue_rollup AS r
-CROSS JOIN non_usd_currency_rollup AS c
-CROSS JOIN active_customer_rollup AS a;
+    CURRENT_DATE() AS as_of_date,
+    DATEADD(day, -89, CURRENT_DATE()) AS revenue_window_start_date,
+    CURRENT_DATE() AS revenue_window_end_date,
+    revenue.invoice_revenue_usd,
+    revenue.refund_revenue_usd,
+    revenue.net_recognized_revenue_usd,
+    customers.active_customers,
+    revenue.net_recognized_revenue_usd / NULLIF(customers.active_customers, 0) AS arpac_trailing_90_day_usd
+FROM net_recognized_revenue AS revenue
+CROSS JOIN active_customer_count AS customers;

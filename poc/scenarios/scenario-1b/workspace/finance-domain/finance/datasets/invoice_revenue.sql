@@ -1,16 +1,4 @@
--- finance.invoice_revenue — LEGACY revenue view (finance domain repo: Snowflake)
--- Snowflake SQL.
--- =========================================================================
--- Registry lifecycle: RETIRED. Superseded by finance.logic.recognize_revenue.
---
--- This view computes customer revenue from POSTED invoices and normalizes currency to USD,
--- but it has two defects that make it unsuitable for executive ARPAC:
---   * it SKIPS refunds and credit notes (shared.fact_refunds) — revenue is gross, not net;
---   * it uses invoice_date, with no revenue-recognition-timing rules.
---
--- It is deliberately left in the repository to demonstrate a failure mode: workspace
--- similarity search will surface it as "reusable", but it is NOT the authoritative definition.
--- =========================================================================
+-- Snowflake SQL
 CREATE OR REPLACE VIEW finance.invoice_revenue AS
 SELECT
     i.invoice_id,
