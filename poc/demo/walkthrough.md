@@ -65,12 +65,12 @@ Workspace similarity search for arpac-authoring-scratch.sql (method=ast)
 
   Ranked by SIMILARITY ONLY — no lifecycle, ownership or canonical status:
 
-    0.65  [STRUCTURAL_SIMILARITY]  dry-reference-repository\domains\finance\logic\udfs\finance.logic.recognize_revenue.v1.sql
+    0.65  [STRUCTURAL_SIMILARITY]  poc\registry\manifests\domains\finance\logic\udfs\finance.logic.recognize_revenue.v1.sql
           ast=0.66 feat=0.62 | authority: UNKNOWN
-    0.44  [PARTIAL_REIMPLEMENTATION]  dry-reference-repository\domains\finance\logic\pyspark\recognize_revenue.py
-          feat=0.44 | authority: UNKNOWN
-    0.15  [INSUFFICIENT_EVIDENCE]  dry-reference-repository\domains\finance\logic\macros\finance.logic.normalize_reporting_currency.v1.sql
+    0.15  [INSUFFICIENT_EVIDENCE]  poc\registry\manifests\domains\finance\logic\macros\finance.logic.normalize_reporting_currency.v1.sql
           ast=0.15 feat=0.15 | authority: UNKNOWN
+    0.14  [PARTIAL_REIMPLEMENTATION]  poc\registry\manifests\domains\finance\datasets\finance.marts.revenue_events.v1.sql
+          ast=0.07 feat=0.41 | authority: UNKNOWN
     ...
   ⚠ The top match may be a certified canonical, a local copy, or a test fixture —
     this method cannot tell. That authority gap is what the registry closes (Pattern 3).
@@ -84,8 +84,7 @@ Workspace similarity search for arpac-authoring-scratch.sql (method=ast)
 ```
 
 **What worked:** the search *did* surface the certified recognition rule as the top structural
-match (0.65, `STRUCTURAL_SIMILARITY`) — and even related the **PySpark** binding cross-language via the
-language-neutral feature signal. Accidental re-implementation is now less likely.
+match (0.65, `STRUCTURAL_SIMILARITY`). Accidental re-implementation is now less likely.
 
 **What is still missing — the three Pattern-2 gaps the whitepaper names:**
 
@@ -134,9 +133,9 @@ python -m dry_registry.cli search arpac --interface semantic_contract
 ```
 
 At the true start of authoring there is nothing certified to reuse — ARPAC does not yet exist as a
-governed metric, so the engineer is cleared to build it. (In this snapshot the finished
-`finance.metrics.arpac.v1` is already registered as the *shared candidate* outcome of this very
-exercise.)
+governed metric, so the engineer is cleared to build it. The input registry holds only the
+**logical + dataset** building blocks; the ARPAC semantic contract
+(`enterprise.semantic.arpac_90d.v1`) is precisely what this exercise *generates*.
 
 ### Step 1b — Ask the registry how to compose it (the intent-first hero)
 
@@ -151,42 +150,44 @@ python -m dry_registry.cli recommend "ARPAC" --component "net recognized revenue
 ```
 Composition recommendation for 'ARPAC':
 
-  ► Whole request already registered: finance.metrics.arpac.v1 [shared] — reuse it.
+  reuse  recognize revenue      → finance.logic.recognize_revenue.v1 [certified]
+  reuse  commercial customer status → sales.datasets.commercial_customer_status_90d.v1 [certified]
 
-  reuse  net recognized revenue → finance.metrics.net_recognized_revenue.v1 [certified]
-  reuse  active customer        → enterprise.metrics.active_customer.v1 [certified]
-
-  A registered artifact already matches the whole request: finance.metrics.arpac.v1 [shared]. Reuse it instead of re-composing.
+  Reuse 2 registered component(s); author only the 0 missing part(s) and the small composition that joins them.
 ```
 
 One call resolves every named component to a **certified** registered artifact (and, with a
-runtime, its binding) and flags anything that must still be authored. In the MCP/agent flow this is
-the `recommend_composition` tool — it makes intent-first authoring a single step instead of a
-manual search-per-component loop.
+runtime, its binding) and flags anything that must still be authored — even though the two inputs
+sit on **different engines** (revenue on Snowflake, the active-customer status on Databricks). In
+the MCP/agent flow this is the `recommend_composition` tool — it makes intent-first authoring a
+single step instead of a manual search-per-component loop.
 
 ### Step 2 — Resolve the certified building blocks and their bindings
 
 ```powershell
-python -m dry_registry.cli resolve "active customer"
+python -m dry_registry.cli resolve "commercial customer status"
+python -m dry_registry.cli resolve-binding sales.datasets.commercial_customer_status_90d.v1 --runtime databricks
 python -m dry_registry.cli resolve-binding finance.logic.recognize_revenue.v1 --runtime dbt
 ```
 
 ```
-Canonical resolution for 'active customer':
+Canonical resolution for 'commercial customer status':
 
-  ► enterprise.metrics.active_customer.v1  [CERTIFIED]
-      Active Customer — owned by data-governance
+  ► sales.datasets.commercial_customer_status_90d.v1  [CERTIFIED]
+      Commercial Customer Status (90d) — owned by sales-analytics
       reuse intent: enterprise_canonical
 
       Other registered matches:
-        - finance.metrics.arpac.v1 [shared]
-        - enterprise.reporting.customer.v1 [certified]
-        - enterprise.semantics.customer.v1 [certified]
-        - finance.metrics.net_recognized_revenue.v1 [certified]
         - finance.reporting.invoice_revenue.v1 [retired]
+        - platform.callable.dry_platform_utils.v1 [shared]
         - finance.reporting.revenue_events.v1 [certified]
+        - platform.callable.dry_shared_macros.v1 [shared]
 
       → Reuse this artifact instead of re-implementing it.
+
+Binding resolution for sales.datasets.commercial_customer_status_90d.v1 (runtime=databricks, dialect=None):
+
+  ► recommended: databricks/databricks prod: sales.datasets.commercial_customer_status_90d (view)
 
 Binding resolution for finance.logic.recognize_revenue.v1 (runtime=dbt, dialect=None):
 
@@ -195,14 +196,17 @@ Binding resolution for finance.logic.recognize_revenue.v1 (runtime=dbt, dialect=
     - warehouse/snowflake prod: analytics.finance.fn_recognize_revenue
 ```
 
-Unlike Pattern 2, this answer carries **authority**: lifecycle state (`CERTIFIED`), owner, reuse
-intent, and the **recommended physical binding for the engineer's runtime** — the dbt macro for a
-dbt project, with the native Snowflake UDF as the alternative (ask for `--runtime warehouse` and the
-recommendation flips). Reuse is not limited to raw SQL: `recognize_revenue` is one certified identity
-with two Snowflake-stack bindings, so a dbt model reuses it with `{{ recognize_revenue(...) }}` while
-a raw-SQL author calls the UDF — the *same* governed logic (Task 8: one logical identity, many
-bindings). dbt solves reuse *inside* dbt; the registry records that the macro and the UDF are one
-capability. The engineer now knows *which* definition is canonical and exactly how to reference it.
+Unlike Pattern 2, this answer carries **authority** *and spans engines*: lifecycle state
+(`CERTIFIED`), owner, reuse intent, and the **recommended physical binding for each component's
+runtime**. The active-customer status resolves to a **Databricks** view; revenue resolves to a
+dbt macro for a dbt project, with the native Snowflake UDF as the alternative (ask for
+`--runtime warehouse` and the recommendation flips). Reuse is not limited to raw SQL:
+`recognize_revenue` is one certified identity with two Snowflake-stack bindings, so a dbt model
+reuses it with `{{ recognize_revenue(...) }}` while a raw-SQL author calls the UDF — the *same*
+governed logic (Task 8: one logical identity, many bindings). dbt solves reuse *inside* dbt on one
+engine; the registry records that the macro and the UDF are one capability **and** that the
+active-customer input lives on a different engine entirely. The engineer now knows *which*
+definition is canonical, on *which* engine, and exactly how to reference it.
 
 ### Step 3 — Detect the re-implementation before it merges
 
@@ -224,6 +228,10 @@ Comparison for arpac-authoring-scratch.sql (scope=registry, method=ast):
       ast=0.15 feat=0.15 (combined=0.15) | authority: REGISTERED_CANONICAL | lifecycle: shared
       shared: fx_rates, amount, currency, fx, reporting
       → No strong match; safe to author, but register the new artifact.
+  [INSUFFICIENT_EVIDENCE] sales.datasets.commercial_customer_status_90d.v1
+      ast=0.08 feat=0.12 (combined=0.09) | authority: REGISTERED_CANONICAL | lifecycle: certified
+      shared: active, customer, invoice, order, reporting
+      → No strong match; safe to author, but register the new artifact.
 
   Closest match: finance.logic.recognize_revenue.v1 [STRUCTURAL_SIMILARITY] — Structurally very close ...
 ```
@@ -231,10 +239,11 @@ Comparison for arpac-authoring-scratch.sql (scope=registry, method=ast):
 ### Step 4 — Compose, and check impact
 
 ARPAC is authored by composition (see
-[`../../dry-reference-repository/domains/finance/semantics/metrics/finance.metrics.arpac.v1.yaml`](../../dry-reference-repository/domains/finance/semantics/metrics/finance.metrics.arpac.v1.yaml)):
-numerator `finance.metrics.net_recognized_revenue.v1`, denominator
-`enterprise.metrics.active_customer.v1`. Before promoting a change to any building block, impact
-analysis shows who breaks:
+[`../scenarios/scenario-2/expected-output/arpac_90d.metric.yaml`](../scenarios/scenario-2/expected-output/arpac_90d.metric.yaml)):
+numerator net recognized revenue from `finance.logic.recognize_revenue.v1` (Snowflake), denominator
+active customers from `sales.datasets.commercial_customer_status_90d.v1` (Databricks), joined once in
+the governed components dataset `enterprise.datasets.customer_arpac_components_90d`. Before promoting
+a change to any building block, impact analysis shows who breaks:
 
 ```powershell
 python -m dry_registry.cli impact finance.logic.recognize_revenue.v1

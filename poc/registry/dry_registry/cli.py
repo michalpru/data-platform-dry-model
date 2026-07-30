@@ -265,7 +265,7 @@ def build_parser() -> argparse.ArgumentParser:
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--db", default=DEFAULT_DB, help=f"SQLite path (default: {DEFAULT_DB})")
     p.add_argument("--repo-root", default=None,
-                   help="Repo root containing dry-reference-repository (auto-detected).")
+                   help="Repo root containing poc/registry/manifests (auto-detected).")
     p.add_argument("--json", action="store_true", help="Emit the raw structured JSON payload.")
     sub = p.add_subparsers(dest="command", required=True)
 

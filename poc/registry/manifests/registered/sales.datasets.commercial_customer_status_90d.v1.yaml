@@ -1,0 +1,48 @@
+# Registered by CI on merge to main.
+# Promoted from: domains/sales/contracts/datasets/sales.datasets.commercial_customer_status_90d.v1.contract.yaml
+#
+# Registry scope: certified queryable dataset for cross-domain executive reporting.
+# Ownership: Sales Analytics team owns the definition; the registry records it.
+#
+# NOTE: this is the ARPAC active-customer input. A Sales-owned, certified SQL view that
+# classifies commercial activity at customer x reporting-date grain. Its Implementation
+# Binding runs on Databricks — the cross-engine surface the finance Snowflake stack does
+# not cover — so the registry, not any single warehouse, is what unifies the ARPAC inputs.
+apiVersion: dry.platform/v1
+kind: DryArtifact
+metadata:
+  fqn: sales.datasets.commercial_customer_status_90d.v1
+  title: Commercial Customer Status (90d)
+  description: >
+    Certified Sales-owned commercial-activity classification for executive reporting: the
+    authoritative is_active_commercial_90d status at customer x reporting-date grain. This is
+    the enterprise active-customer definition used by executive dashboards.
+  owner:
+    team: sales-analytics
+    escalation: sales-data-oncall
+  lifecycle:
+    state: certified
+spec:
+  entryRole: producer
+  reuseIntent: enterprise_canonical
+  interfaceTypes:
+    - queryable_dataset
+  # Implementation Bindings: physical objects that realize the logical identity, plus the
+  # key used to attribute behavioral signals. One certified identity on the Databricks stack.
+  implementationBindings:
+    - system: databricks
+      env: prod
+      objectType: view
+      dialect: databricks
+      ref: sales.datasets.commercial_customer_status_90d
+      attributionKey: "databricks:sales.datasets.commercial_customer_status_90d"
+  compatibility:
+    policy: backward-compatible
+    breakingChanges:
+      - activity_window_change
+      - grain_or_column_change
+  # Declared Dependencies: upstream artifacts, resolved to logical identities for impact analysis.
+  dependencies:
+    - fqn: shared.datasets.dim_customers.v1
+      relationship: source_input
+  sourceManifest: domains/sales/contracts/datasets/sales.datasets.commercial_customer_status_90d.v1.contract.yaml

@@ -1,4 +1,4 @@
-"""Normalization entry point shared by fingerprinting and every scorer.
+"""Normalization entry point shared by every scorer.
 
 `normalize()` returns (language, normalized_text). Language detection is a cheap heuristic
 overridable with an explicit hint. SQL normalization is dialect-aware; Python is not.

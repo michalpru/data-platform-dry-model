@@ -9,7 +9,7 @@ given** for the same task:
 > definitions, datasets or logic where appropriate."
 
 They are **demonstration inputs**, not wired into the registry engine. The governed artifacts the
-engine actually indexes live in [`../../dry-reference-repository/`](../../dry-reference-repository/);
+engine actually indexes live in [`../registry/manifests/`](../registry/manifests/);
 the executable engine, CLI and MCP server live in [`../registry/`](../registry/). The narrated
 run with real command output is [`../demo/walkthrough.md`](../demo/walkthrough.md).
 
@@ -38,17 +38,19 @@ Two rules keep this realistic without becoming noise:
    (never four dialects mixed in one query).
 2. **Authored ARPAC uses the consumer's single dialect.** Enterprise-analytics runs Snowflake, so
    the generated ARPAC is Snowflake SQL calling the resolved Snowflake bindings directly — that is
-   what makes it *executable*. The *logical* composition is dialect-neutral: because the certified
-   `recognize_revenue` also has Databricks and Spark bindings, a Databricks consumer would resolve a
-   different physical object and render the same ARPAC in Spark SQL. Portability is demonstrated by
+   what makes it *executable*. Reuse is still surface-neutral: the certified `recognize_revenue` is
+   one identity with two bindings on the Snowflake stack — the native UDF and a dbt macro
+   (`dry_finance_macros.recognize_revenue`) — so a dbt author resolves the macro and a raw-SQL author
+   resolves the UDF, both the *same* governed definition. Cross-*engine* reuse lives at the platform
+   level, where the marketing active-customer rule runs on Databricks. Portability is demonstrated by
    the **binding set in the registry**, not by writing un-executable ANSI.
 
 ## The intended contrasts
 
 | Concept | Scenario 1A picks | Scenario 1B picks | Scenario 2 picks (authoritative) |
 |---|---|---|---|
-| Revenue | raw `fact_invoices` sums (no recognition, no refunds, no FX) | `finance.invoice_revenue` (retired view; skips refunds) | `finance.metrics.net_recognized_revenue.v1` → `finance.logic.recognize_revenue.v1` (certified) |
-| Active customer | `dim_customers.is_active` (12-month order flag) | `marketing.logic.active_customer` (portal logins) | `enterprise.metrics.active_customer.v1` (enterprise 90-day commercial activity) |
+| Revenue | raw `fact_invoices` sums (no recognition, no refunds, no FX) | `finance.invoice_revenue` (retired view; skips refunds) | `finance.logic.recognize_revenue.v1` (certified, Snowflake) |
+| Active customer | `dim_customers.is_active` (12-month order flag) | `marketing.logic.active_customer` (portal logins) | `sales.datasets.commercial_customer_status_90d.v1` (certified 90-day commercial activity, Databricks) |
 
 Only the registry (scenario 2) knows the **lifecycle** (certified / shared / retired) and
 **ownership** that separate an authoritative definition from a plausible-looking copy.

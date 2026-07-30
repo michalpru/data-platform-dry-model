@@ -1,8 +1,8 @@
-"""Load DRY artifact manifests from the reference repository.
+"""Load DRY artifact manifests from the PoC registry.
 
 The registry ingests two things per artifact:
   1. Governance metadata from the *registered* manifest
-     (dry-reference-repository/platform/registry/registered/*.yaml).
+     (poc/registry/manifests/registered/*.yaml).
   2. Source-file paths, resolved from the *domain source* manifest referenced by
      `sourceManifest`, so the duplication engine can fingerprint the real code.
 """
@@ -32,6 +32,14 @@ class Binding:
 # poc/) so the registry manifests stay untouched; override via DRY_DEFAULT_DIALECT.
 _DEFAULT_WAREHOUSE_DIALECT = os.environ.get("DRY_DEFAULT_DIALECT", "snowflake")
 
+# Root (relative to the repo root) that holds the PoC registry: the registered governance
+# manifests under registered/, plus the domain source trees their sourceManifest pointers
+# reference. Override with DRY_MANIFESTS_DIR. This replaces the earlier dry-reference-repository
+# location so the PoC is cleanly separated from the generic reference examples.
+MANIFESTS_DIR = os.environ.get(
+    "DRY_MANIFESTS_DIR", os.path.join("poc", "registry", "manifests")
+)
+
 
 def infer_runtime_dialect(system: str, object_type: str):
     """Derive (runtime, dialect) from the existing system/objectType fields.
@@ -42,6 +50,8 @@ def infer_runtime_dialect(system: str, object_type: str):
     """
     s = (system or "").lower()
     o = (object_type or "").lower()
+    if "databricks" in s:
+        return "databricks", "databricks"
     if "spark" in s:
         return "spark", "spark"
     if "sqlmesh" in s:
@@ -90,24 +100,22 @@ class Artifact:
 
 
 def find_repo_root(start: Optional[str] = None) -> str:
-    """Walk up from `start` until the folder containing dry-reference-repository is found."""
+    """Walk up from `start` until the folder containing the PoC manifests dir is found."""
     cur = os.path.abspath(start or os.getcwd())
     while True:
-        if os.path.isdir(os.path.join(cur, "dry-reference-repository")):
+        if os.path.isdir(os.path.join(cur, MANIFESTS_DIR)):
             return cur
         parent = os.path.dirname(cur)
         if parent == cur:
             raise FileNotFoundError(
-                "Could not locate 'dry-reference-repository' walking up from "
+                f"Could not locate '{MANIFESTS_DIR}' walking up from "
                 f"{start or os.getcwd()}. Pass --repo-root explicitly."
             )
         cur = parent
 
 
 def registered_dir(repo_root: str) -> str:
-    return os.path.join(
-        repo_root, "dry-reference-repository", "platform", "registry", "registered"
-    )
+    return os.path.join(repo_root, MANIFESTS_DIR, "registered")
 
 
 def _load_yaml(path: str) -> Dict[str, Any]:
@@ -126,7 +134,7 @@ def _resolve_source_paths(repo_root: str, source_manifest: str) -> Dict[str, str
         # Some artifacts point sourceManifest at non-YAML files (e.g. pyproject.toml,
         # package.yaml). Only YAML manifests carry the spec.implementation.source we need.
         return out
-    abs_path = os.path.join(repo_root, "dry-reference-repository", source_manifest)
+    abs_path = os.path.join(repo_root, MANIFESTS_DIR, source_manifest)
     if not os.path.isfile(abs_path):
         # Some source manifests (datasets/metrics) live outside the logic tree; ignore.
         return out

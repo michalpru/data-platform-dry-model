@@ -12,6 +12,4 @@ The CLI and the MCP server are both thin clients of the application services in
 __version__ = "0.2.0"
 
 from .store import RegistryStore  # noqa: F401
-from .fingerprint import fingerprint, normalize  # noqa: F401
-from .similarity import get_backend  # noqa: F401
 from .services import build_services, Services  # noqa: F401

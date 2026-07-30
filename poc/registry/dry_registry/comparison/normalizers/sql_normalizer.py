@@ -2,7 +2,7 @@
 
 Dialect-aware when sqlglot is installed (parses with the source dialect and re-emits a
 canonical form); falls back to a regex/whitespace normalizer otherwise. This is the single
-home of SQL normalization — fingerprint.py and the scorers all route through here.
+home of SQL normalization — every scorer routes through here.
 
 The result is an "AST/parser-normalized token sequence": comments, Jinja, casing and layout
 are removed so copy-paste and near-identical rewrites collapse together. It is NOT a full

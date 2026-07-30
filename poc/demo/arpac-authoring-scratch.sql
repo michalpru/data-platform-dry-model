@@ -9,7 +9,7 @@
 --   * netting (refunds/credit notes)     (owned by finance.logic.recognize_revenue.v1)
 --   * currency normalization             (owned by finance.logic.normalize_reporting_currency.v1)
 -- and it re-derives the active-customer window with a DIFFERENT threshold (30 days),
--- diverging from the certified enterprise.metrics.active_customer.v1 (90 days).
+-- diverging from the certified sales.datasets.commercial_customer_status_90d.v1 (90 days).
 --
 -- Use this file as the duplication-detection input:
 --   python -m dry_registry.cli duplicates ../demo/arpac-authoring-scratch.sql \

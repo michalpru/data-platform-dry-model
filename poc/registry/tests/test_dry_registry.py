@@ -159,17 +159,17 @@ def test_mcp_tools_match_services(svc):
 def test_recommend_composition(svc):
     rec = svc.registry.recommend_composition(
         "ARPAC",
-        ["net recognized revenue", "active customer"],
+        ["recognize revenue", "commercial customer status"],
         runtime="semantic",
     )
     by_concept = {c.concept: c for c in rec.components}
-    rev = by_concept["net recognized revenue"]
+    rev = by_concept["recognize revenue"]
     assert rev.status == "REUSE_REGISTERED"
     assert rev.artifact is not None
-    assert rev.artifact.fqn == "finance.metrics.net_recognized_revenue.v1"
-    cust = by_concept["active customer"]
+    assert rev.artifact.fqn == "finance.logic.recognize_revenue.v1"
+    cust = by_concept["commercial customer status"]
     assert cust.status == "REUSE_REGISTERED"
-    assert cust.artifact.fqn == "enterprise.metrics.active_customer.v1"
+    assert cust.artifact.fqn == "sales.datasets.commercial_customer_status_90d.v1"
     assert rec.summary
 
 

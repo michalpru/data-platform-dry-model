@@ -15,6 +15,7 @@ import os
 from typing import List
 
 from ..models import Candidate, Governance, COVERAGE_WORKSPACE
+from ..manifests import MANIFESTS_DIR
 from .base import CandidateProvider, CODE_EXTENSIONS, _language_for
 
 # Folders that stand in for "the repositories open in the workspace".
@@ -31,7 +32,7 @@ class WorkspaceCandidateProvider(CandidateProvider):
         self.roots = roots or DEFAULT_ROOTS
 
     def _iter_paths(self):
-        base = os.path.join(self.repo_root, "dry-reference-repository")
+        base = os.path.join(self.repo_root, MANIFESTS_DIR)
         for top in self.roots:
             start = os.path.join(base, top)
             if not os.path.isdir(start):
