@@ -9,7 +9,9 @@ given** for the same task:
 > definitions, datasets or logic where appropriate."
 
 They are **demonstration inputs**, not wired into the registry engine. The governed artifacts the
-engine actually indexes live in [`../registry/manifests/`](../registry/manifests/);
+engine actually indexes live as pure-YAML manifests in
+[`scenario-2/registry-manifests/`](scenario-2/registry-manifests/), and the code their bindings
+point at lives in [`scenario-2/workspace/`](scenario-2/workspace/);
 the executable engine, CLI and MCP server live in [`../registry/`](../registry/). The narrated
 run with real command output is [`../demo/walkthrough.md`](../demo/walkthrough.md).
 
@@ -40,7 +42,7 @@ Two rules keep this realistic without becoming noise:
    the generated ARPAC is Snowflake SQL calling the resolved Snowflake bindings directly — that is
    what makes it *executable*. Reuse is still surface-neutral: the certified `recognize_revenue` is
    one identity with two bindings on the Snowflake stack — the native UDF and a dbt macro
-   (`dry_finance_macros.recognize_revenue`) — so a dbt author resolves the macro and a raw-SQL author
+   (`dry_finance_macros.recognized_revenue_relation`) — so a dbt author resolves the macro and a raw-SQL author
    resolves the UDF, both the *same* governed definition. Cross-*engine* reuse lives at the platform
    level, where the marketing active-customer rule runs on Databricks. Portability is demonstrated by
    the **binding set in the registry**, not by writing un-executable ANSI.

@@ -10,7 +10,7 @@
 --
 -- CROSS-ENGINE COMPOSITION (the point of this scenario):
 --   * net recognized revenue -> finance.logic.recognize_revenue.v1
---       resolved SNOWFLAKE binding: analytics.finance.fn_recognize_revenue (native UDF)
+--       resolved SNOWFLAKE binding: FINANCE.LOGIC.RECOGNIZE_REVENUE (native table UDF)
 --   * active-customer status  -> sales.datasets.commercial_customer_status_90d.v1
 --       resolved DATABRICKS binding: sales.datasets.commercial_customer_status_90d (view)
 --
@@ -26,7 +26,7 @@ WITH recognized_revenue AS (
     SELECT
         customer_id,
         SUM(recognized_revenue_usd) AS net_recognized_revenue_90d_usd
-    FROM TABLE(analytics.finance.fn_recognize_revenue(
+    FROM TABLE(FINANCE.LOGIC.RECOGNIZE_REVENUE(
         DATEADD(day, -90, CURRENT_DATE()),
         CURRENT_DATE()
     ))

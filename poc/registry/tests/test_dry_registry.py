@@ -14,13 +14,32 @@ from dry_registry.models import COVERAGE_WORKSPACE, STRUCTURAL_SIMILARITY
 from dry_registry.services import build_services
 
 RECOGNIZE = "finance.logic.recognize_revenue.v1"
+BILLABLE_EVENTS = "finance.datasets.fact_billable_events.v1"
+# A from-scratch re-derivation of recognized revenue straight from the visible base tables. It
+# reimplements the certified billable-event assembly + refund netting + currency normalization, so
+# the registry should flag it as overlapping the certified finance revenue artifacts.
+REVENUE_FAMILY = {BILLABLE_EVENTS, RECOGNIZE}
 SCRATCH_SQL = """
-SELECT o.order_id,
-       SUM(i.amount) - SUM(COALESCE(r.refund_amount, 0)) AS net_amount
-FROM finance.raw.orders o
-JOIN finance.raw.invoices i ON i.order_id = o.order_id
-LEFT JOIN finance.raw.refunds r ON r.invoice_id = i.invoice_id
-GROUP BY o.order_id
+WITH invoice_events AS (
+    SELECT i.customer_id, i.invoice_date AS event_date, i.currency_code,
+           i.invoice_amount AS amount
+    FROM shared.datasets.fact_invoices AS i
+    WHERE i.invoice_status = 'POSTED'
+),
+refund_events AS (
+    SELECT r.customer_id, r.refund_date AS event_date, r.currency_code,
+           -r.refund_amount AS amount
+    FROM shared.datasets.fact_refunds AS r
+    WHERE r.refund_status = 'APPROVED'
+)
+SELECT b.customer_id,
+       SUM(ROUND(b.amount * fx.exchange_rate, 2)) AS net_revenue_usd
+FROM (SELECT * FROM invoice_events UNION ALL SELECT * FROM refund_events) AS b
+JOIN finance.datasets.dim_exchange_rates AS fx
+  ON fx.from_currency = b.currency_code
+ AND fx.to_currency = 'USD'
+ AND fx.rate_date = b.event_date
+GROUP BY b.customer_id
 """
 PYSPARK = """
 def recognize_revenue(orders, invoices, refunds):
@@ -56,7 +75,9 @@ def test_registry_results_have_governance(svc):
     res = svc.reuse_detection.compare_code(SCRATCH_SQL, scope="registry", use_embeddings=False)
     assert res.matches
     top = res.matches[0]
-    assert top.logical_id == RECOGNIZE
+    # The from-scratch re-derivation overlaps the certified finance revenue family
+    # (billable-event assembly / recognition), not any single fixed artifact.
+    assert top.logical_id in REVENUE_FAMILY
     assert top.governance.authority == "REGISTERED_CANONICAL"
     assert top.governance.lifecycle == "certified"
     assert top.governance.owner == "finance-analytics"

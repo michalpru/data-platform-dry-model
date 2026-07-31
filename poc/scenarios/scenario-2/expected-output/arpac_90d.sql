@@ -5,8 +5,8 @@
 -- The DRY Reuse agent resolved certified artifacts from the registry BEFORE authoring. Because the
 -- two inputs live on DIFFERENT engines, resolve_binding returned two different physical objects:
 --   * net recognized revenue -> finance.logic.recognize_revenue.v1
---       resolved SNOWFLAKE binding: analytics.finance.fn_recognize_revenue (recognition rules +
---       refund netting + currency normalization; native UDF)
+--       resolved SNOWFLAKE binding: FINANCE.LOGIC.RECOGNIZE_REVENUE (recognition rules +
+--       refund netting + currency normalization; native table UDF)
 --   * active customer         -> sales.datasets.commercial_customer_status_90d.v1
 --       resolved DATABRICKS binding: sales.datasets.commercial_customer_status_90d (Sales-owned,
 --       certified 90-day commercial-activity view)
@@ -18,10 +18,10 @@
 -- (Snowflake) on top of that governed dataset.
 --
 -- Reuse is not limited to raw SQL. recognize_revenue is one certified identity with two Snowflake
--- bindings — the native UDF above and a dbt macro (dry_finance_macros.recognize_revenue); a dbt
--- model would `{{ recognize_revenue(...) }}` and reuse the exact same governed logic. dbt gives
--- reuse INSIDE dbt on one engine; the registry records that the macro and the UDF are the same
--- certified capability AND spans the Databricks stack that dbt on Snowflake never sees.
+-- bindings — the native UDF above and a dbt macro (dry_finance_macros.recognized_revenue_relation); a
+-- dbt model would `{{ recognized_revenue_relation(...) }}` and reuse the exact same governed logic.
+-- dbt gives reuse INSIDE dbt on one engine; the registry records that the macro and the UDF are the
+-- same certified capability AND spans the Databricks stack that dbt on Snowflake never sees.
 -- =========================================================================
 SELECT
     SUM(CASE WHEN is_active_commercial_90d

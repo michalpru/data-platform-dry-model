@@ -48,7 +48,7 @@ spec:
   # resolve_binding returned the correct physical object per consuming engine.
   reuses:
     - fqn: finance.logic.recognize_revenue.v1
-      binding: warehouse   # Snowflake UDF analytics.finance.fn_recognize_revenue
+      binding: warehouse   # Snowflake UDF FINANCE.LOGIC.RECOGNIZE_REVENUE
     - fqn: sales.datasets.commercial_customer_status_90d.v1
       binding: databricks  # sales.datasets.commercial_customer_status_90d (Delta Share into Snowflake)
   compatibility:

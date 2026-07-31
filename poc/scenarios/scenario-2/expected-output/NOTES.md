@@ -16,7 +16,7 @@ re-implemented. Each is a resolved, certified binding.
 **The agent's reasoning, stated plainly:**
 
 > Reused `finance.logic.recognize_revenue` because it is Finance-owned and certified.
-> Resolved **Snowflake** binding: `analytics.finance.fn_recognize_revenue`.
+> Resolved **Snowflake** binding: `FINANCE.LOGIC.RECOGNIZE_REVENUE`.
 > Reused `sales.datasets.commercial_customer_status_90d` because it is Sales-owned and certified.
 > Resolved **Databricks** binding: `sales.datasets.commercial_customer_status_90d`.
 > Created only the missing Enterprise Analytics composition:

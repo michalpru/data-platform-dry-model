@@ -1,0 +1,44 @@
+# DRY Artifact manifest (registry = logical metadata index; no code stored here).
+#
+# The ARPAC active-customer input. A Sales-owned, certified view that classifies commercial
+# activity at customer x reporting-date grain. Its Implementation Binding runs on Databricks — the
+# cross-engine surface the finance Snowflake stack does not cover — so the registry, not any single
+# warehouse, is what unifies the ARPAC inputs.
+apiVersion: dry.platform/v1
+kind: DryArtifact
+metadata:
+  fqn: sales.datasets.commercial_customer_status_90d.v1
+  title: Commercial Customer Status (90d)
+  description: >
+    Certified Sales-owned commercial-activity classification for executive reporting: the
+    authoritative is_active_commercial_90d status at customer x reporting-date grain. This is the
+    enterprise active-customer definition used by executive dashboards.
+  owner:
+    team: sales-analytics
+    escalation: sales-data-oncall
+  lifecycle:
+    state: certified
+spec:
+  entryRole: producer
+  interfaceTypes:
+    - queryable_dataset
+  reuseIntent: enterprise_canonical
+  implementationBindings:
+    - system: databricks
+      env: prod
+      objectType: view
+      dialect: databricks
+      ref: sales.datasets.commercial_customer_status_90d
+      attributionKey: "databricks:sales.datasets.commercial_customer_status_90d"
+      source: sales/datasets/commercial_customer_status_90d.sql
+  compatibility:
+    policy: backward-compatible
+    breakingChanges:
+      - activity_window_change
+      - grain_or_column_change
+  dependencies:
+    - fqn: shared.datasets.dim_customers.v1
+      relationship: source_input
+  knownConsumers:
+    - fqn: enterprise.datasets.customer_arpac_components_90d.v1
+      relationship: transformation_dependency

@@ -1,10 +1,11 @@
 """Load DRY artifact manifests from the PoC registry.
 
-The registry ingests two things per artifact:
-  1. Governance metadata from the *registered* manifest
-     (poc/registry/manifests/registered/*.yaml).
-  2. Source-file paths, resolved from the *domain source* manifest referenced by
-     `sourceManifest`, so the duplication engine can fingerprint the real code.
+The registry is a *logical metadata index*: it stores only YAML manifests, never code.
+Each registered artifact is a single `kind: DryArtifact` manifest under the manifests root
+(poc/scenarios/scenario-2/registry-manifests/**). Its Implementation Bindings may carry a
+`source` pointer — a path, relative to the mocked workspace root
+(poc/scenarios/scenario-2/workspace/), to the real code the binding realizes. The comparison
+engine reads that code to fingerprint it; the registry itself holds no implementation.
 """
 
 from __future__ import annotations
@@ -32,12 +33,20 @@ class Binding:
 # poc/) so the registry manifests stay untouched; override via DRY_DEFAULT_DIALECT.
 _DEFAULT_WAREHOUSE_DIALECT = os.environ.get("DRY_DEFAULT_DIALECT", "snowflake")
 
-# Root (relative to the repo root) that holds the PoC registry: the registered governance
-# manifests under registered/, plus the domain source trees their sourceManifest pointers
-# reference. Override with DRY_MANIFESTS_DIR. This replaces the earlier dry-reference-repository
-# location so the PoC is cleanly separated from the generic reference examples.
+# Root (relative to the repo root) that holds the PoC registry: pure YAML `DryArtifact`
+# manifests, organized by domain and a shared/ tier for base tables. No code lives here.
+# Override with DRY_MANIFESTS_DIR.
 MANIFESTS_DIR = os.environ.get(
-    "DRY_MANIFESTS_DIR", os.path.join("poc", "registry", "manifests")
+    "DRY_MANIFESTS_DIR",
+    os.path.join("poc", "scenarios", "scenario-2", "registry-manifests"),
+)
+
+# Root (relative to the repo root) of the mocked workspace that holds the ACTUAL code the
+# Implementation Bindings point at (per-scenario, code may be duplicated across scenarios).
+# Binding `source` paths are resolved relative to this root. Override with DRY_WORKSPACE_DIR.
+WORKSPACE_DIR = os.environ.get(
+    "DRY_WORKSPACE_DIR",
+    os.path.join("poc", "scenarios", "scenario-2", "workspace"),
 )
 
 
@@ -114,8 +123,12 @@ def find_repo_root(start: Optional[str] = None) -> str:
         cur = parent
 
 
-def registered_dir(repo_root: str) -> str:
-    return os.path.join(repo_root, MANIFESTS_DIR, "registered")
+def manifests_dir(repo_root: str) -> str:
+    return os.path.join(repo_root, MANIFESTS_DIR)
+
+
+def workspace_dir(repo_root: str) -> str:
+    return os.path.join(repo_root, WORKSPACE_DIR)
 
 
 def _load_yaml(path: str) -> Dict[str, Any]:
@@ -123,47 +136,30 @@ def _load_yaml(path: str) -> Dict[str, Any]:
         return yaml.safe_load(fh) or {}
 
 
-def _resolve_source_paths(repo_root: str, source_manifest: str) -> Dict[str, str]:
-    """Return {physical_ref-ish key: source_path} from a domain source manifest.
-
-    Handles both `spec.implementation.source` (single) and
-    `spec.implementations[].source` (multiple) shapes used by ReusableLogic manifests.
-    """
-    out: Dict[str, str] = {}
-    if not source_manifest or not source_manifest.endswith((".yaml", ".yml")):
-        # Some artifacts point sourceManifest at non-YAML files (e.g. pyproject.toml,
-        # package.yaml). Only YAML manifests carry the spec.implementation.source we need.
-        return out
-    abs_path = os.path.join(repo_root, MANIFESTS_DIR, source_manifest)
-    if not os.path.isfile(abs_path):
-        # Some source manifests (datasets/metrics) live outside the logic tree; ignore.
-        return out
-    spec = (_load_yaml(abs_path) or {}).get("spec", {})
-    impl = spec.get("implementation")
-    if isinstance(impl, dict) and impl.get("source"):
-        key = impl.get("symbol") or impl.get("package") or "default"
-        out[key] = impl["source"]
-    for item in spec.get("implementations", []) or []:
-        if isinstance(item, dict) and item.get("source"):
-            key = item.get("physicalRef") or item.get("binding") or item["source"]
-            out[key] = item["source"]
-    return out
+def _iter_manifest_files(root: str):
+    """Yield every *.yaml manifest under the registry-manifests root, recursively."""
+    for dirpath, _dirnames, filenames in os.walk(root):
+        for name in sorted(filenames):
+            if name.endswith((".yaml", ".yml")):
+                yield os.path.join(dirpath, name)
 
 
 def load_registered(repo_root: str) -> List[Artifact]:
-    """Parse all registered manifests into Artifact records."""
-    rdir = registered_dir(repo_root)
+    """Parse every DryArtifact manifest under the registry-manifests root into Artifacts.
+
+    Single-tier model: each manifest is a `kind: DryArtifact` document whose bindings carry an
+    optional `source` (a path relative to the mocked workspace root) to the real code.
+    """
+    root = manifests_dir(repo_root)
     artifacts: List[Artifact] = []
-    for name in sorted(os.listdir(rdir)):
-        if not name.endswith(".yaml"):
-            continue
-        doc = _load_yaml(os.path.join(rdir, name))
+    for path in _iter_manifest_files(root):
+        doc = _load_yaml(path)
         if doc.get("kind") != "DryArtifact":
             continue
         meta = doc.get("metadata", {})
         spec = doc.get("spec", {})
-        source_manifest = spec.get("sourceManifest", "")
-        source_map = _resolve_source_paths(repo_root, source_manifest)
+        # The manifest's own path (relative to the registry root) is recorded for provenance.
+        source_manifest = os.path.relpath(path, root).replace(os.sep, "/")
 
         # Whitepaper-aligned vocabulary (Implementation Bindings / Declared Dependencies /
         # Reuse Intent / Entry Role) with fallback to the earlier key names so older
@@ -182,14 +178,9 @@ def load_registered(repo_root: str) -> List[Artifact]:
         bindings: List[Binding] = []
         for impl in binding_specs:
             ref = impl.get("ref", "")
-            # Best-effort source resolution: match by physical ref suffix or symbol.
-            source_path = None
-            for key, sp in source_map.items():
-                if key == ref or ref.endswith(str(key)) or str(key).endswith(ref.split(".")[-1]):
-                    source_path = sp
-                    break
-            if source_path is None and len(source_map) == 1:
-                source_path = next(iter(source_map.values()))
+            # Source resolution: the binding declares its own `source` (a path relative to the
+            # mocked workspace root). The registry stores only this pointer, never the code.
+            source_path = impl.get("source") or None
             runtime, dialect = infer_runtime_dialect(
                 impl.get("system", ""), impl.get("objectType", "")
             )

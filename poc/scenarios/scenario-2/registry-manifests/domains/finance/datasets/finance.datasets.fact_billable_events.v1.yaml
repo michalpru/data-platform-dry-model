@@ -1,0 +1,43 @@
+# DRY Artifact manifest (registry = logical metadata index; no code stored here).
+apiVersion: dry.platform/v1
+kind: DryArtifact
+metadata:
+  fqn: finance.datasets.fact_billable_events.v1
+  title: Billable Events
+  description: >
+    Finance-owned canonical stream of billable financial events (invoices, refunds, credit notes)
+    regardless of operational source. Standardizes identifiers, recognition dates, signed amounts,
+    statuses and source systems, and nets refunds via a signed NET_AMOUNT. Upstream source for
+    finance.logic.recognize_revenue.v1; consumers must NOT re-derive it from raw invoices/refunds.
+  owner:
+    team: finance-analytics
+    escalation: finance-data-oncall
+  lifecycle:
+    state: certified
+spec:
+  entryRole: producer
+  interfaceTypes:
+    - queryable_dataset
+  reuseIntent: domain_canonical
+  implementationBindings:
+    - system: warehouse
+      env: prod
+      objectType: table
+      dialect: snowflake
+      ref: FINANCE.DATASETS.FACT_BILLABLE_EVENTS
+      attributionKey: "warehouse:snowflake:FINANCE.DATASETS.FACT_BILLABLE_EVENTS"
+      source: finance/datasets/fact_billable_events.sql
+  compatibility:
+    policy: backward-compatible
+    breakingChanges:
+      - event_grain_change
+      - recognition_date_rule_change
+      - signed_amount_convention_change
+  dependencies:
+    - fqn: shared.datasets.fact_invoices.v1
+      relationship: source_input
+    - fqn: shared.datasets.fact_refunds.v1
+      relationship: source_input
+  knownConsumers:
+    - fqn: finance.logic.recognize_revenue.v1
+      relationship: transformation_dependency

@@ -3,16 +3,15 @@
 In a real DRY Artifact Registry, this is queryable (API/UI).  
 In this reference repo, the YAML set in this folder is the snapshot.
 
-> **Note — PoC input registry moved.** The executable PoC now loads its input registry from
-> `poc/registry/manifests/` (logical + dataset artifacts only). The following artifacts were
-> relocated there and are **no longer stored in this folder**:
-> `platform.callable.dry_platform_utils.v1`, `platform.callable.dry_shared_macros.v1`,
-> `finance.logic.recognize_revenue.v1`, `finance.logic.normalize_reporting_currency.v1`,
-> `finance.reporting.revenue_events.v1`, `finance.reporting.invoice_revenue.v1`.
-> What remains here are the **generic metric / semantic examples** (`enterprise.*`,
-> `finance.metrics.*`) that are *not* part of the PoC's loaded registry — scenario 2 instead
-> *generates* its metric/semantic outputs (`enterprise.datasets.customer_arpac_components_90d.v1`,
-> `enterprise.semantic.arpac_90d.v1`). The table below is retained for reference context.
+> **Note — this reference index is separate from the executable PoC.** The executable PoC keeps its
+> own **self-contained** input registry as pure-YAML manifests under
+> `poc/scenarios/scenario-2/registry-manifests/` (shared base tables + finance/sales logical &
+> dataset artifacts), with the code its bindings point at under
+> `poc/scenarios/scenario-2/workspace/`. The PoC does **not** load from this folder. The shared
+> platform packages used by the reference repo live in `dry-reference-repository/platform/packages/`.
+> The artifacts listed below are **generic reference examples** (a different naming universe from the
+> PoC's `fact_billable_events` / `recognize_revenue` / `commercial_customer_status_90d` set); they
+> illustrate registry structure and are retained for reference context only.
 
 **Population model:** CI/CD parses artifact manifests on merge and publishes here.  
 Domain teams declare artifacts in their own repos; certification gates control what reaches this index.

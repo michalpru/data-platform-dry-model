@@ -38,9 +38,10 @@ knowledge of the certified recognition UDF, the currency macro, or the 90-day ac
 definition. It happily generates working SQL from the raw tables.
 
 **Result:** [`arpac-authoring-scratch.sql`](arpac-authoring-scratch.sql). It runs and looks
-correct, but it silently re-implements **three governed rules** (orders→invoices mapping, netting,
-currency) and invents a **30-day** active-customer window that contradicts the certified
-**90-day** enterprise standard.
+correct, but it silently re-derives **three governed rules** from the visible base tables —
+billable-event assembly (invoices ∪ refunds), refund netting + recognition, and currency
+normalization — and uses the **wrong active-customer definition**: `dim_customers.is_active`
+(a 12-month operational order flag) instead of the certified **90-day** commercial-activity status.
 
 Nothing detects this. The duplicate reaches review — or production — as new "original" code.
 This is the whitepaper's *"AI assistant as duplication amplifier."*
@@ -65,12 +66,14 @@ Workspace similarity search for arpac-authoring-scratch.sql (method=ast)
 
   Ranked by SIMILARITY ONLY — no lifecycle, ownership or canonical status:
 
-    0.65  [STRUCTURAL_SIMILARITY]  poc\registry\manifests\domains\finance\logic\udfs\finance.logic.recognize_revenue.v1.sql
-          ast=0.66 feat=0.62 | authority: UNKNOWN
-    0.15  [INSUFFICIENT_EVIDENCE]  poc\registry\manifests\domains\finance\logic\macros\finance.logic.normalize_reporting_currency.v1.sql
-          ast=0.15 feat=0.15 | authority: UNKNOWN
-    0.14  [PARTIAL_REIMPLEMENTATION]  poc\registry\manifests\domains\finance\datasets\finance.marts.revenue_events.v1.sql
-          ast=0.07 feat=0.41 | authority: UNKNOWN
+    0.32  [PARTIAL_REIMPLEMENTATION]  poc\scenarios\scenario-2\workspace\finance\datasets\fact_billable_events.sql
+          ast=0.30 feat=0.39 | authority: UNKNOWN
+    0.23  [INSUFFICIENT_EVIDENCE]  poc\scenarios\scenario-2\workspace\finance\logic\normalize_currency.sql
+          ast=0.24 feat=0.19 | authority: UNKNOWN
+    0.18  [INSUFFICIENT_EVIDENCE]  poc\scenarios\scenario-2\workspace\finance\datasets\invoice_revenue.sql
+          ast=0.16 feat=0.24 | authority: UNKNOWN
+    0.13  [PARTIAL_REIMPLEMENTATION]  poc\scenarios\scenario-2\workspace\finance\logic\recognize_revenue.sql
+          ast=0.08 feat=0.32 | authority: UNKNOWN
     ...
   ⚠ The top match may be a certified canonical, a local copy, or a test fixture —
     this method cannot tell. That authority gap is what the registry closes (Pattern 3).
@@ -83,20 +86,21 @@ Workspace similarity search for arpac-authoring-scratch.sql (method=ast)
     - No governance signal: lifecycle, ownership and reuse intent are UNKNOWN.
 ```
 
-**What worked:** the search *did* surface the certified recognition rule as the top structural
-match (0.65, `STRUCTURAL_SIMILARITY`). Accidental re-implementation is now less likely.
+**What worked:** the search *did* surface the certified billable-event stream as the top
+structural match (0.32, `PARTIAL_REIMPLEMENTATION`), with the recognition and currency rules just
+below. Accidental re-implementation is now less likely.
 
 **What is still missing — the three Pattern-2 gaps the whitepaper names:**
 
 1. **No authority.** The ranking is by similarity, not governance. The engineer cannot tell that
-   the 0.66 match is *certified and owned by finance-analytics*, while the 0.03 match
-   (`marketing.marts.active_customers_30d`) is an intentionally-local 30-day variant that must
-   **not** be reused for executive reporting.
+   the top match is *certified and owned by finance-analytics*, nor that the `invoice_revenue`
+   match just below it is a **retired** view that must **not** be reused for executive reporting.
 2. **Workspace-bounded.** Only code open in the workspace is visible. Artifacts realized only as
-   **warehouse objects** (the `fn_recognize_revenue` UDF deployed to Snowflake, the
-   `revenue_events` table) or living in **other teams' repos** are invisible to the scan.
-3. **Similarity ≠ semantics.** The active-customer divergence (30d vs 90d) barely registers as a
-   structural signal, yet it is the most consequential error.
+   **warehouse objects** (the `RECOGNIZE_REVENUE` UDF deployed to Snowflake, the
+   `FACT_BILLABLE_EVENTS` table) or living in **other teams' repos** are invisible to the scan.
+3. **Similarity ≠ semantics.** The active-customer divergence (`dim_customers.is_active` vs the
+   certified 90-day status) barely registers as a structural signal, yet it is the most
+   consequential error.
 
 ### Bringing the CI/CD detection techniques to authoring time
 
@@ -144,16 +148,16 @@ This is the **intent-first** path — search and composition come first; code co
 later verification step.
 
 ```powershell
-python -m dry_registry.cli recommend "ARPAC" --component "net recognized revenue" --component "active customer"
+python -m dry_registry.cli recommend "ARPAC" --component "recognize revenue" --component "commercial customer status"
 ```
 
 ```
 Composition recommendation for 'ARPAC':
 
   reuse  recognize revenue      → finance.logic.recognize_revenue.v1 [certified]
+         binding: warehouse/snowflake prod: FINANCE.LOGIC.RECOGNIZE_REVENUE
   reuse  commercial customer status → sales.datasets.commercial_customer_status_90d.v1 [certified]
-
-  Reuse 2 registered component(s); author only the 0 missing part(s) and the small composition that joins them.
+         binding: databricks/databricks prod: sales.datasets.commercial_customer_status_90d
 ```
 
 One call resolves every named component to a **certified** registered artifact (and, with a
@@ -178,10 +182,11 @@ Canonical resolution for 'commercial customer status':
       reuse intent: enterprise_canonical
 
       Other registered matches:
-        - finance.reporting.invoice_revenue.v1 [retired]
-        - platform.callable.dry_platform_utils.v1 [shared]
-        - finance.reporting.revenue_events.v1 [certified]
-        - platform.callable.dry_shared_macros.v1 [shared]
+        - shared.datasets.dim_customers.v1 [certified]
+        - finance.datasets.fact_billable_events.v1 [certified]
+        - shared.datasets.fact_refunds.v1 [certified]
+        - finance.datasets.invoice_revenue.v1 [retired]
+        - finance.logic.recognize_revenue.v1 [certified]
 
       → Reuse this artifact instead of re-implementing it.
 
@@ -191,9 +196,9 @@ Binding resolution for sales.datasets.commercial_customer_status_90d.v1 (runtime
 
 Binding resolution for finance.logic.recognize_revenue.v1 (runtime=dbt, dialect=None):
 
-  ► recommended: dbt/snowflake prod: dry_finance_macros.recognize_revenue (macro)
+  ► recommended: dbt/snowflake prod: dry_finance_macros.recognized_revenue_relation (macro)
   alternatives:
-    - warehouse/snowflake prod: analytics.finance.fn_recognize_revenue
+    - warehouse/snowflake prod: FINANCE.LOGIC.RECOGNIZE_REVENUE
 ```
 
 Unlike Pattern 2, this answer carries **authority** *and spans engines*: lifecycle state
@@ -220,20 +225,28 @@ python -m dry_registry.cli compare ../demo/arpac-authoring-scratch.sql --scope r
 ```
 Comparison for arpac-authoring-scratch.sql (scope=registry, method=ast):
 
-  [STRUCTURAL_SIMILARITY] finance.logic.recognize_revenue.v1
-      ast=0.66 feat=0.42 (combined=0.61) | authority: REGISTERED_CANONICAL | lifecycle: certified
-      shared: amount, credit, currency, customer, gross, invoice, net, netting, order, recogniz, refund, reporting, revenue
-      → Structurally very close to the registered artifact (certified); review and reuse it rather than maintaining a copy.
-  [INSUFFICIENT_EVIDENCE] finance.logic.normalize_reporting_currency.v1
-      ast=0.15 feat=0.15 (combined=0.15) | authority: REGISTERED_CANONICAL | lifecycle: shared
-      shared: fx_rates, amount, currency, fx, reporting
+  [PARTIAL_REIMPLEMENTATION] finance.datasets.fact_billable_events.v1
+      ast=0.27 feat=0.39 (combined=0.30) | authority: REGISTERED_CANONICAL | lifecycle: certified
+      shared: fact_invoices, fact_refunds, invoice_events, refund_events, amount, currency, customer, invoice, net, recogniz, refund, revenue
+      → Overlaps a registered artifact (certified); reuse the shared parts rather than copying logic.
+  [INSUFFICIENT_EVIDENCE] finance.logic.normalize_currency.v1
+      ast=0.24 feat=0.13 (combined=0.21) | authority: REGISTERED_CANONICAL | lifecycle: shared
+      shared: amount, currency, exchange, fx
       → No strong match; safe to author, but register the new artifact.
+  [INSUFFICIENT_EVIDENCE] finance.datasets.invoice_revenue.v1
+      ast=0.16 feat=0.24 (combined=0.18) | authority: REGISTERED_CANONICAL | lifecycle: retired
+      shared: fact_invoices, amount, currency, customer, fx, invoice, recogniz, refund, revenue
+      → No strong match; safe to author, but register the new artifact.
+  [PARTIAL_REIMPLEMENTATION] finance.logic.recognize_revenue.v1
+      ast=0.08 feat=0.33 (combined=0.13) | authority: REGISTERED_CANONICAL | lifecycle: certified
+      shared: amount, currency, customer, fx, invoice, net, netting, recogniz, refund, revenue
+      → Overlaps a registered artifact (certified); reuse the shared parts rather than copying logic.
   [INSUFFICIENT_EVIDENCE] sales.datasets.commercial_customer_status_90d.v1
-      ast=0.08 feat=0.12 (combined=0.09) | authority: REGISTERED_CANONICAL | lifecycle: certified
-      shared: active, customer, invoice, order, reporting
+      ast=0.08 feat=0.18 (combined=0.10) | authority: REGISTERED_CANONICAL | lifecycle: certified
+      shared: dim_customers, active, customer, invoice, order
       → No strong match; safe to author, but register the new artifact.
 
-  Closest match: finance.logic.recognize_revenue.v1 [STRUCTURAL_SIMILARITY] — Structurally very close ...
+  Closest match: finance.datasets.fact_billable_events.v1 [PARTIAL_REIMPLEMENTATION] — Overlaps a registered artifact (certified) ...
 ```
 
 ### Step 4 — Compose, and check impact
@@ -253,11 +266,10 @@ python -m dry_registry.cli impact finance.logic.recognize_revenue.v1
 Impact analysis for finance.logic.recognize_revenue.v1 [certified]
 
   Depends on (upstream):
-    - finance.raw.orders.v1 (source_input)
-    - finance.raw.invoices.v1 (source_input)
-    - finance.raw.refunds.v1 (source_input)
+    - finance.datasets.fact_billable_events.v1 (source_input)
+    - finance.logic.normalize_currency.v1 (transformation_dependency)
   Consumed by (downstream — would break on an incompatible change):
-    - finance.reporting.revenue_events.v1 (transformation_dependency)
+    - (no registered downstream dependents — ARPAC is what this exercise adds)
 ```
 
 **Result:** no revenue logic, no netting rule, no currency rule, and no activity window is

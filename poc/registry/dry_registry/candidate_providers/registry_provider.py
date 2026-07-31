@@ -13,7 +13,7 @@ import os
 from typing import List, Optional
 
 from ..models import Binding, Candidate, Governance, COVERAGE_REGISTRY
-from ..manifests import MANIFESTS_DIR
+from ..manifests import WORKSPACE_DIR
 from ..store import RegistryStore
 from .base import CandidateProvider, _language_for
 
@@ -25,7 +25,7 @@ class RegistryCandidateProvider(CandidateProvider):
         self.preferred_language = preferred_language
 
     def _abs(self, source_path: str) -> str:
-        return os.path.join(self.repo_root, MANIFESTS_DIR, source_path)
+        return os.path.join(self.repo_root, WORKSPACE_DIR, source_path)
 
     def _pick_binding(self, bindings) -> Optional[dict]:
         """Choose a representative, source-bearing binding for the whole artifact.

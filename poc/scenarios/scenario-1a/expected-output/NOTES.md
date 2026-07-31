@@ -8,9 +8,9 @@ and looks correct.
 | Concern | What the 1A output does | Authoritative definition (registry) |
 |---|---|---|
 | Revenue recognition | Sums raw `POSTED` invoice amounts | `finance.logic.recognize_revenue.v1` applies recognition rules |
-| Refunds / credit notes | Ignored (`fact_refunds` never joined) | Netted inside `recognize_revenue` → `net_recognized_revenue.v1` |
-| Currency | Ignored (no FX table in workspace) | Normalized to USD by `normalize_reporting_currency.v1` |
-| Active customer | `dim_customers.is_active` (12-month order flag) | `enterprise.metrics.active_customer.v1` (90-day commercial activity) |
+| Refunds / credit notes | Ignored (`fact_refunds` never joined) | Netted inside `finance.datasets.fact_billable_events.v1` (signed amounts), consumed by `recognize_revenue` |
+| Currency | Ignored (no FX table in workspace) | Normalized to USD by `finance.logic.normalize_currency.v1` |
+| Active customer | `dim_customers.is_active` (12-month order flag) | `sales.datasets.commercial_customer_status_90d.v1` (90-day commercial activity) |
 
 **Detection available in this scenario:** none. This is the whitepaper's *"AI assistant as
 duplication amplifier"* — the divergent metric reaches review or production as new "original" code.
