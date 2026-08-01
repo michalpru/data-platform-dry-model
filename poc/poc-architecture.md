@@ -1,9 +1,6 @@
 # ARPAC Registry-Aware Authoring PoC — Architecture
 
-> **Single source of truth** for this proof of concept. It supersedes the earlier `poc/README.md`
-> and the external working draft. It consolidates the requirements, the scenario design, the
-> artifact catalog, the directory layout, and the engine architecture into one document.
-
+> **Single source of truth** for this proof of concept. 
 This PoC accompanies **Chapter 4 of the whitepaper** (*The Data Platform DRY Model — Phase II:
 Operationalization*). On one concrete authoring task it shows how three levels of tooling change
 whether an analytics engineer **reuses** certified definitions or silently **re-implements** them.
@@ -22,7 +19,7 @@ for an executive dashboard. Two enterprise-certified concepts already exist and 
 
 ### ARPAC definition (canonical for this PoC)
 
-$$\text{ARPAC}_{90d} = \frac{\sum_{c \in \text{Active}} \text{NetRecognizedRevenue}_{90d}(c)}{\bigl|\{\,c : \text{is\_active\_commercial\_90d}(c)\,\}\bigr|}$$
+$$\text{ARPAC}_{90d} = \frac{{ } \text{Net recognized revenue (USD) attributable to active customers}}{\bigl|\\ \text{Count of active customers}}$$
 
 - **Numerator** — net recognized revenue in USD **attributable to active customers only**. Revenue
   from customers who are not commercially active in the window is excluded.
@@ -46,9 +43,9 @@ them, which is precisely why a logical registry with resolvable bindings is need
 |---|---|---|
 | Shared DWH (base tables) | Snowflake | Snowflake SQL |
 | Finance (datasets + logic) | Snowflake | Snowflake SQL (+ dbt macro bindings) |
-| Enterprise Analytics (consumer) | Snowflake | Snowflake SQL |
 | Sales | Databricks | Spark SQL |
 | Marketing | Databricks | Python / PySpark |
+| Enterprise Analytics (consumer) | Snowflake | Snowflake SQL |
 
 ---
 
@@ -66,19 +63,19 @@ components**. It does **not** store or execute implementation code:
 - SQLite plus deterministic AST / feature comparison is sufficient; a vector store is optional and
   advisory.
 
-In this PoC the "existing repositories" are **mocked** as a per-scenario workspace tree
-(`scenario-2/workspace/`), and the registry manifests live alongside it in
-`scenario-2/registry-manifests/`.
+, 
 
 ---
 
 ## 4. The three scenarios
 
+In this PoC the "existing repositories" are **mocked** as a per-scenario workspace tree (`poc/scenarios/scenario-.../workspace/`)
+
 | Scenario | Authoring mode | Exposed in the workspace | Likely / intended outcome |
 |---|---|---|---|
 | **1A** | Standard Copilot (workspace context + search) | Base DWH tables only (`dim_customers`, `fact_invoices`, `fact_refunds`, `dim_exchange_rates`) | Copilot re-codes ARPAC from first principles: invoice-based revenue, refunds ignored, invoice date as revenue date, and `dim_customers.is_active` (a 12-month order flag) misused as the active-customer definition. |
 | **1B** | Standard Copilot (workspace context + search) | Base tables **+** finance & marketing domain repos | Copilot reuses the most *similar* code it finds — the **retired** `finance.datasets.invoice_revenue` view and the Marketing-specific `active_customer` login rule — but similarity and availability do not indicate business authority. |
-| **2** | Registry-aware custom agent (MCP intent lookup + code comparison) | The **registry** (logical artifacts + resolvable bindings) | The agent searches by intent, evaluates lifecycle/scope, resolves the certified Snowflake and Databricks bindings, and authors **only** the missing Enterprise composition. Nothing governed is re-implemented. |
+| **2** | Registry-aware custom agent (MCP intent lookup + code comparison) | The **registry** (logical artifacts + resolvable bindings). The registry manifests live alongside it in `poc/scenarios/scenario-2/registry-manifests/` | The agent searches by intent, evaluates lifecycle/scope, resolves the certified Snowflake and Databricks bindings, and authors **only** the missing Enterprise composition. Nothing governed is re-implemented. |
 
 The failure modes in 1A/1B are the point: **workspace similarity without governance can be worse
 than authoring from scratch**, because it lends false confidence to retired or domain-specific code.
