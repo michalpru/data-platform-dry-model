@@ -1,60 +1,94 @@
-# Three-pattern walkthrough: authoring ARPAC
+# Three-scenario walkthrough: authoring ARPAC
 
 > Task: build **ARPAC = Average Revenue per Active Customer** for the executive dashboard,
 > reusing enterprise-certified definitions instead of rebuilding them.
->
-> All commands below run **fully offline**. Outputs shown are real (captured from the PoC).
-> Run the engine first:
-> ```powershell
-> cd poc/registry
-> pip install -e ".[sql]"      # PyYAML + sqlglot; both offline
-> python -m dry_registry.cli ingest
-> ```
 
-The three patterns map to the authoring-time rows of the whitepaper's *Duplication Detection and
-Prevention Techniques* table (§4.3.3): Pattern 1 has no detection, Pattern 2 is **workspace
-similarity search** (low–medium confidence, informative only), Pattern 3 is **registry-backed
-canonical resolution** (high confidence, prevention at authoring time).
+The three scenarios map to the authoring-time rows of the whitepaper's *Duplication Detection and
+Prevention Techniques* table (§4.3.3). Scenarios 1A and 1B have no registry access. Scenario 2
+is **registry-backed canonical resolution** (high confidence, prevention at authoring time).
 
 > **How this PoC extends the whitepaper.** In the whitepaper, the three *detection techniques* —
 > structural fingerprinting (AST), embedding-based similarity, and LLM-based analysis — sit at
 > **build time**, inside the CI/CD *Duplication Detection and Prevention Flow*. This PoC brings
 > those same techniques **forward to authoring time**: the AST engine that a CI gate would run
-> post-hoc is the same engine powering the Pattern-2 workspace search and the Pattern-3
-> `compare` check here — so a likely reimplementation surfaces while the engineer is still
-> typing, not only after the PR is opened.
+> post-hoc is the same engine powering the workspace search and the registry `compare` check here
+> — so a likely reimplementation surfaces while the engineer is still typing, not only after the
+> PR is opened.
 >
-> **Two integration surfaces.** The workspace flow (Pattern 2) is **CLI-only** — similarity
-> without authority. The registry flow (Pattern 3) is also available through **GitHub Copilot**
-> (a custom agent over a thin MCP server) for registry-aware authoring; see the final section.
+> **Two integration surfaces.** Scenarios 1A/1B use standard Copilot with workspace file context.
+> Scenario 2 uses a **custom DRY Reuse agent** over a thin MCP server for registry-aware authoring.
 
 ---
 
-## Pattern 1 — No registry, no workspace search
+## The prompt
 
-**Setup.** The engineer opens a fresh analytics repo and asks the AI assistant to "compute
-average revenue per active customer." The assistant sees only the local file context. It has no
-knowledge of the certified recognition UDF, the currency macro, or the 90-day active-customer
-definition. It happily generates working SQL from the raw tables.
+In all three scenarios the analytics engineer provides the same prompt:
 
-**Result:** [`arpac-authoring-scratch.sql`](arpac-authoring-scratch.sql). It runs and looks
-correct, but it silently re-derives **three governed rules** from the visible base tables —
-billable-event assembly (invoices ∪ refunds), refund netting + recognition, and currency
-normalization — and uses the **wrong active-customer definition**: `dim_customers.is_active`
-(a 12-month operational order flag) instead of the certified **90-day** commercial-activity status.
+```
+I need to create a trailing-90-day ARPAC (Average Revenue per Active Customer) metric for
+executive reporting. Create a queryable SQL implementation of the metric.
+- Reuse existing definitions, datasets, or functions where appropriate, and explain what was reused.
+- ARPAC should be net recognized revenue in USD divided by the number of active customers.
+- The active-customer definition should be aligned with the definition currently used in other
+  executive dashboards.
 
-Nothing detects this. The duplicate reaches review — or production — as new "original" code.
-This is the whitepaper's *"AI assistant as duplication amplifier."*
+To accomplish this task please use only the code in the /poc/scenarios/<scenario>/workspace
+directory. Please ignore all other files from other directories.
 
-**Why it matters:** two dashboards now show two different ARPAC numbers, and no pipeline fails.
+Generate output into /poc/scenarios/<scenario>/poc-results/<model_name>/ directory.
+```
+
+Three models were tested in each scenario: **GPT-5.5**, **Claude Sonnet 4.6**, and **Claude Opus 4.8**.
 
 ---
 
-## Pattern 2 — No registry, WITH workspace similarity search
+## Scenario 1A — Standard Copilot, DWH tables only
 
-**Setup.** Same task, but now the assistant can run similarity search across the repositories
-open in the workspace. The engineer either searches by keyword or, more realistically, writes a
-draft and asks "is there anything like this already?"
+**Workspace exposed:** `poc/scenarios/scenario-1a/workspace/` — the shared DWH base tables only
+(`dim_customers`, `fact_invoices`, `fact_refunds`, `dim_exchange_rates`).
+
+**What the models do.** With no domain logic visible, every tested model generates ARPAC from
+first principles straight from the raw base tables. The SQL runs and looks correct, but silently
+re-derives three governed rules:
+
+- Billable-event assembly (invoices ∪ refunds, signed amounts) — owned by `finance.datasets.fact_billable_events.v1`
+- Refund netting + recognition — owned by `finance.logic.recognize_revenue.v1`
+- Currency normalization — owned by `finance.logic.normalize_currency.v1`
+
+And uses the **wrong active-customer definition**: `dim_customers.is_active` is a 12-month
+operational order flag, not the certified 90-day commercial-activity status
+(`sales.datasets.commercial_customer_status_90d.v1`). Nothing detects this — the duplicate
+reaches review or production as new "original" code.
+
+This is the whitepaper's *"AI assistant as duplication amplifier."* Two dashboards now show two
+different ARPAC numbers, and no pipeline fails.
+
+**Results:** `poc/scenarios/scenario-1a/poc-results/<model_name>/`
+
+---
+
+## Scenario 1B — Standard Copilot, domain repositories included
+
+**Workspace exposed:** `poc/scenarios/scenario-1b/workspace/` — base DWH tables **plus** the
+Finance and Marketing domain repositories.
+
+**What the models do.** With domain code visible, models find similar artifacts through workspace
+search. However, *availability and similarity do not imply authority*:
+
+- The Finance workspace contains `invoice_revenue.sql` — a **retired** view that skips refunds.
+  Models may reuse it, reproducing a known data-quality defect.
+- The Marketing workspace contains an active-customer rule based on login activity — a
+  **domain-local** definition not certified for executive reporting.
+- The certified recognition UDF (`FINANCE.LOGIC.RECOGNIZE_REVENUE`) and billable-events table
+  (`FINANCE.DATASETS.FACT_BILLABLE_EVENTS`) exist only as deployed warehouse objects, invisible
+  to workspace search.
+
+**Results:** `poc/scenarios/scenario-1b/poc-results/<model_name>/`
+
+### Why workspace similarity alone is not enough
+
+The scan.py harness makes the gap concrete — the same comparison engine that powers registry
+lookups, running without governance metadata:
 
 ```powershell
 cd poc/workspace-similarity
@@ -76,7 +110,7 @@ Workspace similarity search for arpac-authoring-scratch.sql (method=ast)
           ast=0.08 feat=0.32 | authority: UNKNOWN
     ...
   ⚠ The top match may be a certified canonical, a local copy, or a test fixture —
-    this method cannot tell. That authority gap is what the registry closes (Pattern 3).
+    this method cannot tell. That authority gap is what the registry closes (Scenario 2).
 
   Coverage caveats:
     - Warehouse objects (UDFs, tables, views) were not searched.
@@ -86,66 +120,63 @@ Workspace similarity search for arpac-authoring-scratch.sql (method=ast)
     - No governance signal: lifecycle, ownership and reuse intent are UNKNOWN.
 ```
 
-**What worked:** the search *did* surface the certified billable-event stream as the top
-structural match (0.32, `PARTIAL_REIMPLEMENTATION`), with the recognition and currency rules just
-below. Accidental re-implementation is now less likely.
+The three gaps the whitepaper names:
 
-**What is still missing — the three Pattern-2 gaps the whitepaper names:**
-
-1. **No authority.** The ranking is by similarity, not governance. The engineer cannot tell that
-   the top match is *certified and owned by finance-analytics*, nor that the `invoice_revenue`
-   match just below it is a **retired** view that must **not** be reused for executive reporting.
-2. **Workspace-bounded.** Only code open in the workspace is visible. Artifacts realized only as
-   **warehouse objects** (the `RECOGNIZE_REVENUE` UDF deployed to Snowflake, the
-   `FACT_BILLABLE_EVENTS` table) or living in **other teams' repos** are invisible to the scan.
-3. **Similarity ≠ semantics.** The active-customer divergence (`dim_customers.is_active` vs the
-   certified 90-day status) barely registers as a structural signal, yet it is the most
-   consequential error.
-
-### Bringing the CI/CD detection techniques to authoring time
-
-The whitepaper places three detection techniques — **structural fingerprinting (AST)**,
-**embedding-based similarity**, and **LLM-based analysis** — at **build time**, in the CI/CD flow.
-This PoC runs those same techniques *at authoring time* as the engine behind the workspace search.
-The harness is now a thin wrapper over the shared **reuse-detection service** (`scope="workspace"`), so
-the AST baseline, the language-neutral feature signal and the optional embedding tier are the
-**same code** the registry scope uses:
-
-```powershell
-# Structural + feature (default, offline, deterministic)
-python scan.py --query ../demo/arpac-authoring-scratch.sql
-
-# Add the on-demand embedding tier (optional local model; pip install -e "../registry[vector]")
-python scan.py --query ../demo/arpac-authoring-scratch.sql --embeddings
-```
-
-The **LLM tier stays in Copilot**: the service returns structured evidence (signals + shared
-entities/operations), and the model explains and decides. The point of the reuse-detection check is
-not which signal wins, but that **all of them return similarity, none returns authority.**
+1. **No authority.** Similarity rank does not distinguish certified from retired. `invoice_revenue`
+   carries `lifecycle: retired` in the registry — invisible to workspace search.
+2. **Workspace-bounded.** The `FINANCE.LOGIC.RECOGNIZE_REVENUE` UDF and `FACT_BILLABLE_EVENTS`
+   table exist only as deployed warehouse objects and are not visible to workspace search.
+3. **Similarity ≠ semantics.** The active-customer divergence (`dim_customers.is_active`, a 12-month
+   flag, vs the certified 90-day status) barely registers as a structural signal, yet it is the
+   most consequential error.
 
 ---
 
-## Pattern 3 — WITH the DRY Artifact Registry
+## Scenario 2 — Registry-aware authoring
 
-**Setup.** The assistant is connected to the registry (via the CLI here, or via the MCP server +
-Copilot agent in the final section). Authoring now starts with resolution, not generation.
+**Tooling:** the **DRY Reuse** custom agent
+([`.github/agents/dry-reuse.agent.md`](../../.github/agents/dry-reuse.agent.md)) connected to the
+local MCP server. The agent treats the prompt as **business intent** and works through four stages:
+**Discover → Resolve → Compose → Verify.**
 
-### Step 1 — Is there already a certified ARPAC?
+The same prompt works for Scenario 2. For best results, the engineer names the business components
+explicitly — the agent instructions prohibit inventing a composition the engineer did not ask for.
+A strong prompt identifies: the desired business result, the named components (e.g. `recognize
+revenue`, `commercial customer status`), the target engine, and any grain or time-window
+requirements.
+
+To start: open Copilot Chat in VS Code and select the **DRY Reuse** agent. First ensure the MCP
+server is running:
+
+```powershell
+cd poc/registry
+pip install -e ".[sql,mcp]"
+python -m dry_registry.cli ingest    # build the control plane (9 artifacts)
+```
+
+Then reload VS Code so [`.vscode/mcp.json`](../../.vscode/mcp.json) starts the `dry-registry` server.
+
+### Stage 1 — Discover: is there already a certified ARPAC?
+
+The first MCP call is always `search_artifacts`. The equivalent CLI command:
 
 ```powershell
 python -m dry_registry.cli search arpac --interface semantic_contract
 ```
 
-At the true start of authoring there is nothing certified to reuse — ARPAC does not yet exist as a
-governed metric, so the engineer is cleared to build it. The input registry holds only the
-**logical + dataset** building blocks; the ARPAC semantic contract
-(`enterprise.semantic.arpac_90d.v1`) is precisely what this exercise *generates*.
+ARPAC does not yet exist as a governed metric — the engineer is cleared to build it. The input
+registry holds only the logical + dataset building blocks; `enterprise.semantic.arpac_90d.v1` is
+what this exercise *generates*.
 
-### Step 1b — Ask the registry how to compose it (the intent-first hero)
+### Stage 2 — Discover: map components to certified artifacts
 
-Rather than hand-decomposing the metric, the engineer asks the registry for a composition plan.
-This is the **intent-first** path — search and composition come first; code comparison is only a
-later verification step.
+Two options are implemented. The agent uses **Option B** as the primary call.
+
+**Option A — `find_composable_artifacts`**  
+Runs a separate registry search per named concept and returns the first match. Does not resolve
+bindings.
+
+**Option B — `recommend_composition`** (primary)
 
 ```powershell
 python -m dry_registry.cli recommend "ARPAC" --component "recognize revenue" --component "commercial customer status"
@@ -160,36 +191,21 @@ Composition recommendation for 'ARPAC':
          binding: databricks/databricks prod: sales.datasets.commercial_customer_status_90d
 ```
 
-One call resolves every named component to a **certified** registered artifact (and, with a
-runtime, its binding) and flags anything that must still be authored — even though the two inputs
-sit on **different engines** (revenue on Snowflake, the active-customer status on Databricks). In
-the MCP/agent flow this is the `recommend_composition` tool — it makes intent-first authoring a
-single step instead of a manual search-per-component loop.
+`recommend_composition` performs in one call: a whole-request search, a separate search per named
+component, binding resolution per matched component, gap identification, and a summary. It produces
+a **reuse plan** — not SQL. Code generation is Copilot's responsibility.
 
-### Step 2 — Resolve the certified building blocks and their bindings
+### Stage 3 — Resolve: physical bindings per runtime
+
+The registry treats each artifact as a logical identity with potentially multiple physical
+implementations. `resolve_binding` selects the right one for the target runtime:
 
 ```powershell
-python -m dry_registry.cli resolve "commercial customer status"
 python -m dry_registry.cli resolve-binding sales.datasets.commercial_customer_status_90d.v1 --runtime databricks
 python -m dry_registry.cli resolve-binding finance.logic.recognize_revenue.v1 --runtime dbt
 ```
 
 ```
-Canonical resolution for 'commercial customer status':
-
-  ► sales.datasets.commercial_customer_status_90d.v1  [CERTIFIED]
-      Commercial Customer Status (90d) — owned by sales-analytics
-      reuse intent: enterprise_canonical
-
-      Other registered matches:
-        - shared.datasets.dim_customers.v1 [certified]
-        - finance.datasets.fact_billable_events.v1 [certified]
-        - shared.datasets.fact_refunds.v1 [certified]
-        - finance.datasets.invoice_revenue.v1 [retired]
-        - finance.logic.recognize_revenue.v1 [certified]
-
-      → Reuse this artifact instead of re-implementing it.
-
 Binding resolution for sales.datasets.commercial_customer_status_90d.v1 (runtime=databricks, dialect=None):
 
   ► recommended: databricks/databricks prod: sales.datasets.commercial_customer_status_90d (view)
@@ -201,22 +217,51 @@ Binding resolution for finance.logic.recognize_revenue.v1 (runtime=dbt, dialect=
     - warehouse/snowflake prod: FINANCE.LOGIC.RECOGNIZE_REVENUE
 ```
 
-Unlike Pattern 2, this answer carries **authority** *and spans engines*: lifecycle state
-(`CERTIFIED`), owner, reuse intent, and the **recommended physical binding for each component's
-runtime**. The active-customer status resolves to a **Databricks** view; revenue resolves to a
-dbt macro for a dbt project, with the native Snowflake UDF as the alternative (ask for
-`--runtime warehouse` and the recommendation flips). Reuse is not limited to raw SQL:
-`recognize_revenue` is one certified identity with two Snowflake-stack bindings, so a dbt model
-reuses it with `{{ recognize_revenue(...) }}` while a raw-SQL author calls the UDF — the *same*
-governed logic (Task 8: one logical identity, many bindings). dbt solves reuse *inside* dbt on one
-engine; the registry records that the macro and the UDF are one capability **and** that the
-active-customer input lives on a different engine entirely. The engineer now knows *which*
-definition is canonical, on *which* engine, and exactly how to reference it.
+The result carries authority the workspace never had: lifecycle state, owner, reuse intent, and
+the recommended physical object per engine. Revenue resolves to Snowflake (UDF or dbt macro); the
+active-customer status resolves to a Databricks view — two engines, one registry query.
 
-### Step 3 — Detect the re-implementation before it merges
+`recognize_revenue` is one certified identity with two Snowflake-stack bindings: the native UDF
+and a dbt macro. A dbt model reuses it with `{{ recognized_revenue_relation(...) }}`; a raw-SQL
+author calls the UDF. Both reference the *same* governed logic; neither is flagged as duplication.
 
-If the engineer (or the assistant) drafts the from-scratch version anyway, the registry compares
-it to **registered** artifacts and attaches governance authority + evidence to the match:
+### Stage 4 — Compose: write only the missing derived logic
+
+Once discovery and binding resolution are complete, **Copilot generates the composition**. There
+is no implemented composition engine — `recommend_composition` creates a plan, and Copilot fills
+in the code. The agent instructions say: *"Only then help write the small piece of new, derived
+code that is genuinely missing."*
+
+For ARPAC, that is:
+
+```
+finance.logic.recognize_revenue.v1        (Snowflake)
+        +
+sales.datasets.commercial_customer_status_90d.v1   (Databricks)
+        ↓
+enterprise.datasets.customer_arpac_components_90d  ← authored here
+        ↓
+enterprise.semantic.arpac_90d                      ← authored here
+```
+
+The active-customer status (Databricks) is surfaced into the enterprise Snowflake environment via
+Delta Sharing; the cross-engine join is materialized in the governed components dataset. The ARPAC
+ratio is the only genuinely new logic. Reference outputs:
+[`../scenarios/scenario-2/expected-output/customer_arpac_components_90d.sql`](../scenarios/scenario-2/expected-output/customer_arpac_components_90d.sql),
+[`../scenarios/scenario-2/expected-output/arpac_90d.sql`](../scenarios/scenario-2/expected-output/arpac_90d.sql).
+
+### Stage 5 — Verify: no duplication
+
+After Copilot creates or edits the composition, the engineer selects the generated code in Copilot
+Chat and runs:
+
+```
+/compare-with-registry
+```
+
+This calls `compare_code` against the registry scope. The equivalent CLI call demonstrates what it
+flags on the **from-scratch draft** (re-deriving from raw base tables instead of calling the
+certified UDF):
 
 ```powershell
 python -m dry_registry.cli compare ../demo/arpac-authoring-scratch.sql --scope registry
@@ -249,14 +294,12 @@ Comparison for arpac-authoring-scratch.sql (scope=registry, method=ast):
   Closest match: finance.datasets.fact_billable_events.v1 [PARTIAL_REIMPLEMENTATION] — Overlaps a registered artifact (certified) ...
 ```
 
-### Step 4 — Compose, and check impact
+A correctly-composed output that references the certified bindings rather than re-deriving from
+base tables returns no `PARTIAL_REIMPLEMENTATION` flags.
 
-ARPAC is authored by composition (see
-[`../scenarios/scenario-2/expected-output/arpac_90d.metric.yaml`](../scenarios/scenario-2/expected-output/arpac_90d.metric.yaml)):
-numerator net recognized revenue from `finance.logic.recognize_revenue.v1` (Snowflake), denominator
-active customers from `sales.datasets.commercial_customer_status_90d.v1` (Databricks), joined once in
-the governed components dataset `enterprise.datasets.customer_arpac_components_90d`. Before promoting
-a change to any building block, impact analysis shows who breaks:
+### Impact analysis (optional)
+
+Before promoting a change to any building block, check who breaks:
 
 ```powershell
 python -m dry_registry.cli impact finance.logic.recognize_revenue.v1
@@ -273,61 +316,38 @@ Impact analysis for finance.logic.recognize_revenue.v1 [certified]
 ```
 
 **Result:** no revenue logic, no netting rule, no currency rule, and no activity window is
-re-implemented. Reuse of the canonical artifact is the lowest-friction path — the whitepaper's
+re-implemented. Reuse of the canonical artifacts is the lowest-friction path — the whitepaper's
 *"AI assistant as reuse accelerator."*
-
-> **Comparison returns logical artifacts, not bindings.** `recognize_revenue` has two physical
-> bindings (a Snowflake UDF and a dbt macro), but the comparison reports it **once** as a single
-> logical identity. `resolve_binding` then picks the physical object for the engineer's runtime.
-> Reusing the dbt macro in a dbt model is therefore *not* flagged as duplication — only the
-> re-derivation from raw tables is.
 
 ---
 
-## Registry-aware authoring through GitHub Copilot (Scenario C)
+## CLI quick reference
 
-Everything above runs from the CLI. The same registry scope is also available *inside the IDE* so
-the engineer never leaves the editor. This path uses a **thin MCP server** (a proxy over the
-Lookup & Compare Service) and a **Copilot custom agent** — no business logic is duplicated.
+All commands run from `poc/registry`, fully offline.
 
 ```powershell
-cd poc/registry
-pip install -e ".[sql,mcp]"          # add ,vector for the on-demand embedding tier
-python -m dry_registry.cli ingest    # build the control plane once
+pip install -e ".[sql]"                # add ,vector for embeddings; ,mcp for the MCP server
+python -m dry_registry.cli ingest      # build/reset the SQLite control plane (9 artifacts)
+
+python -m dry_registry.cli search "recognize revenue"
+python -m dry_registry.cli recommend "ARPAC" --component "recognize revenue" --component "commercial customer status"
+python -m dry_registry.cli resolve-binding finance.logic.recognize_revenue.v1 --runtime dbt
+python -m dry_registry.cli compare ../demo/arpac-authoring-scratch.sql --scope registry
+python -m dry_registry.cli impact finance.logic.recognize_revenue.v1
+
+# workspace similarity harness (similarity without authority):
+python ../workspace-similarity/scan.py --query ../demo/arpac-authoring-scratch.sql
 ```
 
-Reload VS Code so [`.vscode/mcp.json`](../../.vscode/mcp.json) starts the `dry-registry` server,
-open Copilot Chat, and select the **DRY Reuse** agent
-([`.github/agents/dry-reuse.agent.md`](../../.github/agents/dry-reuse.agent.md)). Two workflows:
-
-- **`/search-registry`** (intent-first) — the engineer describes what they want to build. The
-  agent calls `search_artifacts`; if there is no single match it decomposes the request and calls
-  `recommend_composition` (which resolves each named component to a registered artifact + binding
-  and flags what must be authored), then `resolve_binding` for each component before writing any
-  reference. *ARPAC example:* search "ARPAC" → absent → `recommend_composition("ARPAC", ["net
-  recognized revenue", "active customer"])` → resolve bindings → write only the ratio.
-- **`/compare-with-registry`** (code-first) — a **verification step** when the engineer already
-  has code selected. The agent calls `compare_code`, reads the relationship label + shared
-  entities, explains *why* it matches, and recommends reuse or registration. Prefer intent-first
-  when the engineer can describe what they want to build.
-
-The division of responsibility is deliberate:
-
-> **Registry** knows what exists (start here) · **Reuse-detection service** verifies what is
-> similar · **AI (Copilot)** knows how to help the engineer use both.
-
-The MCP tools (`search_artifacts`, `get_artifact`, `find_composable_artifacts`,
-`recommend_composition`, `resolve_binding`, `compare_code`) return the *same structured JSON* the
-CLI's `--json` flag prints. The model is taught the **workflow and the tools**, never the registry
-contents — and the Python services **never call an LLM**. The LLM reasoning stays in Copilot,
-acting on the evidence the services return.
+Add `--json` to any command to get the raw structured payload the MCP tools also return.
 
 ---
 
 ## Side-by-side summary
 
-| | Pattern 1 | Pattern 2 | Pattern 3 |
+| | Scenario 1A | Scenario 1B | Scenario 2 |
 |---|---|---|---|
+| Workspace visible | DWH base tables only | Base tables + domain repos | DRY Artifact Registry (MCP) |
 | Finds similar code | ✗ | ✓ (workspace only) | ✓ (whole platform) |
 | Knows which is **canonical/certified** | ✗ | ✗ | ✓ |
 | Sees warehouse-only / other-repo artifacts | ✗ | ✗ | ✓ |
