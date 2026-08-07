@@ -22,7 +22,9 @@ is **registry-backed canonical resolution** (high confidence, prevention at auth
 
 ## The prompt
 
-In all three scenarios the analytics engineer provides the same prompt:
+Three models were tested in each scenario: **GPT-5.5**, **Claude Sonnet 4.6**, and **Claude Opus 4.8**.
+
+### Scenarios 1A and 1B — base prompt
 
 ```
 I need to create a trailing-90-day ARPAC (Average Revenue per Active Customer) metric for
@@ -38,7 +40,28 @@ directory. Please ignore all other files from other directories.
 Generate output into /poc/scenarios/<scenario>/poc-results/<model_name>/ directory.
 ```
 
-Three models were tested in each scenario: **GPT-5.5**, **Claude Sonnet 4.6**, and **Claude Opus 4.8**.
+### Scenario 2 — extended prompt
+
+Scenario 2 uses the same base prompt with registry-specific additions. Open Copilot Chat in
+VS Code and select the **DRY Reuse** agent before sending — no context files need to be attached.
+
+```
+I need to create a trailing-90-day ARPAC (Average Revenue per Active Customer) metric for
+executive reporting. Create a queryable SQL implementation of the metric.
+- Reuse existing definitions, datasets, or functions where appropriate, and explain what was reused.
+- ARPAC should be net recognized revenue in USD divided by the number of active customers.
+- The active-customer definition should be aligned with the definition currently used in other
+  executive dashboards.
+- The metric's components are: recognized revenue and commercial customer status (90-day).
+
+Constraints:
+- Do NOT read, reference, or use anything from poc/scenarios/scenario-2/expected-output/.
+- Do NOT read poc/poc-architecture.md, poc/demo/walkthrough.md, or any other documentation
+  file. Derive everything from what the registry tools return.
+- Do NOT read poc/scenarios/scenario-2/registry-manifests/ directly — query the registry
+  through the MCP tools only.
+- Generate output into poc/scenarios/scenario-2/poc-results/<model_name>/ directory.
+```
 
 ---
 
@@ -145,16 +168,35 @@ A strong prompt identifies: the desired business result, the named components (e
 revenue`, `commercial customer status`), the target engine, and any grain or time-window
 requirements.
 
-To start: open Copilot Chat in VS Code and select the **DRY Reuse** agent. First ensure the MCP
-server is running:
+To start: open Copilot Chat in VS Code and select the **DRY Reuse** agent.
+
+**Setup — run once from a PowerShell terminal (not Copilot Chat):**
 
 ```powershell
+# 1. Navigate to the registry package
 cd poc/registry
+
+# 2. Install dependencies (mcp is pinned to 1.x in pyproject.toml)
 pip install -e ".[sql,mcp]"
-python -m dry_registry.cli ingest    # build the control plane (9 artifacts)
+
+# 3. Populate the SQLite store the MCP server reads from
+#    --db must come before the subcommand; run from poc\registry so $pwd resolves correctly
+python -m dry_registry.cli --db "$pwd\.dry_registry.sqlite" ingest
+# Expected: "Ingested 9 registered artifacts ... into ...\poc\registry\.dry_registry.sqlite"
 ```
 
-Then reload VS Code so [`.vscode/mcp.json`](../../.vscode/mcp.json) starts the `dry-registry` server.
+Then in VS Code:
+- **Ctrl+Shift+P** → type `reload` → **Developer: Reload Window**
+- Open Copilot Chat → tools panel → click **Update Tools** under `dry-registry`
+- Expected: individual tools appear (`search_artifacts`, `recommend_composition`, etc.)
+
+> **Why ingest is required:** the MCP server reads from `poc/registry/.dry_registry.sqlite`
+> (set by `DRY_DB` in `.vscode/mcp.json`). That file does not exist until `ingest` is run —
+> the server does not read the YAML manifests directly. If the store is missing or empty, all
+> MCP tool calls return no results.
+>
+> **Re-run ingest only** if you change a manifest YAML. For repeated prompt runs with no
+> manifest changes, the existing store is valid.
 
 ### Stage 1 — Discover: is there already a certified ARPAC?
 
@@ -327,7 +369,11 @@ All commands run from `poc/registry`, fully offline.
 
 ```powershell
 pip install -e ".[sql]"                # add ,vector for embeddings; ,mcp for the MCP server
-python -m dry_registry.cli ingest      # build/reset the SQLite control plane (9 artifacts)
+
+# CLI-only (uses ~/.dry_registry.sqlite):
+python -m dry_registry.cli ingest
+# For MCP use, write to the path mcp.json expects:
+python -m dry_registry.cli --db "$pwd\.dry_registry.sqlite" ingest
 
 python -m dry_registry.cli search "recognize revenue"
 python -m dry_registry.cli recommend "ARPAC" --component "recognize revenue" --component "commercial customer status"

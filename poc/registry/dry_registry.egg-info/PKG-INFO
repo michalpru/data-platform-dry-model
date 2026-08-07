@@ -1,0 +1,12 @@
+Metadata-Version: 2.4
+Name: dry-registry
+Version: 0.2.0
+Summary: Local DRY Artifact Registry + Lookup & Compare Service for registry-aware authoring (PoC).
+Requires-Python: >=3.9
+Requires-Dist: PyYAML>=6.0
+Provides-Extra: sql
+Requires-Dist: sqlglot>=25.0; extra == "sql"
+Provides-Extra: vector
+Requires-Dist: sentence-transformers>=3.0; extra == "vector"
+Provides-Extra: mcp
+Requires-Dist: mcp>=1.2; extra == "mcp"

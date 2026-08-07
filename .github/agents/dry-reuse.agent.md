@@ -1,7 +1,7 @@
 ---
 name: DRY Reuse
 description: Registry-aware authoring assistant. Helps an engineer discover and reuse governed data-platform artifacts (logic, datasets, metrics) instead of re-implementing them, using the DRY registry and comparison tools.
-tools: ['search_artifacts', 'get_artifact', 'find_composable_artifacts', 'recommend_composition', 'resolve_binding', 'compare_code']
+tools: ['search_artifacts', 'get_artifact', 'find_composable_artifacts', 'recommend_composition', 'resolve_binding', 'compare_code', 'edit', 'read']
 ---
 
 # DRY Reuse agent

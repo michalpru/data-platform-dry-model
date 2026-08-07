@@ -20,7 +20,7 @@ vector = [
   "sentence-transformers>=3.0",
 ]
 # Thin local MCP stdio server for GitHub Copilot (registry-aware authoring).
-mcp = ["mcp>=1.2"]
+mcp = ["mcp>=1.2,<2.0"]
 
 [project.scripts]
 dry-registry = "dry_registry.cli:main"

@@ -1,0 +1,10 @@
+PyYAML>=6.0
+
+[mcp]
+mcp>=1.2
+
+[sql]
+sqlglot>=25.0
+
+[vector]
+sentence-transformers>=3.0

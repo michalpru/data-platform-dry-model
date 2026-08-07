@@ -132,7 +132,6 @@ stack that dbt-on-Snowflake never sees.
 ```
 poc/
   poc-architecture.md            ← this file (single source of truth)
-  RECOMMENDATIONS.md             ← design rationale, adopted vs. rejected refinements
   registry/                      ← the DRY Artifact Registry engine + Lookup & Compare Service
     dry_registry/
       manifests.py               ← loads DryArtifact YAML; MANIFESTS_DIR + WORKSPACE_DIR anchors
@@ -197,7 +196,7 @@ classification — lives **once** in the shared comparison core and is reused ac
   intent, recommended binding). Source code is read from the workspace via each binding's `source`
   pointer.
 - **Workspace scope** — candidates are files in the open repos; governance is `UNKNOWN` and the
-  result carries explicit coverage warnings. This is the Pattern-2 limitation: **similarity without
+  result carries explicit coverage warnings. This is the Scenario 1B limitation: **similarity without
   authority**.
 
 Two environment-overridable anchors decouple definitions from code:
@@ -218,7 +217,7 @@ contents.
 ```powershell
 # from poc/registry
 pip install -e ".[sql]"                # add ,vector for embeddings; ,mcp for the server
-python -m dry_registry.cli ingest      # build the SQLite control plane (9 artifacts)
+python -m dry_registry.cli --db "$pwd\.dry_registry.sqlite" ingest   # write to the path mcp.json expects
 
 # intent-first discovery + composition
 python -m dry_registry.cli search "recognize revenue"
@@ -232,10 +231,12 @@ python ../workspace-similarity/scan.py --query ../demo/arpac-authoring-scratch.s
 
 Add `--json` to any command to get the raw structured payload the MCP tools also return.
 
-**Registry-aware authoring through Copilot (Scenario 2):** `pip install -e ".[sql,mcp]"`, run
-`ingest`, reload VS Code so `.vscode/mcp.json` starts the `dry-registry` MCP server, open Copilot
-Chat, pick the **DRY Reuse** agent, and use `/search-registry` (intent-first) or
-`/compare-with-registry` (code-first).
+**Registry-aware authoring through Copilot (Scenario 2):** `pip install -e ".[sql,mcp]"`, then
+run `python -m dry_registry.cli --db "$pwd\.dry_registry.sqlite" ingest` from `poc/registry`,
+reload VS Code (**Ctrl+Shift+P** → Developer: Reload Window) so `.vscode/mcp.json` starts the
+`dry-registry` MCP server, open Copilot Chat, pick the **DRY Reuse** agent, attach
+`.vscode/mcp.json` and `.github/agents/dry-reuse.agent.md` to the chat context, and use
+`/search-registry` (intent-first) or `/compare-with-registry` (code-first).
 
 See [demo/walkthrough.md](demo/walkthrough.md) for the full narrative with real output.
 

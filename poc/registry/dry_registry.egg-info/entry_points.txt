@@ -1,0 +1,3 @@
+[console_scripts]
+dry-registry = dry_registry.cli:main
+dry-registry-mcp = dry_registry.mcp_server:main
