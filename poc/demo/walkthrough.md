@@ -27,12 +27,15 @@ Three models were tested in each scenario: **GPT-5.5**, **Claude Sonnet 4.6**, a
 ### Scenarios 1A and 1B — base prompt
 
 ```
-I need to create a trailing-90-day ARPAC (Average Revenue per Active Customer) metric for
-executive reporting. Create a queryable SQL implementation of the metric.
+I need a trailing-90-day ARPAC (Average Revenue per Active Customer) metric for executive
+reporting. Deliver a reusable ARPAC metric definition that other executive dashboards can adopt.
 - Reuse existing definitions, datasets, or functions where appropriate, and explain what was reused.
-- ARPAC should be net recognized revenue in USD divided by the number of active customers.
-- The active-customer definition should be aligned with the definition currently used in other
-  executive dashboards.
+- ARPAC = net recognized revenue in USD (numerator) divided by the number of active customers
+  (denominator).
+- Denominator = the distinct count of active customers, using the active-customer definition
+  aligned with the one currently used in other executive dashboards.
+- Numerator = net recognized revenue in USD over the trailing 90 days, counting ONLY revenue from
+  the customers in the denominator. Revenue from non-active customers is excluded.
 
 To accomplish this task please use only the code in the /poc/scenarios/<scenario>/workspace
 directory. Please ignore all other files from other directories.
@@ -46,12 +49,15 @@ Scenario 2 uses the same base prompt with registry-specific additions. Open Copi
 VS Code and select the **DRY Reuse** agent before sending — no context files need to be attached.
 
 ```
-I need to create a trailing-90-day ARPAC (Average Revenue per Active Customer) metric for
-executive reporting. Create a queryable SQL implementation of the metric.
+I need a trailing-90-day ARPAC (Average Revenue per Active Customer) metric for executive
+reporting. Deliver a reusable ARPAC metric definition that other executive dashboards can adopt.
 - Reuse existing definitions, datasets, or functions where appropriate, and explain what was reused.
-- ARPAC should be net recognized revenue in USD divided by the number of active customers.
-- The active-customer definition should be aligned with the definition currently used in other
-  executive dashboards.
+- ARPAC = net recognized revenue in USD (numerator) divided by the number of active customers
+  (denominator).
+- Denominator = the distinct count of active customers, using the active-customer definition
+  aligned with the one currently used in other executive dashboards.
+- Numerator = net recognized revenue in USD over the trailing 90 days, counting ONLY revenue from
+  the customers in the denominator. Revenue from non-active customers is excluded.
 - The metric's components are: recognized revenue and commercial customer status (90-day).
 
 Constraints:
@@ -286,9 +292,13 @@ enterprise.datasets.customer_arpac_components_90d  ← authored here
 enterprise.semantic.arpac_90d                      ← authored here
 ```
 
-The active-customer status (Databricks) is surfaced into the enterprise Snowflake environment via
-Delta Sharing; the cross-engine join is materialized in the governed components dataset. The ARPAC
-ratio is the only genuinely new logic. Reference outputs:
+The active-customer status resolves only to a **Databricks** view, while the enterprise target
+engine is **Snowflake** — `resolve_binding(..., runtime=warehouse)` returns no Snowflake binding.
+The agent does **not** fabricate a bridge object: it references the resolved Databricks binding
+under an explicit "assumes reachable from Snowflake once a binding is provisioned" precondition, and
+flags provisioning that binding (portable-SQL framework, or a shared/federated view registered as an
+additional binding) as an integration requirement. The cross-engine join is materialized once in the
+governed components dataset. The ARPAC ratio is the only genuinely new logic. Reference outputs:
 [`../scenarios/scenario-2/expected-output/customer_arpac_components_90d.sql`](../scenarios/scenario-2/expected-output/customer_arpac_components_90d.sql),
 [`../scenarios/scenario-2/expected-output/arpac_90d.sql`](../scenarios/scenario-2/expected-output/arpac_90d.sql).
 

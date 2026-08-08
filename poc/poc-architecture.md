@@ -273,8 +273,10 @@ Those tools are complementary, not a replacement — the registry closes gaps th
 1. **dbt governs a project; the failure modes are cross-project and cross-engine.** dbt Mesh /
    `ref()` / package pins work inside one project's DAG on one warehouse. This PoC's ARPAC spans
    **two engines** — net recognized revenue on **Snowflake** and the certified active-customer
-   status on **Databricks** — surfaced together only via Delta Sharing. The registry's unit is a
-   *logical identity with bindings across engines*; dbt's unit is a node in one project's graph.
+   status on **Databricks**, which has no Snowflake binding. The registry *surfaces* that
+   cross-engine gap (provisioning a bridge is a separate integration task, out of scope here); its
+   unit is a *logical identity with bindings across engines*, whereas dbt's unit is a node in one
+   project's graph.
 2. **A macro/model is not a metric; the semantic layer is not org-wide.** Macros give DRY in Code,
    models give DRY in Logic, MetricFlow gives DRY in Semantics — but only for consumers that go
    through it. The active-customer divergence (`dim_customers.is_active`, a 12-month operational

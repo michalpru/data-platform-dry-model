@@ -18,8 +18,12 @@ metadata:
   title: ARPAC (90-day Average Revenue Per Active Customer)
   description: >
     Certified enterprise KPI: trailing-90-day net recognized revenue from commercially active
-    customers, divided by the count of commercially active customers. Composed entirely from
-    resolved certified bindings — finance.logic.recognize_revenue.v1 (Snowflake) and
+    customers, divided by the count of commercially active customers. Populations are explicit —
+    the denominator is the distinct count of customers with is_active_commercial_90d = true on the
+    reporting date; the numerator is net recognized revenue in USD over the trailing 90 days
+    counting ONLY revenue from those active customers (revenue from non-active customers is
+    excluded). Composed entirely from resolved certified bindings —
+    finance.logic.recognize_revenue.v1 (Snowflake) and
     sales.datasets.commercial_customer_status_90d.v1 (Databricks) — through the governed components
     dataset enterprise.datasets.customer_arpac_components_90d.v1.
   owner:
@@ -36,10 +40,13 @@ spec:
   numerator:
     # Sum of recognized revenue for commercially active customers only.
     measure: net_recognized_revenue_90d_usd
+    agg: sum
     filter: is_active_commercial_90d = true
   denominator:
-    # COUNT of customer_id where is_active_commercial_90d = true.
-    measure: active_customer_count
+    # Distinct count of customers where is_active_commercial_90d = true (matches COUNT_IF in the SQL).
+    measure: customer_id
+    agg: count_distinct
+    filter: is_active_commercial_90d = true
   time:
     defaultGrain: day
   allowedDimensions:
@@ -50,7 +57,9 @@ spec:
     - fqn: finance.logic.recognize_revenue.v1
       binding: warehouse   # Snowflake UDF FINANCE.LOGIC.RECOGNIZE_REVENUE
     - fqn: sales.datasets.commercial_customer_status_90d.v1
-      binding: databricks  # sales.datasets.commercial_customer_status_90d (Delta Share into Snowflake)
+      binding: databricks  # sales.datasets.commercial_customer_status_90d — NO Snowflake binding exists;
+                           # referenced under a "reachable from Snowflake once provisioned" precondition.
+                           # Provisioning a target-engine binding is an integration requirement (out of scope).
   compatibility:
     policy: backward-compatible
     deprecationWindowDays: 90

@@ -47,7 +47,28 @@ not know the answer.
 4. For each artifact you will reference, `resolve_binding(artifact_id, runtime, dialect)` to
    get the correct physical binding for the engineer's runtime **before** you write any
    reference to it.
-5. Only then help write the small piece of new, derived code that is genuinely missing.
+   - **No binding for the target runtime → stop and flag, never fabricate.** If `resolve_binding`
+     returns no binding for the requested runtime/dialect, report it as a cross-engine /
+     missing-binding gap: name the certified artifact, the engine(s) it *is* bound to, and state
+     that provisioning a target-engine binding (via the portable-SQL framework, or a shared /
+     federated view registered as an additional binding) is an integration requirement. Never
+     invent a physical object name to bridge engines.
+   - **Confirm the interface contract before naming columns, parameters or a signature.** Read the
+     binding's `source` file from the workspace to get the real column names, output columns and
+     function arity — do not guess. If the source cannot be read, mark those identifiers
+     `UNCONFIRMED`. (The registry stores only a pointer to the contract; you resolve it from the
+     source, never from a registry schema API.)
+5. Only then author the small piece of new, derived logic that is genuinely missing — as a
+   **governed composition, not one monolithic query**: a components dataset that joins the resolved
+   certified inputs at their natural grain, the metric/ratio on top of it, and its semantic contract
+   with `reuses:` provenance. Every reused input stays a resolved binding.
+   - **When a component resolves only to another engine, still deliver runnable code.** Reference
+     the resolved certified binding under an explicit "assumes reachable from <target engine> once a
+     binding is provisioned" precondition, so the code is usable the moment the gap is closed —
+     without fabricating a bridge object.
+6. **Verify (closing step).** After composing, run `compare_code` on the authored code against the
+   registry scope to confirm it did not re-implement a governed artifact. This is the final check,
+   not the entry point.
 
 ## Code-first workflow
 
@@ -68,6 +89,15 @@ not know the answer.
   the more *relevant* artifact even if it is only `shared`.
 - **Resolve bindings before referencing.** Never reference an artifact by guessing its
   physical object; call `resolve_binding` for the engineer's runtime/dialect.
+- **Never fabricate a cross-engine bridge.** If a component resolves only to another engine,
+  reference its resolved binding and flag the missing target-engine binding as an integration
+  requirement; deliver runnable code under an explicit reachability precondition. Do not invent a
+  share, federation, or mirror object that no binding declares.
+- **Confirm interface contracts from source, never from memory.** Column names, output columns and
+  signatures come from the binding's `source` file read at authoring time — not from guessing. Mark
+  unconfirmed identifiers.
+- **Author governed compositions, not monolithic queries.** New logic ships as a components dataset
+  + metric + semantic contract, reusing resolved bindings for every existing part.
 - **Search components separately.** When composing, search each named component on its own.
 - **Report honestly.**
   - No match → say so, and recommend authoring + registering rather than forcing a fit.
