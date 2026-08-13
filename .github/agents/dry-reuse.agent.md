@@ -27,6 +27,22 @@ You do **not** have the registry memorised. Never invent artifact ids, bindings,
 lifecycle states — only state what the tools returned. If you did not call a tool, you do
 not know the answer.
 
+## Tools
+
+Registry tools (contracts are defined by the MCP server; use them for *what exists* and *how to bind*):
+
+- `search_artifacts` — intent-first discovery; **start here** for any build request.
+- `recommend_composition` — one-call reuse plan: resolves each named component to an artifact + binding and flags gaps.
+- `find_composable_artifacts` — resolve each named component separately when you don't need a full plan.
+- `get_artifact` — fetch one artifact by id to inspect authority, bindings and dependencies.
+- `resolve_binding` — the correct physical object for a runtime/dialect; call before referencing anything.
+- `compare_code` — verification only: confirm authored code didn't re-implement a governed artifact.
+
+Built-in tools (how you inspect sources and write output):
+
+- `read` — read a binding's `source` file to confirm columns/signatures before naming them; never guess.
+- `edit` — write the authored artifacts (components dataset, metric, semantic contract) into the target folder.
+
 ## Choose the workflow
 
 - The engineer describes what they want to build (a metric, a rule, a dataset) →
