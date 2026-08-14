@@ -1,0 +1,108 @@
+metric:
+  id: arpac_trailing_90_days
+  name: ARPAC (Trailing 90 Days)
+  label: Average Revenue per Active Customer - Trailing 90 Days
+  description: >
+    Average net recognized revenue in USD per active customer over the trailing
+    90 days. Intended as a reusable executive-reporting metric that other
+    executive dashboards can adopt without redefining "active customer" or
+    "net recognized revenue".
+  owner: shared
+  grain: enterprise            # single scalar per as_of_date (no dimensional grain)
+  unit: USD
+  format: currency
+  direction: higher_is_better
+
+  definition:
+    formula: numerator / denominator
+    numerator: net_recognized_revenue_usd
+    denominator: active_customer_count
+    divide_by_zero: null_returned   # NULLIF guard in SQL; NULL when no active customers
+
+  # Trailing-90-day window, anchored on the run date.
+  time_window:
+    type: trailing
+    length_days: 90
+    anchor: as_of_date            # CURRENT_DATE at query time
+    bounds: "[as_of_date - 90 days, as_of_date)"
+
+  numerator:
+    name: net_recognized_revenue_usd
+    description: >
+      Recognized invoice revenue minus approved refunds, in USD, over the
+      trailing 90 days, counting ONLY revenue from customers in the denominator
+      (active customers). Revenue from non-active customers is excluded.
+    currency: USD
+    recognized_revenue:
+      source: shared.fact_invoices
+      measure: invoice_amount
+      filters:
+        - invoice_status = 'POSTED'      # recognized revenue only (excludes DRAFT/VOID)
+        - currency_code = 'USD'
+        - invoice_date in trailing_90_day_window
+      restricted_to_active_customers: true   # join on active_customer_denominator
+    refunds:
+      source: shared.fact_refunds
+      measure: refund_amount
+      link: fact_refunds.invoice_id -> fact_invoices.invoice_id
+      filters:
+        - refund_status = 'APPROVED'     # approved returns only
+        - currency_code = 'USD'
+        - refund_date in trailing_90_day_window
+      restricted_to_active_customers: true   # via parent invoice customer_id
+
+  denominator:
+    name: active_customer_count
+    description: >
+      Distinct count of active customers using the shared, enterprise
+      active-customer definition already used by other executive dashboards.
+    source: shared.dim_customers
+    definition_reused: dim_customers.is_active
+    active_customer_rule: "is_active = TRUE (placed >= 1 order in the last 12 months)"
+    aggregation: count_distinct(customer_id where is_active = TRUE)
+
+  reuse:
+    reused_datasets:
+      - shared.dim_customers        # active-customer definition (denominator)
+      - shared.fact_invoices        # recognized revenue (numerator)
+      - shared.fact_refunds         # refunds netted from revenue (numerator)
+    reused_definitions:
+      - name: active_customer
+        source: shared.dim_customers.is_active
+        rationale: >
+          Aligns the ARPAC denominator with the active-customer definition
+          already used by other executive dashboards, instead of introducing a
+          new, divergent definition.
+    new_artifacts:
+      - shared.metric_arpac_trailing_90_days   # reusable view other dashboards adopt
+
+  implementation:
+    dialect: snowflake
+    object: shared.metric_arpac_trailing_90_days
+    file: arpac_trailing_90_days.sql
+    output_columns:
+      - as_of_date
+      - window_start_date
+      - net_recognized_revenue_usd
+      - active_customer_count
+      - arpac_trailing_90_days_usd
+
+  assumptions:
+    - >
+      "Recognized" revenue = invoices with invoice_status = 'POSTED'; DRAFT and
+      VOID invoices are excluded.
+    - >
+      "Net" revenue subtracts only refunds with refund_status = 'APPROVED';
+      PENDING and REJECTED refunds are excluded.
+    - >
+      USD scope: the workspace provides no FX rate dataset, so revenue is
+      limited to rows already denominated in USD (currency_code = 'USD').
+      Add an FX conversion step if multi-currency revenue must be included.
+    - >
+      Both invoices and refunds are windowed by their own event date
+      (invoice_date / refund_date) within the trailing 90 days.
+
+  adoption:
+    intended_consumers: executive dashboards
+    how_to_adopt: >
+      SELECT arpac_trailing_90_days_usd FROM shared.metric_arpac_trailing_90_days;

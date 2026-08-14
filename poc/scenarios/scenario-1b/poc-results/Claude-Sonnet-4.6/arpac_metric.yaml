@@ -1,0 +1,94 @@
+apiVersion: dry.platform/v1
+kind: Metric
+metadata:
+  fqn: executive.metrics.arpac_trailing_90d.v1
+  title: "ARPAC — Average Revenue per Active Customer (Trailing 90 Days)"
+  description: >
+    Executive KPI: net recognized revenue in USD divided by the count of distinct
+    active customers, both measured over a trailing 90-day window ending on the
+    reporting date.
+  owner:
+    team: executive-analytics
+    escalation: data-platform-oncall
+  lifecycle:
+    state: shared   # local | shared | certified | deprecated | retired
+  registry:
+    publish: true
+    interfaceType: semantic_contract
+
+spec:
+  formula: "net_revenue_usd / NULLIF(active_customer_count, 0)"
+  type: ratio
+
+  numerator:
+    label: Net Recognized Revenue (USD)
+    description: >
+      SUM of invoice_revenue_usd for active customers with revenue_date in
+      [as_of_date − 90 days, as_of_date], minus SUM of APPROVED refunds
+      (converted to USD) for those same invoices with refund_date in the
+      same window.
+    sources:
+      - artifact: finance.invoice_revenue
+        kind: view
+        file: finance-domain/finance/datasets/invoice_revenue.sql
+        role: gross_revenue
+        reuse: >
+          Reused as-is.  Provides POSTED invoices already FX-converted to USD,
+          eliminating re-implementation of the exchange-rate join and the
+          invoice-status filter.
+      - artifact: shared.fact_refunds
+        kind: table
+        file: dwh/shared/datasets/fact_refunds.sql
+        role: deductions
+        fxVia: finance.dim_exchange_rates
+        reuse: >
+          Joined to active-customer invoices (via invoice_id) to scope deductions
+          to active customers only.  FX conversion reuses the same
+          dim_exchange_rates join pattern already established in invoice_revenue
+          (from_currency → USD on event date).
+          Only refunds with refund_status = 'APPROVED' and refund_date within the
+          trailing window are deducted.
+
+  denominator:
+    label: Active Customer Count
+    description: >
+      COUNT(DISTINCT customer_id) of customers with a Marketing Portal login
+      in [as_of_date − 90 days, as_of_date].
+    sources:
+      - artifact: marketing.active_customer
+        kind: python_function
+        file: marketing-domain/marketing/logic/active_customer.py
+        role: active_customer_definition
+        reuse: >
+          PySpark definition ported 1-for-1 to SQL.  All criteria preserved:
+            application_name = 'Marketing Portal'
+            login window      = trailing 90 days (as_of_date − 90 days … as_of_date)
+          Port note: PySpark's timestamp ≤ DateType comparison casts the date to
+          midnight (00:00:00), so `login_timestamp <= as_of_date` in Snowflake
+          reproduces identical semantics.
+
+          dim_customers.is_active was intentionally NOT used.  That column reflects
+          a 12-month order-activity flag and does not match the certified 90-day
+          Marketing Portal login definition used in other executive dashboards.
+
+  time:
+    defaultGrain: day
+    window: trailing_90d
+    windowDays: 90
+    parameter: as_of_date
+
+  implementation:
+    kind: snowflake_table_function
+    schema: executive
+    functionFqn: executive.arpac_trailing_90d
+    convenienceView: executive.arpac_trailing_90d_current
+    file: arpac_trailing_90d.sql
+    language: sql
+    platform: snowflake
+
+  allowedDimensions:
+    - as_of_date
+
+  compatibility:
+    policy: backward-compatible
+    deprecationWindowDays: 90

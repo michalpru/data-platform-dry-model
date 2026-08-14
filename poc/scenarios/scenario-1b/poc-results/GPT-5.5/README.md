@@ -1,33 +1,33 @@
-# Trailing-90-Day ARPAC Metric
+# Trailing 90 Day ARPAC Metric
 
-This result contains a queryable Snowflake SQL implementation of executive-reporting ARPAC in `arpac_trailing_90_day.sql`.
+This directory contains a reusable ARPAC metric definition for executive reporting:
 
-## Metric definition
+- `arpac_trailing_90_day_metric.yaml` is the portable metric contract.
+- `arpac_trailing_90_day.sql` is a Snowflake-style reference implementation.
 
-ARPAC is calculated as:
+## Metric Definition
+
+ARPAC is defined as:
 
 ```text
-net recognized revenue in USD / active customers
+net_recognized_revenue_usd / active_customer_count
 ```
 
-For a supplied `as_of_date`, the function evaluates the trailing 90-day window from `DATEADD(day, -90, as_of_date)` through `as_of_date`, inclusive.
+The numerator is posted invoice revenue in USD minus approved refunds in USD over the trailing 90 days. Both invoice revenue and refunds are restricted to the customers in the denominator, so revenue from non-active customers is excluded.
 
-## Reuse decisions
+The denominator is the distinct count of active customers produced by the existing active-customer definition used for executive dashboards.
 
-- Reused `finance.invoice_revenue` for recognized posted invoice revenue in USD. This preserves the existing invoice-status filter, exchange-rate join, and USD rounding logic already defined by Finance.
-- Reused `finance.normalize_currency` for refund currency conversion to USD instead of duplicating exchange-rate logic.
-- Reused `shared.fact_refunds` and `shared.fact_invoices` to subtract approved refunds from recognized invoice revenue.
-- Aligned the active-customer denominator with `marketing.logic.active_customer`: distinct customers with `application_name = 'Marketing Portal'` and login activity inside the trailing 90-day window.
+## Reuse Summary
 
-## Query example
+- Reused `marketing-domain/marketing/logic/active_customer.py` for the denominator definition: distinct customers with a Marketing Portal login between `as_of_date - trailing_days` and `as_of_date`, using the existing default `trailing_days = 90`.
+- Reused `finance-domain/finance/datasets/invoice_revenue.sql` for posted invoice revenue that is already recognized and converted to USD.
+- Reused `dwh/shared/datasets/fact_refunds.sql` to subtract approved refunds from recognized revenue.
+- Reused the currency conversion rule from `finance-domain/finance/logic/normalize_currency.sql`: join exchange rates by source currency, USD target currency, and conversion date, then round converted amounts to two decimals.
 
-```sql
-SELECT *
-FROM TABLE(finance.arpac_trailing_90_day('2026-07-29'::DATE));
-```
+## Implementation Notes
 
-## Assumptions
+The scenario workspace contains the PySpark active-customer function but not the customer-login source table. For that reason, the SQL reference implementation expects `analytics.active_customers` to be materialized upstream from `marketing.logic.active_customer` with the same `as_of_date` and `trailing_days` parameters used by the metric.
 
-- `marketing.customer_logins` is the SQL-accessible dataset corresponding to the DataFrame consumed by `marketing.logic.active_customer`.
-- Approved refunds reduce recognized revenue on `refund_date` and are converted using the refund currency and refund date.
-- The trailing 90-day period is inclusive of both the start date and `as_of_date`, matching the active-customer implementation's inclusive date filters.
+Refunds are attributed to customers by joining `shared.fact_refunds.invoice_id` to `shared.fact_invoices.invoice_id`. Only `APPROVED` refunds inside the trailing window are subtracted.
+
+When there are no active customers, `arpac_usd` returns `NULL` rather than dividing by zero.

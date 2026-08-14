@@ -1,0 +1,75 @@
+metric_id: arpac_trailing_90_day
+name: Trailing 90 Day ARPAC
+description: Average Revenue per Active Customer for executive reporting.
+owner_domain: executive_reporting
+grain: reporting_period
+version: 1.0.0
+
+definition:
+  expression: net_recognized_revenue_usd / active_customer_count
+  numerator:
+    name: net_recognized_revenue_usd
+    description: >
+      Posted invoice revenue in USD less approved refunds in USD over the trailing
+      90-day reporting window, restricted to customers in the active-customer
+      denominator cohort.
+    aggregation: sum
+    currency: USD
+  denominator:
+    name: active_customer_count
+    description: >
+      Distinct count of active customers using the existing executive-dashboard
+      active-customer definition from marketing.logic.active_customer.
+    aggregation: count_distinct
+    entity: customer_id
+
+parameters:
+  as_of_date:
+    type: date
+    description: Inclusive reporting date for the trailing window.
+  trailing_days:
+    type: integer
+    default: 90
+    description: Number of days in the revenue and activity windows.
+
+reused_artifacts:
+  - artifact: marketing-domain/marketing/logic/active_customer.py
+    usage: >
+      Defines the denominator cohort as distinct customers with Marketing Portal
+      logins between as_of_date - trailing_days and as_of_date. The default
+      trailing_days value is 90 and is retained for this metric.
+  - artifact: finance-domain/finance/datasets/invoice_revenue.sql
+    usage: >
+      Provides recognized posted invoice revenue already converted to USD as
+      invoice_revenue_usd.
+  - artifact: dwh/shared/datasets/fact_refunds.sql
+    usage: >
+      Provides refund amounts and statuses used to subtract approved refunds from
+      posted invoice revenue.
+  - artifact: finance-domain/finance/logic/normalize_currency.sql
+    usage: >
+      Establishes the reusable currency-conversion rule of joining exchange rates
+      by source currency, target currency, and conversion date, then rounding the
+      converted amount to two decimals.
+
+filters:
+  revenue_window: revenue_date between as_of_date - trailing_days and as_of_date
+  refund_window: refund_date between as_of_date - trailing_days and as_of_date
+  invoice_status: POSTED via finance.invoice_revenue
+  refund_status: APPROVED
+  customer_scope: only customers in active_customer_denominator
+
+reference_implementation: arpac_trailing_90_day.sql
+
+output_fields:
+  - as_of_date
+  - trailing_days
+  - active_customer_count
+  - gross_recognized_revenue_usd
+  - approved_refunds_usd
+  - net_recognized_revenue_usd
+  - arpac_usd
+
+null_and_zero_handling:
+  no_active_customers: arpac_usd is null when active_customer_count is zero.
+  missing_refunds: approved_refunds_usd defaults to 0.
