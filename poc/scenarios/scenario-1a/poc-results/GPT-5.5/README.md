@@ -1,25 +1,32 @@
-# Trailing-90-Day ARPAC
+# Trailing 90 Day ARPAC
 
-Generated artifact: `arpac_trailing_90_day.sql`
+This folder contains a reusable ARPAC metric definition for executive dashboards:
 
-The SQL creates a queryable Snowflake view named `shared.arpac_trailing_90_day` for executive reporting.
+- `arpac_trailing_90_day_metric.yaml` defines the metric contract, numerator, denominator, source reuse, and dashboard adoption guidance.
+- `arpac_trailing_90_day.sql` implements the metric in Snowflake SQL using only the shared datasets in `poc/scenarios/scenario-1a/workspace`.
 
-## Metric Definition
+## Metric
 
-ARPAC is implemented as:
+ARPAC is calculated as:
 
 ```text
-net recognized revenue in USD over the trailing 90 days / active customers
+net recognized revenue in USD over the trailing 90 days / distinct active customers
 ```
 
-Net recognized revenue is calculated as posted USD invoice revenue minus approved USD refunds in the same trailing 90-day window. The view returns the revenue window, gross invoice revenue, refund offsets, net recognized revenue, active-customer count, and the final ARPAC value.
+The query returns `NULL` for ARPAC when the active-customer denominator is zero.
 
 ## Reuse
 
-Only artifacts from `/poc/scenarios/scenario-1a/workspace` were used:
+The definition reuses the local shared data assets:
 
-- `shared.dim_customers`: reused for the active-customer definition via `is_active = TRUE`. The local DDL defines this as customers that placed at least one order in the last 12 months, so the denominator aligns with the executive-dashboard active-customer definition available in the workspace.
-- `shared.fact_invoices`: reused for recognized gross revenue. `invoice_status = 'POSTED'` is treated as recognized invoice revenue.
-- `shared.fact_refunds`: reused for recognized revenue offsets. `refund_status = 'APPROVED'` is subtracted from posted invoice revenue.
+- `shared.dim_customers`: reuses `customer_id` and `is_active` for the denominator. The source DDL documents `is_active` as customers who placed at least one order in the last 12 months, which is the active-customer definition available to this scenario workspace.
+- `shared.fact_invoices`: reuses posted invoice facts as recognized gross revenue. The metric includes only `invoice_status = 'POSTED'` and `currency_code = 'USD'`.
+- `shared.fact_refunds`: reuses approved refund facts as contra revenue. Refunds are joined to invoices to inherit `customer_id`, and the metric includes only `refund_status = 'APPROVED'` and `currency_code = 'USD'`.
 
-The workspace does not include an FX-rate or currency-conversion artifact, so the implementation reports USD ARPAC by filtering invoice and refund events to `currency_code = 'USD'`.
+## Customer Scope
+
+The numerator is restricted to the denominator customer set. Both invoice revenue and refund contra revenue join to the `active_customers` CTE before aggregation, so revenue from non-active customers is excluded.
+
+## Reporting Window
+
+Dashboards should bind `:as_of_date` to the reporting date. The trailing 90-day window is inclusive: `DATEADD(day, -89, as_of_date)` through `as_of_date`.

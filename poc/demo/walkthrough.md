@@ -27,45 +27,33 @@ Three models were tested in each scenario: **GPT-5.5**, **Claude Sonnet 4.6**, a
 ### Scenarios 1A and 1B — base prompt
 
 ```
-I need a trailing-90-day ARPAC (Average Revenue per Active Customer) metric for executive
-reporting. Deliver a reusable ARPAC metric definition that other executive dashboards can adopt.
+I need a trailing-90-day ARPAC (Average Revenue per Active Customer) metric for executive reporting. Deliver a reusable ARPAC metric definition that other executive dashboards can adopt.
 - Reuse existing definitions, datasets, or functions where appropriate, and explain what was reused.
-- ARPAC = net recognized revenue in USD (numerator) divided by the number of active customers
-  (denominator).
-- Denominator = the distinct count of active customers, using the active-customer definition
-  aligned with the one currently used in other executive dashboards.
-- Numerator = net recognized revenue in USD over the trailing 90 days, counting ONLY revenue from
-  the customers in the denominator. Revenue from non-active customers is excluded.
+- ARPAC = net recognized revenue in USD (numerator) divided by the number of active customers (denominator).
+- Denominator = the distinct count of active customers, using the active-customer definition aligned with the one currently used in other executive dashboards.
+- Numerator = net recognized revenue in USD over the trailing 90 days, counting ONLY revenue from the customers in the denominator. Revenue from non-active customers is excluded.
 
-To accomplish this task please use only the code in the /poc/scenarios/<scenario>/workspace
-directory. Please ignore all other files from other directories.
+To accomplish this task please use only the code in the /poc/scenarios/<scenario>/workspace directory. Please ignore all other files from other directories.
 
 Generate output into /poc/scenarios/<scenario>/poc-results/<model_name>/ directory.
 ```
 
 ### Scenario 2 — extended prompt
 
-Scenario 2 uses the same base prompt with registry-specific additions. Open Copilot Chat in
-VS Code and select the **DRY Reuse** agent before sending — no context files need to be attached.
+Scenario 2 uses the same base prompt with registry-specific additions. Open Copilot Chat in VS Code and select the **DRY Reuse** agent before sending — no context files need to be attached.
 
 ```
-I need a trailing-90-day ARPAC (Average Revenue per Active Customer) metric for executive
-reporting. Deliver a reusable ARPAC metric definition that other executive dashboards can adopt.
+I need a trailing-90-day ARPAC (Average Revenue per Active Customer) metric for executive reporting. Deliver a reusable ARPAC metric definition that other executive dashboards can adopt.
 - Reuse existing definitions, datasets, or functions where appropriate, and explain what was reused.
-- ARPAC = net recognized revenue in USD (numerator) divided by the number of active customers
-  (denominator).
-- Denominator = the distinct count of active customers, using the active-customer definition
-  aligned with the one currently used in other executive dashboards.
-- Numerator = net recognized revenue in USD over the trailing 90 days, counting ONLY revenue from
-  the customers in the denominator. Revenue from non-active customers is excluded.
+- ARPAC = net recognized revenue in USD (numerator) divided by the number of active customers (denominator).
+- Denominator = the distinct count of active customers, using the active-customer definition aligned with the one currently used in other executive dashboards.
+- Numerator = net recognized revenue in USD over the trailing 90 days, counting ONLY revenue from the customers in the denominator. Revenue from non-active customers is excluded.
 - The metric's components are: recognized revenue and commercial customer status (90-day).
 
 Constraints:
 - Do NOT read, reference, or use anything from poc/scenarios/scenario-2/expected-output/.
-- Do NOT read poc/poc-architecture.md, poc/demo/walkthrough.md, or any other documentation
-  file. Derive everything from what the registry tools return.
-- Do NOT read poc/scenarios/scenario-2/registry-manifests/ directly — query the registry
-  through the MCP tools only.
+- Do NOT read poc/poc-architecture.md, poc/demo/walkthrough.md, or any other documentation file. Derive everything from what the registry tools return.
+- Do NOT read poc/scenarios/scenario-2/registry-manifests/ directly — query the registry through the MCP tools only.
 - Generate output into poc/scenarios/scenario-2/poc-results/<model_name>/ directory.
 ```
 
@@ -74,7 +62,7 @@ Constraints:
 ## Scenario 1A — Standard Copilot, DWH tables only
 
 **Workspace exposed:** `poc/scenarios/scenario-1a/workspace/` — the shared DWH base tables only
-(`dim_customers`, `fact_invoices`, `fact_refunds`, `dim_exchange_rates`).
+(`dim_customers`, `fact_invoices`, `fact_refunds`).
 
 **What the models do.** With no domain logic visible, every tested model generates ARPAC from
 first principles straight from the raw base tables. The SQL runs and looks correct, but silently
