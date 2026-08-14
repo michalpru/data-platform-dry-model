@@ -35,6 +35,8 @@ I need a trailing-90-day ARPAC (Average Revenue per Active Customer) metric for 
 
 To accomplish this task please use only the code in the /poc/scenarios/<scenario>/workspace directory. Please ignore all other files from other directories.
 
+Do NOT use the DRY registry or any MCP tools (e.g. search_artifacts, get_artifact, recommend_composition, resolve_binding). Scenarios 1A/1B are standard Copilot with workspace files only — rely solely on the files in that workspace directory.
+
 Generate output into /poc/scenarios/<scenario>/poc-results/<model_name>/ directory.
 ```
 
