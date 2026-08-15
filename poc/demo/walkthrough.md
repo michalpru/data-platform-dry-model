@@ -50,12 +50,12 @@ I need a trailing-90-day ARPAC (Average Revenue per Active Customer) metric for 
 - ARPAC = net recognized revenue in USD (numerator) divided by the number of active customers (denominator).
 - Denominator = the distinct count of active customers, using the active-customer definition aligned with the one currently used in other executive dashboards.
 - Numerator = net recognized revenue in USD over the trailing 90 days, counting ONLY revenue from the customers in the denominator. Revenue from non-active customers is excluded.
-- The metric's components are: recognized revenue and commercial customer status (90-day).
 
 Constraints:
 - Do NOT read, reference, or use anything from poc/scenarios/scenario-2/expected-output/.
-- Do NOT read poc/poc-architecture.md, poc/demo/walkthrough.md, or any other documentation file. Derive everything from what the registry tools return.
+- Do NOT read poc/poc-architecture.md, poc/demo/walkthrough.md, or any other documentation file. Derive artifact identity, authority and bindings from what the registry tools return, not from documentation.
 - Do NOT read poc/scenarios/scenario-2/registry-manifests/ directly — query the registry through the MCP tools only.
+- DO read a resolved binding's `source` file under poc/scenarios/scenario-2/workspace/ to confirm exact column names, parameters and function signatures before you reference them — this is the binding's implementation source, NOT the registry-manifests/ directory. Never guess a signature; if a source file cannot be read, mark those identifiers UNCONFIRMED.
 - Generate output into poc/scenarios/scenario-2/poc-results/<model_name>/ directory.
 ```
 
@@ -158,11 +158,12 @@ The three gaps the whitepaper names:
 local MCP server. The agent treats the prompt as **business intent** and works through four stages:
 **Discover → Resolve → Compose → Verify.**
 
-The same prompt works for Scenario 2. For best results, the engineer names the business components
-explicitly — the agent instructions prohibit inventing a composition the engineer did not ask for.
-A strong prompt identifies: the desired business result, the named components (e.g. `recognize
-revenue`, `commercial customer status`), the target engine, and any grain or time-window
-requirements.
+The same base prompt works for Scenario 2 — no component list is added. The agent decomposes the
+ARPAC formula already in the prompt (`net recognized revenue` ÷ `active customers`) into its
+components itself, searches each concept, and resolves it to the **enterprise-wide certified**
+definition — domain-local canonicals and raw base tables are not selected for this executive
+request. The agent instructions prohibit inventing a composition the engineer did not ask for; it
+decomposes only what the stated ARPAC definition contains.
 
 To start: open Copilot Chat in VS Code and select the **DRY Reuse** agent.
 
@@ -211,27 +212,33 @@ what this exercise *generates*.
 Two options are implemented. The agent uses **Option B** as the primary call.
 
 **Option A — `find_composable_artifacts`**  
-Runs a separate registry search per named concept and returns the first match. Does not resolve
-bindings.
+Runs a separate registry search per concept and returns the enterprise-wide canonical for each.
+Does not resolve bindings.
 
 **Option B — `recommend_composition`** (primary)
 
 ```powershell
-python -m dry_registry.cli recommend "ARPAC" --component "recognize revenue" --component "commercial customer status"
+python -m dry_registry.cli recommend "ARPAC" --component "net recognized revenue" --component "active customers"
 ```
 
 ```
 Composition recommendation for 'ARPAC':
 
-  reuse  recognize revenue      → finance.logic.recognize_revenue.v1 [certified]
+  reuse  net recognized revenue → finance.logic.recognize_revenue.v1 [certified]
          binding: warehouse/snowflake prod: FINANCE.LOGIC.RECOGNIZE_REVENUE
-  reuse  commercial customer status → sales.datasets.commercial_customer_status_90d.v1 [certified]
+  reuse  active customers       → sales.datasets.commercial_customer_status_90d.v1 [certified]
          binding: databricks/databricks prod: sales.datasets.commercial_customer_status_90d
+
+  Reuse 2 registered component(s); author only the 0 missing part(s) and the small composition that joins them.
 ```
 
-`recommend_composition` performs in one call: a whole-request search, a separate search per named
-component, binding resolution per matched component, gap identification, and a summary. It produces
-a **reuse plan** — not SQL. Code generation is Copilot's responsibility.
+The component terms are the two nouns in the ARPAC formula — the agent derives them from the
+prompt, they are not supplied as a hint. `recommend_composition` performs in one call: a
+whole-request search, a separate search per component, and per component it resolves the
+**enterprise-wide certified** definition (the domain-canonical `fact_billable_events` and the
+`dim_customers` base table are deliberately **not** selected for this executive metric), binding
+resolution, gap identification, and a summary. It produces a **reuse plan** — not SQL. Code
+generation is Copilot's responsibility.
 
 ### Stage 3 — Resolve: physical bindings per runtime
 
@@ -376,7 +383,7 @@ python -m dry_registry.cli ingest
 python -m dry_registry.cli --db "$pwd\.dry_registry.sqlite" ingest
 
 python -m dry_registry.cli search "recognize revenue"
-python -m dry_registry.cli recommend "ARPAC" --component "recognize revenue" --component "commercial customer status"
+python -m dry_registry.cli recommend "ARPAC" --component "net recognized revenue" --component "active customers"
 python -m dry_registry.cli resolve-binding finance.logic.recognize_revenue.v1 --runtime dbt
 python -m dry_registry.cli compare ../demo/arpac-authoring-scratch.sql --scope registry
 python -m dry_registry.cli impact finance.logic.recognize_revenue.v1

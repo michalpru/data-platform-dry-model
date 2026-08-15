@@ -10,7 +10,8 @@ metadata:
   fqn: finance.logic.recognize_revenue.v1
   title: Recognize Revenue
   description: >
-    Certified Finance revenue-recognition rule. Reads the canonical billable-event stream
+    The enterprise-wide certified definition of net recognized revenue (USD), used by executive
+    dashboards. Finance-owned revenue-recognition rule: reads the canonical billable-event stream
     finance.datasets.fact_billable_events.v1, keeps only recognizable events in the requested
     window, and normalizes each signed amount to USD via finance.logic.normalize_currency.v1.
     Consumers must call this instead of re-deriving revenue from raw invoices/refunds.
@@ -23,7 +24,7 @@ spec:
   entryRole: producer
   interfaceTypes:
     - callable_logic
-  reuseIntent: domain_canonical
+  reuseIntent: enterprise_canonical
   implementationBindings:
     - system: warehouse
       env: prod

@@ -221,7 +221,7 @@ python -m dry_registry.cli --db "$pwd\.dry_registry.sqlite" ingest   # write to 
 
 # intent-first discovery + composition
 python -m dry_registry.cli search "recognize revenue"
-python -m dry_registry.cli recommend "ARPAC" --component "recognize revenue" --component "commercial customer status"
+python -m dry_registry.cli recommend "ARPAC" --component "net recognized revenue" --component "active customers"
 python -m dry_registry.cli resolve-binding finance.logic.recognize_revenue.v1 --runtime dbt
 
 # reuse detection (verification)

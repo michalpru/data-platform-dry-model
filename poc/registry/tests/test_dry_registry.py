@@ -180,28 +180,34 @@ def test_mcp_tools_match_services(svc):
 def test_recommend_composition(svc):
     rec = svc.registry.recommend_composition(
         "ARPAC",
-        ["recognize revenue", "commercial customer status"],
+        ["net recognized revenue", "active customers"],
         runtime="semantic",
     )
     by_concept = {c.concept: c for c in rec.components}
-    rev = by_concept["recognize revenue"]
+    rev = by_concept["net recognized revenue"]
     assert rev.status == "REUSE_REGISTERED"
     assert rev.artifact is not None
+    # Enterprise-only resolution skips the domain-canonical fact_billable_events and the retired
+    # invoice_revenue, landing on the certified enterprise revenue rule.
     assert rev.artifact.fqn == "finance.logic.recognize_revenue.v1"
-    cust = by_concept["commercial customer status"]
+    cust = by_concept["active customers"]
     assert cust.status == "REUSE_REGISTERED"
+    # Enterprise-only resolution skips the shared-utility dim_customers base table.
     assert cust.artifact.fqn == "sales.datasets.commercial_customer_status_90d.v1"
+    # 'ARPAC' matches the two components only via their consumer edge, not their identity —
+    # so no whole-request direct match is claimed.
+    assert rec.direct_match is None
     assert rec.summary
 
 
 # 10. Manifests expose whitepaper vocabulary: Producer entry role + Reuse Intent.
 def test_manifests_whitepaper_terminology(svc):
     art = svc.registry.get_artifact(RECOGNIZE)
-    assert art.governance.reuse_intent == "domain_canonical"
+    assert art.governance.reuse_intent == "enterprise_canonical"
     # Loader reads whitepaper key `reuseIntent` and `entryRole`; entry role is producer.
     from dry_registry.manifests import find_repo_root, load_registered
 
     loaded = {a.fqn: a for a in load_registered(find_repo_root())}
     assert loaded[RECOGNIZE].entry_role == "producer"
-    assert loaded[RECOGNIZE].reuse_scope == "domain_canonical"
+    assert loaded[RECOGNIZE].reuse_scope == "enterprise_canonical"
 

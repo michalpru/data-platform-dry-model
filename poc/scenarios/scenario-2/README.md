@@ -12,8 +12,12 @@ The governed artifacts this scenario resolves against are the **pure-YAML** mani
 
 1. **Search the whole intent first.** `search_artifacts("ARPAC", interface_type="semantic_contract")`.
    If a certified ARPAC already existed, reuse it and stop.
-2. **No single match? Recommend a composition.**
-   `recommend_composition("ARPAC", ["recognize revenue", "commercial customer status"])` resolves each named component to a registered artifact **and** its binding, and flags anything missing.
+2. **No single match? Recommend a composition.** The agent decomposes the ARPAC formula in the
+   prompt into its components and calls
+   `recommend_composition("ARPAC", ["net recognized revenue", "active customers"])`, which resolves
+   each component to the **enterprise-wide certified** artifact **and** its binding, and flags
+   anything missing. Domain-local canonicals and base tables (`fact_billable_events`,
+   `dim_customers`) are not selected for this executive request.
 3. **Check lifecycle & ownership.** The registry returns authority the workspace never had:
 
    | Component | Resolved artifact | Lifecycle | Owner | Engine |
