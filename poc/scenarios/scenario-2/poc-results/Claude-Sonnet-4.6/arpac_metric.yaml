@@ -1,0 +1,98 @@
+apiVersion: dry.platform/v1
+kind: Metric
+metadata:
+  fqn: finance.metrics.arpac_trailing_90d.v1
+  title: "ARPAC — Trailing 90 Days"
+  description: >
+    Average Revenue per Active Customer over a trailing 90-day window, for executive reporting.
+    ARPAC = net recognized revenue in USD (numerator) / distinct active customers (denominator).
+
+    Both inputs draw from certified enterprise definitions:
+      Denominator — sales.datasets.commercial_customer_status_90d.v1:
+        The enterprise active-customer definition used by executive dashboards.
+        A customer is active if they have a 'paid_invoice', 'active_subscription', or
+        'committed_order' event in the 90-day window ending on reporting_date.
+      Numerator — finance.logic.recognize_revenue.v1:
+        Certified net recognized revenue (USD) from FINANCE.DATASETS.FACT_BILLABLE_EVENTS,
+        recognition-timing-adjusted, with refunds/credit notes netted via signed NET_AMOUNT.
+        Only revenue attributable to active customers is included.
+
+    Revenue from non-active customers is excluded by construction in the underlying
+    components dataset (finance.reporting.arpac_components.v1): the revenue join is
+    made only against the active-customer population, not the full customer base.
+  owner:
+    team: finance-analytics
+    escalation: finance-data-oncall
+  lifecycle:
+    state: certified
+  registry:
+    publish: true
+    interfaceType: semantic_contract
+
+spec:
+  model: finance.semantic.arpac_components.v1
+  type: ratio
+  numerator:
+    measure: net_recognized_revenue_usd
+    description: "SUM of net recognized revenue (USD) for active customers in the trailing 90-day window."
+  denominator:
+    measure: active_customer_count
+    description: "COUNT of distinct active customers in the trailing 90-day window."
+  time:
+    window: trailing_90d
+    defaultGrain: day
+  allowedDimensions:
+    - reporting_date
+  compatibility:
+    policy: backward-compatible
+    deprecationWindowDays: 90
+
+reuses:
+  - fqn: sales.datasets.commercial_customer_status_90d.v1
+    role: denominator_population
+    authority: REGISTERED_CANONICAL
+    lifecycle: certified
+    owner: sales-analytics
+    note: >
+      Enterprise active-customer definition (commercial activity classification, 90-day lookback).
+      This is the same definition used by other executive dashboards — no alternate active-customer
+      logic should be introduced.
+    cross_engine_gap:
+      severity: BLOCKING
+      description: >
+        sales.datasets.commercial_customer_status_90d.v1 is certified (enterprise_canonical) but
+        has NO Snowflake (warehouse) binding. It is bound only to Databricks
+        (ref: sales.datasets.commercial_customer_status_90d, runtime: databricks).
+        This metric targets the Snowflake runtime (where finance.logic.recognize_revenue.v1 lives).
+        A Snowflake binding must be provisioned before this metric can execute end-to-end.
+      existing_bindings:
+        - runtime: databricks
+          dialect: databricks
+          ref: sales.datasets.commercial_customer_status_90d
+          object_type: view
+      required_binding:
+        runtime: warehouse
+        dialect: snowflake
+        suggested_object: SALES.DATASETS.COMMERCIAL_CUSTOMER_STATUS_90D
+        action: >
+          Register a new Snowflake binding for sales.datasets.commercial_customer_status_90d.v1.
+          Provision the physical object via Snowflake external table (pointing at the Databricks
+          Delta table), Databricks Delta Sharing, or a partner connect data share — then register
+          the resulting Snowflake object as an additional binding in the artifact registry.
+          DO NOT re-derive the active-customer logic; the bridge must surface the same certified view.
+
+  - fqn: finance.logic.recognize_revenue.v1
+    role: numerator_revenue
+    authority: REGISTERED_CANONICAL
+    lifecycle: certified
+    owner: finance-analytics
+    binding_used:
+      runtime: warehouse
+      dialect: snowflake
+      ref: FINANCE.LOGIC.RECOGNIZE_REVENUE
+      object_type: udf
+    note: >
+      Certified Finance revenue-recognition rule. Reads FINANCE.DATASETS.FACT_BILLABLE_EVENTS,
+      applies recognition-timing filters, and normalizes amounts to USD via
+      finance.logic.normalize_currency.v1. Refund netting is already carried in the signed
+      NET_AMOUNT of the billable event stream.

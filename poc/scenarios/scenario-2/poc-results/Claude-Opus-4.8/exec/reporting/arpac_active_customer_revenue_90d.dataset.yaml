@@ -1,0 +1,109 @@
+apiVersion: dry.platform/v1
+kind: DatasetContract
+metadata:
+  fqn: exec.reporting.arpac_active_customer_revenue_90d.v1
+  title: ARPAC Components — Active-Customer Trailing-90d Recognized Revenue
+  description: >
+    Per-active-customer trailing-90d net recognized revenue in USD, at reporting_date x customer_id
+    grain. Components dataset feeding the ARPAC ratio metric (exec.metrics.arpac_90d.v1). Population
+    is restricted to active customers via the certified active-customer definition, so downstream
+    numerators count ONLY revenue from the denominator set.
+  owner:
+    team: exec-analytics
+    escalation: exec-reporting-oncall
+  lifecycle:
+    state: local # newly authored composition; promote to shared/certified after owner review (not self-certified)
+  registry:
+    publish: true
+    interfaceType: queryable_dataset
+
+spec:
+  # --- DATA CONTRACT ---
+  grain:
+    - reporting_date
+    - customer_id
+  materialization:
+    type: view # parameterized by :reporting_date in the implementation source
+    refreshMode: on_query
+  slos:
+    freshnessMinutes: 1440
+    availability: "99.5%"
+  schema:
+    - name: reporting_date
+      type: date
+      nullable: false
+    - name: customer_id
+      type: number
+      nullable: false
+    - name: recognized_revenue_usd_90d
+      type: decimal(18,2)
+      nullable: false
+  compatibility:
+    policy: backward-compatible
+    deprecationWindowDays: 90
+
+  # --- DRY GOVERNANCE ---
+  binding:
+    runtime: warehouse
+    dialect: snowflake
+    source: ./arpac_active_customer_revenue_90d.sql
+
+  # Every existing input stays a RESOLVED registry binding — nothing is re-derived here.
+  reuses:
+    - fqn: finance.logic.recognize_revenue.v1
+      role: numerator_source
+      lifecycle: certified
+      reuseIntent: enterprise_canonical
+      resolvedBinding:
+        runtime: warehouse
+        dialect: snowflake
+        ref: FINANCE.LOGIC.RECOGNIZE_REVENUE
+        objectType: udf
+        signature: FINANCE.LOGIC.RECOGNIZE_REVENUE(P_START_DATE DATE, P_END_DATE DATE)
+        confirmedFromSource: finance/logic/recognize_revenue.sql
+    - fqn: sales.datasets.commercial_customer_status_90d.v1
+      role: denominator_population
+      lifecycle: certified
+      reuseIntent: enterprise_canonical
+      resolvedBinding:
+        runtime: databricks
+        dialect: databricks
+        ref: sales.datasets.commercial_customer_status_90d
+        objectType: view
+        columns: [customer_id, reporting_date, is_active_commercial_90d]
+        confirmedFromSource: sales/datasets/commercial_customer_status_90d.sql
+
+  crossEngineGaps:
+    - artifact: sales.datasets.commercial_customer_status_90d.v1
+      requestedRuntime: warehouse
+      requestedDialect: snowflake
+      status: missing_target_binding
+      boundOn: [databricks]
+      detail: >
+        resolve_binding returned no warehouse/snowflake binding for the certified active-customer
+        definition; it exists only on databricks. This dataset references the resolved databricks
+        binding under an explicit reachability precondition. Closing the gap is an integration
+        requirement: provision a warehouse/snowflake binding under the SAME FQN via the portable-SQL
+        framework (materialize into snowflake) OR register a federated/shared view as an ADDITIONAL
+        binding. No bridging object name is fabricated. Also reconcile the join-key type
+        (numerator CUSTOMER_ID is NUMBER(38,0) vs the databricks customer_id).
+
+  semanticGovernance:
+    transformationLogic: >
+      For a given :reporting_date, take the distinct active customers from the certified
+      commercial_customer_status_90d definition (is_active_commercial_90d = TRUE), and LEFT JOIN the
+      certified recognized-revenue rule over the trailing-90d window [reporting_date - 90,
+      reporting_date] summed per customer. Window is aligned with the active-customer definition's
+      own 90-day lookback. Non-active customers are excluded by construction.
+    grainOwnership: >
+      One row per active customer per reporting_date. Grain owned by exec-analytics. Downstream
+      aggregation must not alter the grain.
+    fieldDefinitions:
+      recognized_revenue_usd_90d: "Trailing-90d net recognized revenue in USD for this active customer (0 if none)."
+    semanticBreakingChanges:
+      - change: active-customer population rule changed
+        breaking: true
+        reason: denominator membership and numerator scope both shift
+      - change: trailing-window length changed
+        breaking: true
+        reason: metric values change across historical periods
