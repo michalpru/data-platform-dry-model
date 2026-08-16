@@ -5,9 +5,9 @@ In this reference repo, the YAML set in this folder is the snapshot.
 
 > **Note — this reference index is separate from the executable PoC.** The executable PoC keeps its
 > own **self-contained** input registry as pure-YAML manifests under
-> `poc/scenarios/scenario-2/registry-manifests/` (shared base tables + finance/sales logical &
+> `registry-aware-authoring/scenarios/scenario-2/registry-manifests/` (shared base tables + finance/sales logical &
 > dataset artifacts), with the code its bindings point at under
-> `poc/scenarios/scenario-2/workspace/`. The PoC does **not** load from this folder. The shared
+> `registry-aware-authoring/scenarios/scenario-2/workspace/`. The PoC does **not** load from this folder. The shared
 > platform packages used by the reference repo live in `dry-reference-repository/platform/packages/`.
 > The artifacts listed below are **generic reference examples** (a different naming universe from the
 > PoC's `fact_billable_events` / `recognize_revenue` / `commercial_customer_status_90d` set); they

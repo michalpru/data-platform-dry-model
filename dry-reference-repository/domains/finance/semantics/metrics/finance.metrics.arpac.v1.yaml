@@ -15,10 +15,9 @@ metadata:
       - enterprise.metrics.active_customer.v1      (certified; data-governance) — the
         denominator, the enterprise Is_Active_Commercial_90d definition.
 
-    This manifest represents the Pattern-3 (registry-backed) outcome from the PoC: no revenue
+    This manifest represents the Scenario 2 (registry-backed) outcome from the PoC: no revenue
     logic, netting rule, currency rule, or activity window is reimplemented. Contrast with the
-    Pattern-1/2 outcome (poc/demo/arpac-authoring-scratch.sql), where the same number is rebuilt
-    from raw tables and silently diverges.
+    Scenario 1A/1B outcome, where the same number is rebuilt from raw tables and silently diverges.
   owner:
     team: revenue-analytics
     escalation: analytics-eng-oncall
