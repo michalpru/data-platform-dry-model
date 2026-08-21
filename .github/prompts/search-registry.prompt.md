@@ -19,12 +19,18 @@ Steps:
    Call `recommend_composition(intent, [component, ...])` — it resolves each named component
    to a registered artifact + binding and flags anything that must be authored. You may also
    call `find_composable_artifacts([component, ...])`, or `search_artifacts` each component
-   **separately**. Do not infer a composition the engineer did not describe.
+   **separately**. Resolution defaults to **enterprise-wide certified** definitions —
+   domain-local canonicals and raw base tables are not selected as reuse targets. Do not infer a
+   composition the engineer did not describe.
 3. **Report gaps honestly.** For any component with no registered artifact, say so and treat
    it as new work to author and register — do not force an unrelated match to fit.
 4. **Resolve bindings.** For every artifact you will reference, call
    `resolve_binding(artifact_id, runtime, dialect)` for the engineer's runtime and use the
-   returned recommended binding. Never reference a physical object you guessed.
+   returned recommended binding. Never reference a physical object you guessed. If
+   `resolve_binding` returns no binding for the target runtime, report it as a cross-engine /
+   missing-binding gap — name the artifact and the engine(s) it *is* bound to, and treat
+   provisioning a target-engine binding as an integration requirement. Never invent a physical
+   object to bridge engines.
 5. **Recommend.** Summarise: which registered artifacts to reuse (with lifecycle + owner from
    the registry), their resolved bindings, and only the small piece of genuinely new, derived
    logic that remains. Prefer certified over shared, but surface the most relevant artifact

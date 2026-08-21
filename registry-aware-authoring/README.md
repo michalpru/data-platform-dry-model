@@ -28,7 +28,7 @@ $$\text{ARPAC}_{90d} = \frac{{ } \text{Net recognized revenue (USD) attributable
 
 This "active-only numerator" is the standard ARPAC convention (average revenue *per active
 customer* should divide revenue **from** active customers by the number of active customers). It is
-the definition materialized in the Scenario 2 expected outputs. It is a deliberate, documented
+the definition materialized by the Scenario 2 generated artifacts. It is a deliberate, documented
 choice; a variant that puts total recognized revenue over the active count is a different metric and
 is not used here.
 
@@ -138,7 +138,7 @@ stack that dbt-on-Snowflake never sees.
 
 ```
 registry-aware-authoring/
-  poc-architecture.md            ← this file (single source of truth)
+  README.md                      ← this file (single source of truth)
   registry/                      ← the DRY Artifact Registry engine + Lookup & Compare Service
     dry_registry/
       manifests.py               ← loads DryArtifact YAML; MANIFESTS_DIR + WORKSPACE_DIR anchors
@@ -155,8 +155,7 @@ registry-aware-authoring/
       mcp_server.py              ← THIN stdio MCP proxy over the services (registry scope)
     pyproject.toml               ← zero required ML deps; optional [sql] [vector] [mcp] extras
     tests/                       ← invariant tests (offline)
-  demo/
-    walkthrough.md               ← the three-scenario walkthrough with commands + real output
+  demo-walkthrough.md            ← the three-scenario walkthrough with commands + real output
   scenarios/                     ← the three workspaces the assistant "sees"
     scenario-1a/                 ← base warehouse tables only
     scenario-1b/                 ← base tables + finance & marketing domain repos
@@ -170,8 +169,6 @@ registry-aware-authoring/
         finance/{datasets,logic} ← finance code (Snowflake + dbt macros)
         sales/datasets/          ← commercial_customer_status_90d (Databricks)
         enterprise/{datasets,semantic} ← EMPTY authoring target (agent writes here)
-      expected-output/           ← reference results (NOT exposed during the live demo)
-
 .github/agents/dry-reuse.agent.md         ← Copilot custom agent (registry-aware authoring)
 .github/prompts/search-registry.prompt.md ← intent-first workflow
 .github/prompts/compare-with-registry.prompt.md ← code-first workflow
@@ -279,7 +276,7 @@ reload VS Code (**Ctrl+Shift+P** → Developer: Reload Window) so `.vscode/mcp.j
 `.vscode/mcp.json` and `.github/agents/dry-reuse.agent.md` to the chat context, and use
 `/search-registry` (intent-first) or `/compare-with-registry` (code-first).
 
-See [demo/walkthrough.md](demo/walkthrough.md) for the full narrative with real output.
+See [demo-walkthrough.md](demo-walkthrough.md) for the full narrative with real output.
 
 ---
 

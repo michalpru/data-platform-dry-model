@@ -46,5 +46,5 @@ active-customer rule is a Databricks PySpark job. Composing them forces the engi
 Databricks output and land it in Snowflake — a brittle cross-warehouse hop that similarity search
 never surfaces.
 
-See [`expected-output/arpac_90d.sql`](expected-output/arpac_90d.sql) and
-[`expected-output/NOTES.md`](expected-output/NOTES.md).
+See the recorded Scenario 1B model results and failure-pattern analysis in
+[`../../poc-results.md`](../../poc-results.md).

@@ -7,5 +7,5 @@ Enterprise Analytics artifacts here, on top of certified artifacts resolved from
   (Finance recognized revenue on Snowflake + Sales active-customer status on Databricks).
 - `enterprise/semantic/arpac_90d.sql` — the trailing-90-day ARPAC metric.
 
-During the live demo these folders start empty; the reference results live in
-`../../expected-output/` and must NOT be exposed in the authoring workspace.
+During the live demo these folders start empty; generated results are written to
+`../../../../poc-results/<model_name>/` and must NOT be exposed in the authoring workspace.

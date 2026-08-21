@@ -36,13 +36,13 @@ The governed artifacts this scenario resolves against are the **pure-YAML** mani
 
 ## SQL dialect (Task 8)
 
-The enterprise-analytics domain runs on **Snowflake**, so both authored artifacts in
-[`expected-output/`](expected-output/) are **Snowflake SQL**. The catch is that only *one* of the
+The enterprise-analytics domain runs on **Snowflake**, so both authored artifacts recorded in the
+Scenario 2 model results are **Snowflake SQL**. The catch is that only *one* of the
 two governed inputs is native to Snowflake: `recognize_revenue` resolves to a Snowflake UDF, but
 `commercial_customer_status_90d` resolves to a **Databricks** view — and `resolve_binding(...,
 runtime=warehouse)` returns **no Snowflake binding** for it. The registry's value is that it
 *surfaces* this cross-engine gap; the components dataset
-[`expected-output/customer_arpac_components_90d.sql`](expected-output/customer_arpac_components_90d.sql)
+recorded under `scenarios/scenario-2/poc-results/<model_name>/`
 references the resolved Databricks binding under an explicit "reachable from Snowflake once a binding
 is provisioned" precondition and flags provisioning it as an integration requirement. **No bridge
 object is fabricated** — actually provisioning one (a portable-SQL binding, or a shared/federated
@@ -56,4 +56,4 @@ returns the macro, `--runtime warehouse` the UDF. dbt solves reuse *inside* dbt 
 registry records that the macro and the UDF are one capability — and spans the Databricks stack that
 dbt on Snowflake never sees (the Sales active-customer view lives on Databricks).
 
-See [`expected-output/NOTES.md`](expected-output/NOTES.md). The full narrated run with real command output is [`../../demo/walkthrough.md`](../../demo/walkthrough.md) (Scenario 2).
+See [`../../poc-results.md`](../../poc-results.md) for the recorded model results. The full narrated run with real command output is [`../../demo-walkthrough.md`](../../demo-walkthrough.md) (Scenario 2).

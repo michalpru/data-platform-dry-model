@@ -1,6 +1,6 @@
 """Minimal local DRY Artifact Registry control plane (PoC).
 
-Layered architecture (see registry-aware-authoring/poc-architecture.md):
+Layered architecture (see registry-aware-authoring/README.md):
   Registry (knows what exists)      -> YAML manifests + SQLite control plane
   Comparison service (what's alike) -> shared normalize/feature/score/rank/classify core
   AI (how to help)                  -> Copilot custom agent + prompts over thin MCP tools

@@ -70,8 +70,7 @@ I need a trailing-90-day ARPAC (Average Revenue per Active Customer) metric for 
 - Numerator = net recognized revenue in USD over the trailing 90 days, counting ONLY revenue from the customers in the denominator. Revenue from non-active customers is excluded.
 
 Constraints:
-- Do NOT read, reference, or use anything from registry-aware-authoring/scenarios/scenario-2/expected-output/.
-- Do NOT read registry-aware-authoring/poc-architecture.md, registry-aware-authoring/demo/walkthrough.md, or any other documentation file. Derive artifact identity, authority and bindings from what the registry tools return, not from documentation.
+- Do NOT read registry-aware-authoring/README.md, registry-aware-authoring/demo-walkthrough.md, or any other documentation file. Derive artifact identity, authority and bindings from what the registry tools return, not from documentation.
 - Do NOT read registry-aware-authoring/scenarios/scenario-2/registry-manifests/ directly — query the registry through the MCP tools only.
 - DO read a resolved binding's `source` file under registry-aware-authoring/scenarios/scenario-2/workspace/ to confirm exact column names, parameters and function signatures before you reference them — this is the binding's implementation source, NOT the registry-manifests/ directory. Never guess a signature; if a source file cannot be read, mark those identifiers UNCONFIRMED.
 - Generate output into registry-aware-authoring/scenarios/scenario-2/poc-results/<model_name>/ directory.
@@ -171,13 +170,13 @@ pip install -e ".[sql,mcp]"
 # 3. Populate the SQLite store the MCP server reads from
 #    --db must come before the subcommand; run from registry-aware-authoring\registry so $pwd resolves correctly
 python -m dry_registry.cli --db "$pwd\.dry_registry.sqlite" ingest
-# Expected: "Ingested 9 registered artifacts ... into ...\registry-aware-authoring\registry\.dry_registry.sqlite"
+# Confirm: "Ingested 9 registered artifacts ... into ...\registry-aware-authoring\registry\.dry_registry.sqlite"
 ```
 
 Then in VS Code:
 - **Ctrl+Shift+P** → type `reload` → **Developer: Reload Window**
 - Open Copilot Chat → tools panel → click **Update Tools** under `dry-registry`
-- Expected: individual tools appear (`search_artifacts`, `recommend_composition`, etc.)
+- Confirm: individual tools appear (`search_artifacts`, `recommend_composition`, etc.)
 
 > **Why ingest is required:** the MCP server reads from `registry-aware-authoring/registry/.dry_registry.sqlite`
 > (set by `DRY_DB` in `.vscode/mcp.json`). That file does not exist until `ingest` is run —
@@ -287,9 +286,8 @@ The agent does **not** fabricate a bridge object: it references the resolved Dat
 under an explicit "assumes reachable from Snowflake once a binding is provisioned" precondition, and
 flags provisioning that binding (portable-SQL framework, or a shared/federated view registered as an
 additional binding) as an integration requirement. The cross-engine join is materialized once in the
-governed components dataset. The ARPAC ratio is the only genuinely new logic. Reference outputs:
-[`../scenarios/scenario-2/expected-output/customer_arpac_components_90d.sql`](../scenarios/scenario-2/expected-output/customer_arpac_components_90d.sql),
-[`../scenarios/scenario-2/expected-output/arpac_90d.sql`](../scenarios/scenario-2/expected-output/arpac_90d.sql).
+governed components dataset. The ARPAC ratio is the only genuinely new logic. Generated Scenario 2
+artifacts are recorded under `scenarios/scenario-2/poc-results/<model_name>/`.
 
 ### Stage 5 — Verify: no duplication
 

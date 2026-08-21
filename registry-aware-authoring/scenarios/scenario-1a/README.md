@@ -27,5 +27,5 @@ makes three governance mistakes:
 The result runs and looks plausible, but the number is **not comparable** to governed ARPAC.
 Nothing in this workspace can detect the divergence.
 
-See [`expected-output/arpac_90d.sql`](expected-output/arpac_90d.sql) and
-[`expected-output/NOTES.md`](expected-output/NOTES.md).
+See the recorded Scenario 1A model results and failure-pattern analysis in
+[`../../poc-results.md`](../../poc-results.md).

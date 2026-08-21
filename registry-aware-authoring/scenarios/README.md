@@ -13,7 +13,7 @@ engine actually indexes live as pure-YAML manifests in
 [`scenario-2/registry-manifests/`](scenario-2/registry-manifests/), and the code their bindings
 point at lives in [`scenario-2/workspace/`](scenario-2/workspace/);
 the executable engine, CLI and MCP server live in [`../registry/`](../registry/). The narrated
-run with real command output is [`../demo/walkthrough.md`](../demo/walkthrough.md).
+run with real command output is [`../demo-walkthrough.md`](../demo-walkthrough.md).
 
 | Scenario | What the workspace exposes | What Copilot does | Failure / success |
 |---|---|---|---|
