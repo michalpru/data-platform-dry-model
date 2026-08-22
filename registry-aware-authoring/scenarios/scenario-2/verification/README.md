@@ -36,9 +36,11 @@ MCP `compare` tool and the CLI both call. Nothing here is hand-edited.
   records scope/method/matches/summary but not the query path.
 
 Each comparison feeds **one authored file** (left side) against **the whole registry** (right side):
-for every registered artifact, `compare_code` follows the binding's `source` pointer into
-[`../workspace/`](../workspace/), reads that artifact's real code, fingerprints it, and scores the
-authored code against it — returning similarity **plus** the artifact's lifecycle/owner/authority.
+for every registered artifact, `compare_code` follows a **representative** binding's `source` pointer
+into [`../workspace/`](../workspace/), reads that artifact's real code, fingerprints it, and scores
+the authored code against it — returning similarity **plus** the artifact's lifecycle/owner/authority.
+Where an artifact has several bindings, one representative source-bearing binding is chosen (preferring
+the query language, then SQL), so a logical identity is compared once, not once per binding.
 
 ## How this maps to the whitepaper (§4.3.3)
 
@@ -59,6 +61,30 @@ The one structural difference: the whitepaper positions these signals at **build
 after the PR is opened); the PoC runs the *same* engine at **authoring time**, and — because the CLI
 and MCP server are thin clients over one shared engine — the identical check can still run as a
 build-time CI gate.
+
+### Where the fingerprint comes from (whitepaper vs. this PoC)
+
+The scoring is fingerprint-against-fingerprint in both models; what differs is *where each side's
+fingerprint lives*:
+
+- **Whitepaper / a production build-time gate:** detection runs at build time and can score against
+  **persisted derived signals** rather than re-reading every repository. The whitepaper retains
+  *derived structural signals* and, for embedding-based similarity, a **stored vector corpus** keyed
+  to logical identity and embedding-model version (which must be re-embedded after a model upgrade);
+  it treats a vector store as needed only for advanced similarity, not as a blanket requirement, and
+  does not mandate that every AST fingerprint be a persisted registry record. A typical operational
+  realization persists these signals via a separate ingestion / catalog-harvesting step.
+- **This PoC (compare-time):** there is **no persisted fingerprint or vector store**. At
+  `compare_code` time, for each registered artifact the engine follows a **representative** binding's
+  `source` pointer into [`../workspace/`](../workspace/), reads the real code, and computes its AST
+  fingerprint (and any embeddings) **on the fly, then discards them**. Both sides — the candidate
+  and the registered artifact — are normalized fresh on every run.
+
+That `source:` pointer on a binding is a **PoC convenience extension**, not part of the whitepaper's
+binding definition (which names the *deployed* physical object plus the attribution key, with source
+reached via repository-scan connectors). The trade-off is deliberate: the PoC stays fully local and
+store-free at the cost of re-reading and re-fingerprinting on each call; a production build-time gate
+would typically persist the derived signals instead.
 
 ## Environment
 

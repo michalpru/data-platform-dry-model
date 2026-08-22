@@ -286,8 +286,9 @@ See [demo-walkthrough.md](demo-walkthrough.md) for the full narrative with real 
   stdlib and `sqlglot`. No vector store, graph DB or remote service is required to run the demo.
 - **AST is the default signal; embeddings are advisory.** The deterministic AST/feature baseline
   catches copy-paste and near-duplicates with zero ML dependencies. The optional `[vector]` extra
-  computes code embeddings per run and discards them (no vector DB, no persistence); its output is
-  always advisory and never blocks on its own, consistent with the whitepaper.
+  computes embeddings of the extracted transformation profile per run and discards them (no vector
+  DB, no persistence); its output is always advisory and never blocks on its own, consistent with
+  the whitepaper.
 - **`compare_code` is the whitepaper's build-time detection, moved to authoring time — and it is
   verified.** The whitepaper's §4.3.3 duplication-detection techniques (AST structural
   fingerprinting, advisory embedding similarity, advisory LLM analysis, all routing to review) are
@@ -300,6 +301,20 @@ See [demo-walkthrough.md](demo-walkthrough.md) for the full narrative with real 
   reformatted certified UDF are both caught; the three composed Scenario 2 outputs return *safe to
   author*). Exercising it via the CLI as the closing Verify step — versus auto-invoking and
   persisting the verdict on every generated artifact — is still an open step.
+- **Scoring target differs from the whitepaper by design (persisted vs. on-the-fly).** A production
+  build-time gate would typically score a candidate against **persisted derived signals** —
+  normalized AST fingerprints, and (for embedding similarity) a stored vector corpus keyed to
+  logical identity and embedding-model version — fed by a separate ingestion step rather than
+  re-reading every repository. The whitepaper supports retaining such derived signals (and notes a
+  stored embedding corpus must be re-embedded after a model-version change), and treats a vector
+  store as needed only for advanced similarity, not as a universal requirement; it does not mandate
+  that every AST fingerprint be a persisted registry record. This PoC keeps **no fingerprint or
+  vector store**: at `compare_code` time it reads each registered artifact's source (via a
+  representative binding's `source` pointer) from the workspace and computes both the AST fingerprint
+  and any embeddings on the fly, then discards them. The comparison is fingerprint-vs-fingerprint
+  either way; only *where* each side's fingerprint comes from changes. That per-binding `source`
+  pointer is itself a PoC extension — the whitepaper's binding names the deployed object plus an
+  attribution key, with source reached via repository-scan connectors.
 - **The registry is a reuse-control overlay, not a new catalog or a second transformation tool.**
   It ingests the declaration-layer YAML teams already write and adds only the reuse-governance
   fields (lifecycle, canonical status, bindings, dependency edges). In an operational system those

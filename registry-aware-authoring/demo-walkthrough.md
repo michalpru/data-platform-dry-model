@@ -291,10 +291,14 @@ artifacts are recorded under `scenarios/scenario-2/poc-results/<model_name>/`.
 
 ### Stage 5 — Verify: no duplication
 
-Verification is the **automatic closing step of the intent-first workflow** — the *Verify* stage of
-the agent's Discover → Resolve → Compose → Verify loop. Once it finishes composing, the DRY Reuse
-agent calls `compare_code` on the code it just authored against the registry scope on its own; the
-engineer does not select the code or trigger the check manually.
+Verification is the **closing step of the intent-first workflow** — the *Verify* stage of the
+agent's Discover → Resolve → Compose → Verify loop. The DRY Reuse agent's instructions require it to
+call `compare_code` on the code it just authored against the registry scope once composing is done,
+without the engineer selecting the code or triggering the check manually. This is an **implemented
+service capability, not yet evidenced as an automatic recorded agent step**: in this PoC the service
+was exercised via the CLI against each generated output and the verdicts recorded alongside them (see
+[`poc-results/<model>/VERIFICATION.md`](scenarios/scenario-2/poc-results/)), but the original
+generation records do not prove the agent invoked and persisted the check on its own.
 
 Because the composition references the certified bindings
 (`enterprise.datasets.customer_arpac_components_90d`, which in turn calls the certified
