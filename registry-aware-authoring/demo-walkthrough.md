@@ -345,6 +345,38 @@ instead surface as `PARTIAL_REIMPLEMENTATION` against their certified canonicals
 > the comparison is the deliberate starting point — a verification request — not the automatic tail
 > of intent-first authoring.
 
+### Verifying the detector actually fires — recorded battery
+
+The *safe-to-author* verdict above only proves the tool is **quiet** on a correctly-composed output.
+To show it also **fires** on real duplication, a recorded control battery lives in
+[`scenarios/scenario-2/verification/`](scenarios/scenario-2/verification/). It runs the *same*
+`ReuseDetectionService.compare_code` (via the CLI) over a mix of real and crafted inputs and stores
+every raw JSON payload under [`verification/results/`](scenarios/scenario-2/verification/results/):
+
+- **`verification/probes/`** — small, known-answer inputs that simulate code an engineer just wrote,
+  hand-authored from the real certified/retired sources: a fresh reimplementation of the **retired**
+  invoice-revenue view, an **alias-renamed** copy of the certified `recognize_revenue` UDF, and a
+  **reformat-only** copy of that same UDF.
+- **`verification/results/`** — one raw `compare_code` payload per run; the input each result maps to
+  is recorded in the [verification README table](scenarios/scenario-2/verification/README.md).
+
+What the recorded runs show:
+
+| Control | Input | Result |
+|---|---|---|
+| Negative — re-derived revenue | real `scenario-1a` output | `PARTIAL_REIMPLEMENTATION` vs the certified billable-event rule — **fires** |
+| Retired-artifact reimplementation | probe | surfaces the **retired** `invoice_revenue` as #1 — the Scenario 1B failure mode, caught |
+| Normalization robustness | reformat-only probe | `DIRECT_MATCH` (ast 1.00) — normalization collapses cosmetics |
+| Cross-language fallback | PySpark `active_customer.py` | no AST; falls back to the language-neutral feature profile |
+| Embedding tier absent | probe | records the "embeddings unavailable, used feature profile" warning and still returns a verdict |
+| Positive — 3 Scenario 2 outputs | real generated SQL | each returns **safe to author** — reference-not-copy confirmed |
+
+These are the whitepaper's build-time duplication-detection signals (§4.3.3 — AST structural
+fingerprinting plus advisory embeddings) run here at **authoring time**. Exercising the check via the
+CLI as the closing Verify step is *not* the same as the agent auto-invoking and persisting the
+verdict on every generated artifact — that wiring is still an open step (see
+[poc-results.md](poc-results.md) §5).
+
 ### Impact analysis (optional)
 
 Before promoting a change to any building block, check who breaks:

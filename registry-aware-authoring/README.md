@@ -288,6 +288,18 @@ See [demo-walkthrough.md](demo-walkthrough.md) for the full narrative with real 
   catches copy-paste and near-duplicates with zero ML dependencies. The optional `[vector]` extra
   computes code embeddings per run and discards them (no vector DB, no persistence); its output is
   always advisory and never blocks on its own, consistent with the whitepaper.
+- **`compare_code` is the whitepaper's build-time detection, moved to authoring time — and it is
+  verified.** The whitepaper's §4.3.3 duplication-detection techniques (AST structural
+  fingerprinting, advisory embedding similarity, advisory LLM analysis, all routing to review) are
+  implemented by the shared comparison engine and run at authoring time rather than only in a CI
+  gate: `ast_scorer` (`sqlglot`/Python `ast`, normalized), the optional advisory embedding tier, a
+  language-neutral `feature_scorer` for cross-language pairs, and — kept deliberately separate — the
+  DRY Reuse **agent** as the LLM that reasons over the structured evidence (the Python services never
+  call an LLM). A recorded [verification battery](scenarios/scenario-2/verification/) proves the
+  detector fires with positive *and* negative controls (a retired-artifact reimplementation and a
+  reformatted certified UDF are both caught; the three composed Scenario 2 outputs return *safe to
+  author*). Exercising it via the CLI as the closing Verify step — versus auto-invoking and
+  persisting the verdict on every generated artifact — is still an open step.
 - **The registry is a reuse-control overlay, not a new catalog or a second transformation tool.**
   It ingests the declaration-layer YAML teams already write and adds only the reuse-governance
   fields (lifecycle, canonical status, bindings, dependency edges). In an operational system those

@@ -34,6 +34,19 @@ The governed artifacts this scenario resolves against are the **pure-YAML** mani
 5. **Author only what is missing** — the components dataset `enterprise.datasets.customer_arpac_components_90d` and the ARPAC ratio `enterprise.semantic.arpac_90d` on top of it.
 6. **(Optional) verify.** `compare_code` the generated SQL against the registry to confirm it does not re-implement governed logic.
 
+## Verifying the output (`compare_code`)
+
+The closing step is code-first: feed the generated SQL back through `compare_code` to confirm the
+composition *references* governed logic rather than re-deriving it. A recorded
+[**verification battery**](verification/) exercises this with positive *and* negative controls and
+stores the raw JSON — the three Scenario 2 outputs each return *safe to author*, while re-derived
+revenue, a reimplemented **retired** view, and a reformatted copy of the certified UDF all make the
+detector fire (down to a `DIRECT_MATCH` on the reformat-only copy). Those are the whitepaper's
+build-time duplication-detection signals — AST structural fingerprinting plus advisory embeddings
+(§4.3.3) — run here at authoring time; see [`verification/README.md`](verification/README.md) for the
+per-control mapping.
+
+
 ## SQL dialect (Task 8)
 
 The enterprise-analytics domain runs on **Snowflake**, so both authored artifacts recorded in the

@@ -14,6 +14,52 @@ MCP `compare` tool and the CLI both call. Nothing here is hand-edited.
 > an open step (see [poc-results.md](../../../poc-results.md) §5). The evidence closes the
 > *"does the detector actually work?"* gap; it does not change that honest caveat.
 
+## What's in this folder
+
+- **[`probes/`](probes/)** — small input files that **simulate code an engineer (or a model) just
+  wrote** and wants to check against the registry before committing. Each probe is a deliberate,
+  known-answer case, hand-authored from the real certified/retired sources in
+  [`../workspace/`](../workspace/):
+  - `probe_invoice_revenue_reimpl.sql` — a fresh reimplementation of the **retired** invoice-revenue
+    rule (renamed CTEs/aliases, reformatted) → should surface the retired artifact.
+  - `probe_recognize_revenue_aliased.sql` — a disguised copy of the **certified** `recognize_revenue`
+    UDF (parameters/aliases renamed) → the harder "renamed copy" case.
+  - `probe_recognize_revenue_reformatted.sql` — the same certified UDF with **cosmetic-only** changes
+    (comments stripped, lower-cased, reflowed) → normalization should collapse it to a direct match.
+  The other inputs are **not** crafted: the negative control and the positive controls are real files
+  (a model-generated `scenario-1a` output, the three generated Scenario 2 outputs, and the PySpark
+  `active_customer.py`), so the battery mixes synthetic probes with genuine AI output.
+- **[`results/`](results/)** — the **raw `compare_code` JSON payload** for each run (similarity
+  signals + governance evidence + summary), exactly as the CLI/MCP tool returns it. Each file is one
+  comparison. **Which input a result belongs to is encoded in the filename** and mapped in the
+  [recorded-results table](#recorded-results) below (input → scope → verdict); the payload itself
+  records scope/method/matches/summary but not the query path.
+
+Each comparison feeds **one authored file** (left side) against **the whole registry** (right side):
+for every registered artifact, `compare_code` follows the binding's `source` pointer into
+[`../workspace/`](../workspace/), reads that artifact's real code, fingerprints it, and scores the
+authored code against it — returning similarity **plus** the artifact's lifecycle/owner/authority.
+
+## How this maps to the whitepaper (§4.3.3)
+
+The whitepaper's *Duplication Detection and Prevention Techniques* table places three build-time
+signals in the CI/CD gate — **structural fingerprinting (AST)**, **embedding-based similarity**
+(advisory), and **LLM-based analysis** (advisory) — all routing to review, never blocking on their
+own. This PoC implements the same signal design and brings it **forward to authoring time**:
+
+| Whitepaper §4.3.3 technique | PoC `compare_code` realization |
+|---|---|
+| Structural fingerprinting (AST), SQLGlot/Python AST, normalized to remove formatting & alias naming | `ast_scorer` — `sqlglot` for SQL, `ast.dump` for Python, then a difflib token-sequence ratio. Control 6b (reformat-only → `DIRECT_MATCH`) demonstrates the normalization the whitepaper describes. |
+| Embedding-based similarity (advisory, model-version sensitive, re-embedding needed) | Optional `[vector]` tier, **computed on-demand per run and discarded** (no vector store), so there is nothing to invalidate on a model upgrade. Always advisory; control 7 shows graceful degradation when it is absent. |
+| LLM-based analysis (advisory) | **Not** an engine scorer — the Python services never call an LLM. The DRY Reuse **agent** is the LLM consumer that reads the structured evidence and decides, keeping the deterministic signals separate from the model's reasoning. |
+| Language-neutral cross-language coverage (a known gap for AST) | `feature_scorer` — a Jaccard overlap of a language-neutral transformation profile, the signal used when AST is undefined (SQL vs Python, control 5). A pragmatic PoC addition beyond the three whitepaper techniques. |
+| All signals route to review, never block by themselves | The relationship label is an **advisory hint**; authority comes from the registry's lifecycle/owner fields, not the score — exactly the whitepaper's "detection routes to review" stance. |
+
+The one structural difference: the whitepaper positions these signals at **build time** (a CI gate
+after the PR is opened); the PoC runs the *same* engine at **authoring time**, and — because the CLI
+and MCP server are thin clients over one shared engine — the identical check can still run as a
+build-time CI gate.
+
 ## Environment
 
 - Python 3.10, `dry-registry` PoC package, run from `registry-aware-authoring/registry/`.
