@@ -1,0 +1,240 @@
+﻿{
+  "scope": "registry",
+  "language": "sql",
+  "dialect": "snowflake",
+  "method": "ast",
+  "coverage": "REGISTERED_ARTIFACTS",
+  "coverage_warnings": [],
+  "matches": [
+    {
+      "logical_id": "finance.datasets.invoice_revenue.v1",
+      "title": "Invoice Revenue (Legacy)",
+      "language": "sql",
+      "governance": {
+        "authority": "REGISTERED_CANONICAL",
+        "lifecycle": "retired",
+        "owner": "finance-analytics",
+        "reuse_intent": "domain_canonical"
+      },
+      "coverage": "REGISTERED_ARTIFACTS",
+      "similarity": {
+        "ast": 0.42857142857142855,
+        "feature": 0.6818,
+        "combined": 0.4792,
+        "method": "ast",
+        "ast_supported": true
+      },
+      "evidence": {
+        "shared_source_entities": [
+          "fact_invoices"
+        ],
+        "shared_operations": [
+          "1"
+        ],
+        "shared_concepts": [
+          "amount",
+          "credit",
+          "currency",
+          "customer",
+          "invoice",
+          "refund",
+          "reporting",
+          "revenue"
+        ],
+        "notes": []
+      },
+      "relationship": "PARTIAL_REIMPLEMENTATION",
+      "recommended_action": "Overlaps a registered artifact (retired); reuse the shared parts rather than copying logic.",
+      "recommended_binding": {
+        "ref": "FINANCE.DATASETS.INVOICE_REVENUE",
+        "system": "warehouse",
+        "env": "prod",
+        "runtime": "warehouse",
+        "dialect": "snowflake",
+        "object_type": "view",
+        "attribution_key": "warehouse:snowflake:FINANCE.DATASETS.INVOICE_REVENUE",
+        "source_path": "finance/datasets/invoice_revenue.sql"
+      }
+    },
+    {
+      "logical_id": "finance.logic.recognize_revenue.v1",
+      "title": "Recognize Revenue",
+      "language": "sql",
+      "governance": {
+        "authority": "REGISTERED_CANONICAL",
+        "lifecycle": "certified",
+        "owner": "finance-analytics",
+        "reuse_intent": "enterprise_canonical"
+      },
+      "coverage": "REGISTERED_ARTIFACTS",
+      "similarity": {
+        "ast": 0.2077922077922078,
+        "feature": 0.3043,
+        "combined": 0.2271,
+        "method": "ast",
+        "ast_supported": true
+      },
+      "evidence": {
+        "shared_source_entities": [],
+        "shared_operations": [],
+        "shared_concepts": [
+          "amount",
+          "credit",
+          "currency",
+          "customer",
+          "invoice",
+          "refund",
+          "revenue"
+        ],
+        "notes": []
+      },
+      "relationship": "PARTIAL_REIMPLEMENTATION",
+      "recommended_action": "Overlaps a registered artifact (certified); reuse the shared parts rather than copying logic.",
+      "recommended_binding": {
+        "ref": "FINANCE.LOGIC.RECOGNIZE_REVENUE",
+        "system": "warehouse",
+        "env": "prod",
+        "runtime": "warehouse",
+        "dialect": "snowflake",
+        "object_type": "udf",
+        "attribution_key": "warehouse:snowflake:FINANCE.LOGIC.RECOGNIZE_REVENUE",
+        "source_path": "finance/logic/recognize_revenue.sql"
+      }
+    },
+    {
+      "logical_id": "sales.datasets.commercial_customer_status_90d.v1",
+      "title": "Commercial Customer Status (90d)",
+      "language": "sql",
+      "governance": {
+        "authority": "REGISTERED_CANONICAL",
+        "lifecycle": "certified",
+        "owner": "sales-analytics",
+        "reuse_intent": "enterprise_canonical"
+      },
+      "coverage": "REGISTERED_ARTIFACTS",
+      "similarity": {
+        "ast": 0.21568627450980393,
+        "feature": 0.1667,
+        "combined": 0.2059,
+        "method": "ast",
+        "ast_supported": true
+      },
+      "evidence": {
+        "shared_source_entities": [],
+        "shared_operations": [],
+        "shared_concepts": [
+          "customer",
+          "invoice",
+          "order",
+          "reporting"
+        ],
+        "notes": []
+      },
+      "relationship": "INSUFFICIENT_EVIDENCE",
+      "recommended_action": "No strong match; safe to author, but register the new artifact.",
+      "recommended_binding": {
+        "ref": "sales.datasets.commercial_customer_status_90d",
+        "system": "databricks",
+        "env": "prod",
+        "runtime": "databricks",
+        "dialect": "databricks",
+        "object_type": "view",
+        "attribution_key": "databricks:sales.datasets.commercial_customer_status_90d",
+        "source_path": "sales/datasets/commercial_customer_status_90d.sql"
+      }
+    },
+    {
+      "logical_id": "finance.datasets.fact_billable_events.v1",
+      "title": "Billable Events",
+      "language": "sql",
+      "governance": {
+        "authority": "REGISTERED_CANONICAL",
+        "lifecycle": "certified",
+        "owner": "finance-analytics",
+        "reuse_intent": "domain_canonical"
+      },
+      "coverage": "REGISTERED_ARTIFACTS",
+      "similarity": {
+        "ast": 0.16,
+        "feature": 0.32,
+        "combined": 0.192,
+        "method": "ast",
+        "ast_supported": true
+      },
+      "evidence": {
+        "shared_source_entities": [
+          "fact_invoices"
+        ],
+        "shared_operations": [],
+        "shared_concepts": [
+          "amount",
+          "credit",
+          "currency",
+          "customer",
+          "invoice",
+          "refund",
+          "revenue"
+        ],
+        "notes": []
+      },
+      "relationship": "PARTIAL_REIMPLEMENTATION",
+      "recommended_action": "Overlaps a registered artifact (certified); reuse the shared parts rather than copying logic.",
+      "recommended_binding": {
+        "ref": "FINANCE.DATASETS.FACT_BILLABLE_EVENTS",
+        "system": "warehouse",
+        "env": "prod",
+        "runtime": "warehouse",
+        "dialect": "snowflake",
+        "object_type": "table",
+        "attribution_key": "warehouse:snowflake:FINANCE.DATASETS.FACT_BILLABLE_EVENTS",
+        "source_path": "finance/datasets/fact_billable_events.sql"
+      }
+    },
+    {
+      "logical_id": "shared.datasets.fact_invoices.v1",
+      "title": "Invoice Facts",
+      "language": "sql",
+      "governance": {
+        "authority": "REGISTERED_CANONICAL",
+        "lifecycle": "certified",
+        "owner": "platform-dwh",
+        "reuse_intent": "shared_utility"
+      },
+      "coverage": "REGISTERED_ARTIFACTS",
+      "similarity": {
+        "ast": 0.1016949152542373,
+        "feature": 0.3158,
+        "combined": 0.1445,
+        "method": "ast",
+        "ast_supported": true
+      },
+      "evidence": {
+        "shared_source_entities": [
+          "fact_invoices"
+        ],
+        "shared_operations": [],
+        "shared_concepts": [
+          "amount",
+          "currency",
+          "customer",
+          "invoice",
+          "revenue"
+        ],
+        "notes": []
+      },
+      "relationship": "PARTIAL_REIMPLEMENTATION",
+      "recommended_action": "Overlaps a registered artifact (certified); reuse the shared parts rather than copying logic.",
+      "recommended_binding": {
+        "ref": "SHARED.DATASETS.FACT_INVOICES",
+        "system": "warehouse",
+        "env": "prod",
+        "runtime": "warehouse",
+        "dialect": "snowflake",
+        "object_type": "table",
+        "attribution_key": "warehouse:snowflake:SHARED.DATASETS.FACT_INVOICES",
+        "source_path": "dwh/shared/datasets/fact_invoices.sql"
+      }
+    }
+  ],
+  "summary": "Closest match: finance.datasets.invoice_revenue.v1 [PARTIAL_REIMPLEMENTATION] \u2014 Overlaps a registered artifact (retired); reuse the shared parts rather than copying logic."
+}

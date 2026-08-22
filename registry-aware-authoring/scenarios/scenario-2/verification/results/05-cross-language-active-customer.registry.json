@@ -1,0 +1,214 @@
+﻿{
+  "scope": "registry",
+  "language": "python",
+  "method": "feature",
+  "coverage": "REGISTERED_ARTIFACTS",
+  "coverage_warnings": [],
+  "matches": [
+    {
+      "logical_id": "shared.datasets.dim_customers.v1",
+      "title": "Customer Dimension",
+      "language": "sql",
+      "governance": {
+        "authority": "REGISTERED_CANONICAL",
+        "lifecycle": "certified",
+        "owner": "platform-dwh",
+        "reuse_intent": "shared_utility"
+      },
+      "coverage": "REGISTERED_ARTIFACTS",
+      "similarity": {
+        "feature": 0.25,
+        "combined": 0.25,
+        "method": "feature",
+        "ast_supported": false
+      },
+      "evidence": {
+        "shared_source_entities": [],
+        "shared_operations": [],
+        "shared_concepts": [
+          "active",
+          "customer"
+        ],
+        "notes": [
+          "Cross-language pair: AST/token comparison is unsupported; using the language-neutral transformation profile."
+        ]
+      },
+      "relationship": "VALID_ALTERNATE_BINDING",
+      "recommended_action": "This is a valid runtime binding of a registered artifact (certified); resolve the binding for your runtime.",
+      "recommended_binding": {
+        "ref": "SHARED.DATASETS.DIM_CUSTOMERS",
+        "system": "warehouse",
+        "env": "prod",
+        "runtime": "warehouse",
+        "dialect": "snowflake",
+        "object_type": "table",
+        "attribution_key": "warehouse:snowflake:SHARED.DATASETS.DIM_CUSTOMERS",
+        "source_path": "dwh/shared/datasets/dim_customers.sql"
+      }
+    },
+    {
+      "logical_id": "sales.datasets.commercial_customer_status_90d.v1",
+      "title": "Commercial Customer Status (90d)",
+      "language": "sql",
+      "governance": {
+        "authority": "REGISTERED_CANONICAL",
+        "lifecycle": "certified",
+        "owner": "sales-analytics",
+        "reuse_intent": "enterprise_canonical"
+      },
+      "coverage": "REGISTERED_ARTIFACTS",
+      "similarity": {
+        "feature": 0.15,
+        "combined": 0.15,
+        "method": "feature",
+        "ast_supported": false
+      },
+      "evidence": {
+        "shared_source_entities": [],
+        "shared_operations": [],
+        "shared_concepts": [
+          "active",
+          "customer",
+          "reporting"
+        ],
+        "notes": [
+          "Cross-language pair: AST/token comparison is unsupported; using the language-neutral transformation profile."
+        ]
+      },
+      "relationship": "VALID_ALTERNATE_BINDING",
+      "recommended_action": "This is a valid runtime binding of a registered artifact (certified); resolve the binding for your runtime.",
+      "recommended_binding": {
+        "ref": "sales.datasets.commercial_customer_status_90d",
+        "system": "databricks",
+        "env": "prod",
+        "runtime": "databricks",
+        "dialect": "databricks",
+        "object_type": "view",
+        "attribution_key": "databricks:sales.datasets.commercial_customer_status_90d",
+        "source_path": "sales/datasets/commercial_customer_status_90d.sql"
+      }
+    },
+    {
+      "logical_id": "finance.logic.normalize_currency.v1",
+      "title": "Normalize Currency",
+      "language": "sql",
+      "governance": {
+        "authority": "REGISTERED_CANONICAL",
+        "lifecycle": "shared",
+        "owner": "finance-analytics",
+        "reuse_intent": "shared_utility"
+      },
+      "coverage": "REGISTERED_ARTIFACTS",
+      "similarity": {
+        "feature": 0.0909,
+        "combined": 0.0909,
+        "method": "feature",
+        "ast_supported": false
+      },
+      "evidence": {
+        "shared_source_entities": [],
+        "shared_operations": [],
+        "shared_concepts": [
+          "reporting"
+        ],
+        "notes": [
+          "Cross-language pair: AST/token comparison is unsupported; using the language-neutral transformation profile."
+        ]
+      },
+      "relationship": "VALID_ALTERNATE_BINDING",
+      "recommended_action": "This is a valid runtime binding of a registered artifact (shared); resolve the binding for your runtime.",
+      "recommended_binding": {
+        "ref": "FINANCE.LOGIC.NORMALIZE_CURRENCY",
+        "system": "warehouse",
+        "env": "prod",
+        "runtime": "warehouse",
+        "dialect": "snowflake",
+        "object_type": "function",
+        "attribution_key": "warehouse:snowflake:FINANCE.LOGIC.NORMALIZE_CURRENCY",
+        "source_path": "finance/logic/normalize_currency.sql"
+      }
+    },
+    {
+      "logical_id": "finance.datasets.invoice_revenue.v1",
+      "title": "Invoice Revenue (Legacy)",
+      "language": "sql",
+      "governance": {
+        "authority": "REGISTERED_CANONICAL",
+        "lifecycle": "retired",
+        "owner": "finance-analytics",
+        "reuse_intent": "domain_canonical"
+      },
+      "coverage": "REGISTERED_ARTIFACTS",
+      "similarity": {
+        "feature": 0.087,
+        "combined": 0.087,
+        "method": "feature",
+        "ast_supported": false
+      },
+      "evidence": {
+        "shared_source_entities": [],
+        "shared_operations": [],
+        "shared_concepts": [
+          "customer",
+          "reporting"
+        ],
+        "notes": [
+          "Cross-language pair: AST/token comparison is unsupported; using the language-neutral transformation profile."
+        ]
+      },
+      "relationship": "VALID_ALTERNATE_BINDING",
+      "recommended_action": "This is a valid runtime binding of a registered artifact (retired); resolve the binding for your runtime.",
+      "recommended_binding": {
+        "ref": "FINANCE.DATASETS.INVOICE_REVENUE",
+        "system": "warehouse",
+        "env": "prod",
+        "runtime": "warehouse",
+        "dialect": "snowflake",
+        "object_type": "view",
+        "attribution_key": "warehouse:snowflake:FINANCE.DATASETS.INVOICE_REVENUE",
+        "source_path": "finance/datasets/invoice_revenue.sql"
+      }
+    },
+    {
+      "logical_id": "shared.datasets.fact_invoices.v1",
+      "title": "Invoice Facts",
+      "language": "sql",
+      "governance": {
+        "authority": "REGISTERED_CANONICAL",
+        "lifecycle": "certified",
+        "owner": "platform-dwh",
+        "reuse_intent": "shared_utility"
+      },
+      "coverage": "REGISTERED_ARTIFACTS",
+      "similarity": {
+        "feature": 0.0833,
+        "combined": 0.0833,
+        "method": "feature",
+        "ast_supported": false
+      },
+      "evidence": {
+        "shared_source_entities": [],
+        "shared_operations": [],
+        "shared_concepts": [
+          "customer"
+        ],
+        "notes": [
+          "Cross-language pair: AST/token comparison is unsupported; using the language-neutral transformation profile."
+        ]
+      },
+      "relationship": "VALID_ALTERNATE_BINDING",
+      "recommended_action": "This is a valid runtime binding of a registered artifact (certified); resolve the binding for your runtime.",
+      "recommended_binding": {
+        "ref": "SHARED.DATASETS.FACT_INVOICES",
+        "system": "warehouse",
+        "env": "prod",
+        "runtime": "warehouse",
+        "dialect": "snowflake",
+        "object_type": "table",
+        "attribution_key": "warehouse:snowflake:SHARED.DATASETS.FACT_INVOICES",
+        "source_path": "dwh/shared/datasets/fact_invoices.sql"
+      }
+    }
+  ],
+  "summary": "No strong match found. Safe to author, but register the new artifact."
+}
