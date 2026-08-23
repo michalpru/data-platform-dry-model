@@ -15,7 +15,7 @@ ARPAC does not exist yet as a governed metric. But its parts do. **Net recognize
 
 So the real task is not "write ARPAC from scratch." It is "compose ARPAC for executive reporting **from definitions already approved as company-wide canonicals**." That is a reuse problem, and it is exactly where AI-assisted authoring is supposed to help.
 
-This article reports a small proof of concept that tested how well it does. The result is the interesting part: when the AI coding assistant could use only the code available in its workspace, **none of the models produced the correct governed metric** — and giving it more workspace code made the answer more confident and more wrong.
+This article reports a small proof of concept that tested how well it does. The result is the interesting part: when the AI coding assistant could use only the code available in its workspace, **none of the models produced the correct governed metric**, and giving it more workspace code made the answer more confident and more wrong.
 
 ---
 
@@ -27,15 +27,17 @@ The PoC runs the same ARPAC task through three authoring setups and three curren
 
 | Authoring setup | Scenario | What the AI coding assistant can use |
 |---|---|---|
-| **Workspace-only (base tables)** | **Scenario 1A** | The shared warehouse tables: `dim_customers`, `fact_invoices`, and `fact_refunds`. |
-| **Workspace-only (base tables + domain repositories)** | **Scenario 1B** | The base tables plus chosen Finance and Marketing domain code, so the assistant can find similar existing logic. |
-| **Registry-aware authoring** | **Scenario 2** | The **DRY Artifact Registry**, exposed as structured tools over a thin MCP server and driven by the custom **DRY Reuse** agent. |
+| **Workspace-only (base tables)** | **Scenario 1A** | The shared warehouse base tables: `dim_customers`, `fact_invoices`, and `fact_refunds` |
+| **Workspace-only (base tables + domain repositories)** | **Scenario 1B** | The base tables plus chosen Finance and Marketing domain code, so the assistant can find similar existing logic |
+| **Registry-aware authoring** | **Scenario 2** | The **DRY Artifact Registry**, exposed as structured tools over a thin MCP server and driven by the custom **DRY Reuse agent** |
 
-The prompt is the same business intent in every run: a trailing-90-day ARPAC, numerator = net recognized revenue in USD counting *only* active customers, denominator = the count of active customers, "reuse existing definitions where appropriate and explain what was reused." The exact wording is not the point — the *pattern* it exposes is. (Full prompts and recorded runs: [demo walkthrough](demo-walkthrough.md).) Each scenario's repositories are mocked and deliberately scoped, so the test isolates *which context the assistant can reach*, not codebase size.
+The prompt is the same business intent in every run: "I need a trailing-90-day ARPAC metric for executive reporting...
+- Numerator = net recognized revenue in USD, over the trailing 90 days, counting *only* active customers
+- Denominator = the count of active customers using the definition used in other executive dashboards... 
+Reuse existing definitions, datasets, or functions where appropriate, and explain what was reused"
+(Full prompts and recorded runs: [demo walkthrough](demo-walkthrough.md).) Each scenario's repositories are mocked and deliberately scoped, so the test isolates *which context the assistant can reach*.
 
 One scoring rule matters up front, because it looks harsh and is deliberate. A run is graded on **one** question: *did it deliver the correct, governed ARPAC?* If a model cannot produce a component because the certified definition was unreachable, that scores **zero** — exactly like getting it wrong. Reachability is not an excuse; it is precisely the deficiency the registry exists to remove.
-
-
 
 ---
 
@@ -45,24 +47,20 @@ One scoring rule matters up front, because it looks harsh and is deliberate. A r
 
 With only base tables visible, every model does the same thing: it builds ARPAC from first principles. It sums raw invoice amounts, and — depending on the run — nets refunds itself, filters to USD by hand, and reaches for `dim_customers.is_active` as the definition of "active customer."
 
-The SQL runs. It looks correct. And it silently re-implements three governed rules that already exist as owned artifacts (billable-event assembly, revenue recognition, currency normalization) while using the **wrong** active-customer definition — `dim_customers.is_active` is a 12-month operational order flag, not the certified 90-day commercial-activity status. Nothing fails. Two dashboards now show two different ARPAC numbers, and no pipeline complains.
-
-This is the whitepaper's *"AI assistant as duplication amplifier"*: without reuse context, re-implementing a definition is cheaper than discovering it.
+The SQL runs. It looks correct. And it silently re-implements three governed rules that already exist as owned artifacts (billable-event assembly, revenue recognition, currency normalization) while using the **wrong** active-customer definition — `dim_customers.is_active` is a 12-month operational order flag, not the certified enterprise-wide customer status definition. Nothing fails. Two dashboards now show two different ARPAC numbers, and no pipeline complains.
 
 ### Scenario 1B — Workspace-only (base tables + domain repositories): similarity without authority
 
-The obvious fix is to give the assistant more to work with, so Scenario 1B adds the domain repositories. This is where the result becomes counter-intuitive, and where the article's headline sits: **more context did not fix the answer — it made the wrong one more convincing.**
+The obvious fix is to give the AI coding assistant more to work with, so Scenario 1B adds some artifacts (functions an datasets) from the domain repositories. This is where the result becomes counter-intuitive, and where the article's headline sits: **more context did not fix the answer — it made the wrong one more convincing.**
 
 With domain code visible, the models found similar artifacts and reused them — the wrong ones:
 
-- The Finance repo contains `invoice_revenue` — a **retired** view that skips refunds. Nothing in the code repository says "retired," so models reused it and reproduced a known defect.
-- The Marketing repo contains a login-based active-customer rule — a **domain-local** definition never certified for executive reporting. Two of the three models translated it to SQL and explicitly labelled it *"the authoritative active-customer definition used by executive dashboards."*
-- Meanwhile the actually-certified recognition function and the certified active-customer status view were **invisible** — they exist only as deployed warehouse objects and in repositories that were never checked out.
+- The Finance repo contains `invoice_revenue` — a **retired** view that skips refunds. Nothing in the code repository says "retired," so models reused it and reproduced a known defect
+- The Marketing repo contains a login-based active-customer rule — a **domain-local** definition never certified as enterprise-level canonical. Two of the three models translated it to SQL and explicitly labelled it *"the authoritative active-customer definition used by executive dashboards."*
+- Meanwhile the actually-certified recognition function and the certified active-customer status view were **invisible** as they exist only as deployed warehouse objects and in repositories that were never checked out.
 
-Workspace search ranks code by textual and structural similarity. It carries **no governance signal**: lifecycle, ownership, and canonical status are all unknown. A high-ranking match may be a certified canonical, a local copy, or a retired view — and similarity alone cannot tell them apart. That is why 1B is the more dangerous failure: the output *looks* more complete and more authoritative while resting on a retired revenue view and a non-enterprise active rule.
 
 ### The failure modes, in one place
-
 Across the runs, the workspace-only setups fail in four recurring ways — each one *silent*, because the SQL is valid:
 
 - **Re-deriving governed logic** from raw tables (recognition, refund netting, currency, activity window).
@@ -71,8 +69,7 @@ Across the runs, the workspace-only setups fail in four recurring ways — each 
 - **False confidence** — a well-commented result presented with no governance caveat.
 
 ### What AI cannot infer from code alone
-
-The common thread is that the decisive information is **not in the source**. Even with perfect search over every repository, an assistant cannot read off:
+Even when an AI coding assistant can search the exposed domain code, workspace search ranks matches only by textual and structural similarity. The decisive information is **not in the source**. Even with perfect search over every repository, an assistant cannot read off:
 
 - **Authority** — is this the certified definition, or one of five look-alikes?
 - **Reuse intent and scope** — was this built to be reused enterprise-wide, within one domain, or never?
@@ -80,7 +77,7 @@ The common thread is that the decisive information is **not in the source**. Eve
 - **Ownership** — who is accountable for it, and can approve a change?
 - **Implementation bindings** — even if the right logic is found, how is it consumed from *this* engineer's runtime and dialect?
 
-And there is a coverage limit on top of the semantic one: **workspace search only sees what is open.** Assuming an assistant will have — and will search — every relevant repository and every deployed warehouse object across every domain is not realistic. Widening the workspace does not resolve this; it just adds more places a retired, local, or irrelevant artifact can be picked up with false confidence.
+And there is a coverage limit on top of the semantic one: **workspace search only sees what is open.** Assuming an assistant will have, and will search every relevant repository and every deployed warehouse object across every domain is not realistic. Widening the workspace does not resolve this; it just adds more places a retired, local, or irrelevant artifact can be picked up with false confidence.
 
 AI-assisted authoring makes it cheap to *write* code and to *find* something that looks reusable. It does not answer the question the task actually turns on: **what should be reused.** That answer requires governance context that spans the repositories — and does not live in any of them.
 
@@ -88,7 +85,7 @@ AI-assisted authoring makes it cheap to *write* code and to *find* something tha
 
 Scored on the single question — *did it deliver the correct governed ARPAC?* — the workspace-only setups fail for every model:
 
-| Model | 1A (base tables) | 1B (+ domain repos) | 2 (registry-aware) |
+| Model | 1A (base tables) | 1B (base tables + domain repos) | 2 (registry-aware) |
 |---|:--:|:--:|:--:|
 | **GPT-5.5** | 27% | 40% | 100% |
 | **Claude Sonnet 4.6** | 27% | 33% | 93% |
