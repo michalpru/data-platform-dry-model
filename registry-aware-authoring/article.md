@@ -38,7 +38,7 @@ The prompt is the same business intent in every run: "I need a trailing-90-day A
 Reuse existing definitions, datasets, or functions where appropriate, and explain what was reused"
 (Full prompts and recorded runs: [demo walkthrough](demo-walkthrough.md).) Each scenario's repositories are mocked and deliberately scoped, so the test isolates *which context the assistant can reach*.
 
-One scoring rule matters up front, because it looks harsh and is deliberate. A run is graded on **one** question: *did it deliver the correct, governed ARPAC?* If a model cannot produce a component because the certified definition was unreachable, that scores **zero** — exactly like getting it wrong. Reachability is not an excuse; it is precisely the deficiency the registry exists to remove.
+One scoring rule matters up front, because it looks harsh and is deliberate. A run is graded on **one** question: *did it deliver the correct, governed ARPAC?* If a model cannot produce a component because the certified definition was unreachable, that scores **zero** — exactly like getting it wrong. The workspace-only scenarios deliberately withhold direct warehouse and catalog access; an MCP tool for either could solve that reachability gap. The test asks whether the additional governance facts needed to select and bind the correct definition are available.
 
 ---
 
@@ -58,7 +58,7 @@ With domain code visible, the models found similar artifacts and reused them —
 
 - The Finance repo contains `invoice_revenue` — a **retired** view that skips refunds. Nothing in the code repository says "retired," so models reused it and reproduced a known defect
 - The Marketing repo contains a login-based active-customer rule — a **domain-local** definition never certified as enterprise-level canonical. Two of the three models translated it to SQL and explicitly labelled it *"the authoritative active-customer definition used by executive dashboards."*
-- Meanwhile the actually-certified recognition function and the certified active-customer status view were **invisible** as they exist only as deployed warehouse objects and in repositories that were never checked out.
+- Meanwhile the actually-certified recognition function and the certified active-customer status view were **invisible to workspace search** because they exist only as deployed warehouse objects and in repositories that were never checked out. A direct warehouse or catalog MCP tool could expose them; that tool was intentionally outside this workspace-only setup.
 
 ### Scenario 1C — Workspace-only (all existing codebase): reachable but not distinguishable
 
@@ -105,13 +105,15 @@ These results are **use-case-specific**, not precise predictions for every metri
 
 ---
 
-## The missing control plane: exposing the registry to Copilot
+## The governance control plane: exposing the registry to Copilot
 
 ### What the registry is
 
 The turning point in the PoC is a small **DRY Artifact Registry** — the concept introduced in the [whitepaper](https://michalpru.github.io/data-platform-dry-model/). It is not a new warehouse or catalog. It is a thin **reuse-governance metadata** layer over the repositories, warehouses, and catalogs that already exist, adding only the facts they do not hold: a stable logical identity per artifact, its lifecycle state, reuse intent and scope, owner, and its **implementation bindings** — the physical objects (a warehouse UDF, a dbt macro, a Databricks view) that realise the same logical definition across engines and dialects. As the whitepaper describes, it stores manifests for the three reuse interfaces — **callable logic, queryable datasets, and semantic contracts** — as a vendor-neutral reuse architecture. It stores metadata and pointers; it never stores or executes code.
 
 This is what separates it from generic code retrieval, and heads off the *"isn't this just RAG?"* objection. The registry is **not** a code- or data-distribution mechanism and never sits in the query-execution path; its lookup runs over *governance metadata*, not over a corpus of source. Where workspace similarity answers *"what looks like this,"* the registry answers the question the task actually turns on: *which definition is authoritative, for what scope, and how do I bind to it from my runtime.* Retrieval surfaces candidates; the registry surfaces the *declared, governed* authority and the runtime bindings. Put differently: RAG is a retrieval technique, the registry is a reuse-governance control plane — a retrieval system could even index the registry's records, but retrieval alone cannot certify an artifact, choose its runtime binding, or make anyone accountable for it.
+
+Direct warehouse and data-catalog MCP tools can also expose deployed objects, schemas, lineage, and any governance metadata that their systems maintain. They may therefore close the **reachability** gap in Scenarios 1A and 1B. If they consistently expose cross-domain certification, lifecycle, reuse scope, logical identity, and target-runtime bindings, they can provide or implement the same governance capability described here. This PoC does not compare those tools. Its registry is a vendor-neutral layer that consolidates those facts across repositories, warehouses, and catalogs when no one source carries them all.
 
 ### What was implemented
 
@@ -164,7 +166,7 @@ The outcome held across all three models. Every one:
 - resolved one logical identity to the right binding per runtime — a Snowflake UDF *or* a dbt macro for recognition, a Databricks view for active status — so the *same* certified definition was referenced regardless of engine, rather than re-implemented per stack;
 - and, when the active-customer status resolved only to Databricks while the target engine was Snowflake, surfaced the missing binding as an integration requirement rather than silently shipping a cross-engine join — two of the three invented nothing, while the third flagged the gap but minted a placeholder Snowflake name (its single deduction, 14/15).
 
-The scoreboard jump from ≤67% to ≥93% is not a model-quality effect; it reflects that only the registry surfaced governed authority and the required bindings — information that workspace search cannot supply, not even with the whole codebase in Scenario 1C.
+The scoreboard jump from ≤67% to ≥93% is not a model-quality effect; it reflects that, in this PoC, the registry surfaced governed authority and the required bindings — information that workspace search cannot supply, not even with the whole codebase in Scenario 1C. A warehouse or catalog MCP tool that exposed the same governed metadata could play this role; it was not part of the comparison.
 
 Scenario 2 was not flawless — the models needed steering on registry-readiness polish (a consistent namespace; keeping the components dataset separate from the metric), and the fabricated binding above was a small correctness deduction, not merely cosmetic. None of it changed the outcome: every model produced the correctly-governed ARPAC composition — reusing the certified definitions and flagging, not faking, the one missing cross-engine binding, which stays an explicit integration precondition rather than a live cross-engine execution. And none of this replaces dbt or the semantic layer: those remain the primary mechanisms for implementing and consuming reuse, while the registry adds the organization-level *certified* status and the cross-engine, multi-implementation bindings that a single project graph or semantic layer does not hold (see [README §10](README.md), [poc-results.md](poc-results.md)). The PoC exercises an enterprise-wide canonical, but the same registry model also governs domain-scoped canonicals within a single domain — the adoption boundary is heterogeneity and criticality, not enterprise scope alone.
 
