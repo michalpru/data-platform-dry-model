@@ -40,6 +40,26 @@ and the *marketing* active rule are visible while the certified ones are not, so
 actively leads models toward the wrong artifacts. Only in **2** are the certified artifacts (and the
 Databricks-only status view) reachable at all.
 
+### The active-customer definition trap
+
+The denominator is where every workspace-only scenario breaks, because "active customer" has several
+legitimate, co-existing definitions — and nothing in the code says which one is the governed
+denominator for a revenue metric:
+
+| Domain | Artifact | Local definition of "active" | Legitimate purpose | Why it's wrong for ARPAC |
+|---|---|---|---|---|
+| Marketing | `active_customer.py` | Logged into the Marketing Portal in 90d | Campaign reach, engagement analytics | Engagement ≠ revenue; excludes paying customers who never log in |
+| Sales | `active_customer_90d.sql` | Has a **POSTED invoice** in 90d | Sales-ops / AR dashboards, billed-account tracking | Billing activity ≠ full commercial activity |
+| Enterprise (certified) | `commercial_customer_status_90d.sql` | `paid_invoice` **OR** `active_subscription` **OR** `committed_order` in 90d | Governed denominator for revenue metrics | — (this is the canonical one) |
+
+In **1B** the Marketing rule is the visible decoy; in **1C** the Sales `active_customer_90d`
+look-alike joins it, and every model picks it over the certified view because the certified one's
+dependencies are not materialized in the workspace (so it "does not run") while the look-alike reads
+the always-present `shared.*` tables. Only the registry marks `commercial_customer_status_90d` as the
+certified enterprise denominator — the distinction that separates the correct ARPAC from a
+plausible-but-wrong one. Full Scenario 1C write-up:
+[`scenarios/scenario-1c/poc-results/README.md`](scenarios/scenario-1c/poc-results/README.md).
+
 ---
 
 ## 2. Failure patterns AI models can make
