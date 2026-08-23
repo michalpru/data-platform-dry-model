@@ -1,4 +1,4 @@
-# Scenario 1A — Standard Copilot authoring, warehouse tables only
+# Scenario 1A — Workspace-only (base tables)
 
 **Workspace exposed to Copilot:** the central data-warehouse base tables only.
 **Engine:** the shared DWH runs on **Snowflake** — all SQL in this scenario is Snowflake dialect.

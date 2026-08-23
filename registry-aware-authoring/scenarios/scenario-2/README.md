@@ -1,4 +1,4 @@
-# Scenario 2 — Registry-aware Copilot authoring
+# Scenario 2 — Registry-aware authoring
 
 **Workspace exposed to Copilot:** the **DRY Artifact Registry**, reached through the thin MCP server and the **DRY Reuse** custom agent (or the CLI). Unlike scenarios 1A/1B, authoring starts with **resolution**, not generation.
 

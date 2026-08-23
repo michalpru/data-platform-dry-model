@@ -15,11 +15,11 @@ point at lives in [`scenario-2/workspace/`](scenario-2/workspace/);
 the executable engine, CLI and MCP server live in [`../registry/`](../registry/). The narrated
 run with real command output is [`../demo-walkthrough.md`](../demo-walkthrough.md).
 
-| Scenario | What the workspace exposes | What Copilot does | Failure / success |
-|---|---|---|---|
-| [`scenario-1a`](scenario-1a/) | Base warehouse tables only — Snowflake (`dim_customers`, `fact_invoices`, `fact_refunds`) | Authors ARPAC from first principles | Re-implements revenue recognition; ignores currency; uses the wrong (12-month) active flag |
-| [`scenario-1b`](scenario-1b/) | Base tables (Snowflake) **+** finance (Snowflake) & marketing (Databricks) domain repos | Reuses the most *similar* artifacts it finds | Reuses a **retired** invoice-revenue view (skips refunds) and a **marketing** active-customer rule (logins) on a **different engine** — similarity ≠ authority |
-| [`scenario-2`](scenario-2/) | The **DRY Artifact Registry** (via CLI / MCP agent) | Searches by intent, checks lifecycle & ownership, resolves bindings, composes | Reuses the certified revenue + active-customer definitions; authors only the ratio |
+| Authoring setup | Scenario | What the workspace exposes | What Copilot does | Failure / success |
+|---|---|---|---|---|
+| **Workspace-only (base tables)** | [**Scenario 1A**](scenario-1a/) | Base warehouse tables only — Snowflake (`dim_customers`, `fact_invoices`, `fact_refunds`) | Authors ARPAC from first principles | Re-implements revenue recognition; ignores currency; uses the wrong (12-month) active flag |
+| **Workspace-only (base tables + domain repositories)** | [**Scenario 1B**](scenario-1b/) | Base tables (Snowflake) **+** Finance (Snowflake) and Marketing (Databricks) domain repositories | Reuses the most *similar* artifacts it finds | Reuses a **retired** invoice-revenue view (skips refunds) and a **marketing** active-customer rule (logins) on a **different engine** — similarity ≠ authority |
+| **Registry-aware authoring** | [**Scenario 2**](scenario-2/) | The **DRY Artifact Registry** (via CLI / MCP agent) | Searches by intent, checks lifecycle & ownership, resolves bindings, composes | Reuses the certified revenue + active-customer definitions; authors only the ratio |
 
 ## SQL dialect convention (Task 8)
 

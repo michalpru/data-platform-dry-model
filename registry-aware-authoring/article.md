@@ -8,35 +8,40 @@
 
 ## An analytics engineer is asked for one number
 
-An analytics engineer is handed a familiar task: build **ARPAC — Average Revenue per Active Customer** (trailing 90 days) for an executive dashboard. They open their IDE, describe the metric to GitHub Copilot, and let it draft the SQL.
+An analytics engineer is handed a familiar task: build **ARPAC — Average Revenue per Active Customer** (trailing 90 days) for an executive dashboard. 
+They open their IDE, describe the metric to an AI coding assistant — GitHub Copilot in this PoC — and let it draft the SQL.
 
-ARPAC does not exist yet as a governed metric. But its parts do. **Net recognized revenue** and **active customers** are among the most reused concepts in any company — defined and redefined across warehouses, notebooks, dbt projects, and BI tools. In most medium and large organizations there are several *valid but different* definitions of each, each certified for a particular scope: a marketing definition of "active," a finance definition of "recognized revenue," a domain-local flag that was never meant to leave its team.
+ARPAC does not exist yet as a governed metric. But its parts do. **Net recognized revenue** and **active customers** are among the most reused concepts in any company — defined and redefined across warehouses, notebooks, and BI tools. In most large organizations, each concept has several *valid but different* definitions. Some are legitimate but intentionally scoped to a team or domain, such as Marketing or Finance, rather than approved as company-wide canonicals. Others are legacy or retired tables, views, or code that remain in repositories and can be mistaken for valid reuse candidates by an AI coding assistant.
 
-So the real task is not "write ARPAC from scratch." It is "compose ARPAC **from the definitions that are already approved for executive reporting**." That is a reuse problem, and it is exactly where AI-assisted authoring is supposed to help.
+So the real task is not "write ARPAC from scratch." It is "compose ARPAC for executive reporting **from definitions already approved as company-wide canonicals**." That is a reuse problem, and it is exactly where AI-assisted authoring is supposed to help.
 
-This article reports a small proof of concept that tested how well it does. The result is the interesting part: with the ordinary workspace-based approach, **none of the models produced the correct governed metric** — and giving the assistant *more* code made the answer more confident and more wrong.
+This article reports a small proof of concept that tested how well it does. The result is the interesting part: when the AI coding assistant could use only the code available in its workspace, **none of the models produced the correct governed metric** — and giving it more workspace code made the answer more confident and more wrong.
 
 ---
 
 ## The test: one metric, three models, three setups
+The diagram below maps the ARPAC use case across the enterprise data platform, highlighting the two certified enterprise definitions that the governed metric should reuse.
+![Data Landscape In The PoC](../publications/assets-diagrams/registry-aware-authoring-poc-scenarios.jpg)
 
 The PoC runs the same ARPAC task through three authoring setups and three current models — **GPT-5.5**, **Claude Sonnet 4.6**, and **Claude Opus 4.8**:
 
-- **Scenario 1A — standard Copilot, base tables only.** Only the shared warehouse tables (`dim_customers`, `fact_invoices`, `fact_refunds`) are in the workspace.
-- **Scenario 1B — standard Copilot, base tables + domain repositories.** The Finance and Marketing domain code is added, so the assistant can find similar existing logic.
-- **Scenario 2 — registry-aware authoring.** Instead of raw files, the assistant works through the **DRY Artifact Registry** — exposed as structured tools over a thin MCP server and driven by a custom **DRY Reuse** agent.
+| Authoring setup | Scenario | What the AI coding assistant can use |
+|---|---|---|
+| **Workspace-only (base tables)** | **Scenario 1A** | The shared warehouse tables: `dim_customers`, `fact_invoices`, and `fact_refunds`. |
+| **Workspace-only (base tables + domain repositories)** | **Scenario 1B** | The base tables plus chosen Finance and Marketing domain code, so the assistant can find similar existing logic. |
+| **Registry-aware authoring** | **Scenario 2** | The **DRY Artifact Registry**, exposed as structured tools over a thin MCP server and driven by the custom **DRY Reuse** agent. |
 
 The prompt is the same business intent in every run: a trailing-90-day ARPAC, numerator = net recognized revenue in USD counting *only* active customers, denominator = the count of active customers, "reuse existing definitions where appropriate and explain what was reused." The exact wording is not the point — the *pattern* it exposes is. (Full prompts and recorded runs: [demo walkthrough](demo-walkthrough.md).) Each scenario's repositories are mocked and deliberately scoped, so the test isolates *which context the assistant can reach*, not codebase size.
 
 One scoring rule matters up front, because it looks harsh and is deliberate. A run is graded on **one** question: *did it deliver the correct, governed ARPAC?* If a model cannot produce a component because the certified definition was unreachable, that scores **zero** — exactly like getting it wrong. Reachability is not an excuse; it is precisely the deficiency the registry exists to remove.
 
-![The nine artifacts and what each scenario can see](../publications/assets-diagrams/registry-aware-authoring-poc-scenarios.jpg)
+
 
 ---
 
 ## Why exposing the code workspace to Copilot doesn't deliver governed reuse
 
-### Scenario 1A: the duplication amplifier
+### Scenario 1A — Workspace-only (base tables): the duplication amplifier
 
 With only base tables visible, every model does the same thing: it builds ARPAC from first principles. It sums raw invoice amounts, and — depending on the run — nets refunds itself, filters to USD by hand, and reaches for `dim_customers.is_active` as the definition of "active customer."
 
@@ -44,13 +49,13 @@ The SQL runs. It looks correct. And it silently re-implements three governed rul
 
 This is the whitepaper's *"AI assistant as duplication amplifier"*: without reuse context, re-implementing a definition is cheaper than discovering it.
 
-### Scenario 1B: similarity without authority — the real finding
+### Scenario 1B — Workspace-only (base tables + domain repositories): similarity without authority
 
 The obvious fix is to give the assistant more to work with, so Scenario 1B adds the domain repositories. This is where the result becomes counter-intuitive, and where the article's headline sits: **more context did not fix the answer — it made the wrong one more convincing.**
 
 With domain code visible, the models found similar artifacts and reused them — the wrong ones:
 
-- The Finance repo contains `invoice_revenue` — a **retired** view that skips refunds. Nothing in the file says "retired," so models reused it and reproduced a known defect.
+- The Finance repo contains `invoice_revenue` — a **retired** view that skips refunds. Nothing in the code repository says "retired," so models reused it and reproduced a known defect.
 - The Marketing repo contains a login-based active-customer rule — a **domain-local** definition never certified for executive reporting. Two of the three models translated it to SQL and explicitly labelled it *"the authoritative active-customer definition used by executive dashboards."*
 - Meanwhile the actually-certified recognition function and the certified active-customer status view were **invisible** — they exist only as deployed warehouse objects and in repositories that were never checked out.
 
@@ -143,7 +148,7 @@ The same call is the agent's closing **Verify** step by design: find composables
 
 Because the MCP server and the CLI are thin clients over the **same** Lookup & Compare services, an engineer does not need the agent to use them: `search`, `recommend`, `resolve-binding`, and `compare` are callable from the command line for an ad-hoc check at authoring time, or as a build-time CI gate so the same comparison fires before merge.
 
-### Scenario 2 results
+### Scenario 2 — Registry-aware authoring: results
 
 The outcome held across all three models. Every one:
 

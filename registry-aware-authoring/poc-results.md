@@ -1,6 +1,8 @@
 # ARPAC Registry-Aware Authoring PoC — Results Analysis
 
-> Analysis of the PoC runs for Scenarios 1A, 1B and 2 across three models
+> Analysis of the PoC runs for **Scenario 1A — Workspace-only (base tables)**,
+> **Scenario 1B — Workspace-only (base tables + domain repositories)**, and
+> **Scenario 2 — Registry-aware authoring** across three models
 > (**GPT-5.5**, **Claude Sonnet 4.6**, **Claude Opus 4.8**), scored against the
 > failure patterns catalogued in §2 and the goals in
 > [demo-walkthrough.md](demo-walkthrough.md) and [README.md](README.md).
@@ -8,8 +10,8 @@
 - Scope analyzed: `scenarios/<scenario>/poc-results/<model>/`
 - Method: each run is checked against the failure patterns in §2; §3 links every model and
   scenario to the patterns it hit or avoided.
-- Task: does registry-aware authoring (Scenario 2) prevent the silent duplication that
-  workspace-only authoring (1A/1B) produces?
+- Task: does **Scenario 2 — Registry-aware authoring** prevent the silent duplication that the
+  workspace-only scenarios (1A/1B) produce?
 
 ---
 

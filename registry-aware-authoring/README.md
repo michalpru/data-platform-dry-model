@@ -71,18 +71,19 @@ components**. It does **not** store or execute implementation code:
 
 In this PoC the "existing repositories" are **mocked** as a per-scenario workspace tree (`registry-aware-authoring/scenarios/scenario-.../workspace/`).
 
-- **Scenario 1 — workspace-exposed DWH codebase.** The warehouse code is placed in the workspace and
-  standard Copilot reasons over it to build the metric. **1A** exposes base DWH tables only; **1B**
-  additionally exposes the domain warehouse tables/functions.
-- **Scenario 2 — registry-aware authoring.** The DRY Artifact Registry (registry service methods +
+- **Scenario 1 — workspace-only authoring.** Standard Copilot reasons over code available in the
+  workspace to build the metric. **Scenario 1A — Workspace-only (base tables)** exposes base DWH
+  tables only; **Scenario 1B — Workspace-only (base tables + domain repositories)** additionally
+  exposes Finance and Marketing domain code.
+- **Scenario 2 — Registry-aware authoring.** The DRY Artifact Registry (registry service methods +
   comparison service methods) is exposed through a thin MCP server and driven by the DRY Reuse agent
   (architecture in §7).
 
-| Scenario | Authoring mode | Exposed in the workspace | Likely / intended outcome |
-|---|---|---|---|
-| **1A** | Standard Copilot (workspace context + search) | Base DWH tables only (`dim_customers`, `fact_invoices`, `fact_refunds`) | Copilot re-codes ARPAC from first principles: invoice-based revenue, refunds ignored, invoice date as revenue date, and `dim_customers.is_active` (a 12-month order flag) misused as the active-customer definition. |
-| **1B** | Standard Copilot (workspace context + search) | Base tables **+** finance & marketing domain repos | Copilot reuses the most *similar* code it finds — the **retired** `finance.datasets.invoice_revenue` view and the Marketing-specific `active_customer` login rule — but similarity and availability do not indicate business authority. |
-| **2** | Registry-aware custom agent (MCP intent lookup + code comparison) | The **registry** (logical artifacts + resolvable bindings). The registry manifests live alongside it in `registry-aware-authoring/scenarios/scenario-2/registry-manifests/` | The agent searches by intent, evaluates lifecycle/scope, resolves the certified Snowflake and Databricks bindings, and authors **only** the missing Enterprise composition. Nothing governed is re-implemented. |
+| Authoring setup | Scenario | Authoring mode | Exposed in the workspace | Likely / intended outcome |
+|---|---|---|---|---|
+| **Workspace-only (base tables)** | **1A** | Standard Copilot (workspace context + search) | Base DWH tables only (`dim_customers`, `fact_invoices`, `fact_refunds`) | Copilot re-codes ARPAC from first principles: invoice-based revenue, refunds ignored, invoice date as revenue date, and `dim_customers.is_active` (a 12-month order flag) misused as the active-customer definition. |
+| **Workspace-only (base tables + domain repositories)** | **1B** | Standard Copilot (workspace context + search) | Base tables **+** Finance and Marketing domain repositories | Copilot reuses the most *similar* code it finds — the **retired** `finance.datasets.invoice_revenue` view and the Marketing-specific `active_customer` login rule — but similarity and availability do not indicate business authority. |
+| **Registry-aware authoring** | **2** | Registry-aware custom agent (MCP intent lookup + code comparison) | The **registry** (logical artifacts + resolvable bindings). The registry manifests live alongside it in `registry-aware-authoring/scenarios/scenario-2/registry-manifests/` | The agent searches by intent, evaluates lifecycle/scope, resolves the certified Snowflake and Databricks bindings, and authors **only** the missing Enterprise composition. Nothing governed is re-implemented. |
 
 The failure modes in 1A/1B are the point: **workspace similarity without governance can be worse
 than authoring from scratch**, because it lends false confidence to retired or domain-specific code.

@@ -4,8 +4,10 @@
 > reusing enterprise-certified definitions instead of rebuilding them.
 
 The three scenarios map to the authoring-time rows of the whitepaper's *Duplication Detection and
-Prevention Techniques* table (§4.3.3). Scenarios 1A and 1B have no registry access. Scenario 2
-is **registry-backed canonical resolution** (high confidence, prevention at authoring time).
+Prevention Techniques* table (§4.3.3). **Scenario 1A — Workspace-only (base tables)** and
+**Scenario 1B — Workspace-only (base tables + domain repositories)** have no registry access.
+**Scenario 2 — Registry-aware authoring** is **registry-backed canonical resolution** (high
+confidence, prevention at authoring time).
 
 > **How this PoC extends the whitepaper.** In the whitepaper, the three *detection techniques* —
 > structural fingerprinting (AST), embedding-based similarity, and LLM-based analysis — sit at
@@ -15,8 +17,9 @@ is **registry-backed canonical resolution** (high confidence, prevention at auth
 > — so a likely reimplementation surfaces while the engineer is still typing, not only after the
 > PR is opened.
 >
-> **Two integration surfaces.** Scenarios 1A/1B use standard Copilot with workspace file context.
-> Scenario 2 uses a **custom DRY Reuse agent** over a thin MCP server for registry-aware authoring.
+> **Two integration surfaces.** The workspace-only scenarios (1A/1B) use standard Copilot with
+> workspace file context. Scenario 2 uses a **custom DRY Reuse agent** over a thin MCP server for
+> registry-aware authoring.
 
 ---
 
@@ -27,11 +30,11 @@ Two authoring setups are compared — the first split into two workspace-exposur
 - **Scenario 1 — workspace-exposed DWH codebase.** The data-warehouse codebase is exposed in the
   VS Code workspace and **standard Copilot** (the AI model) reasons over those files to build the
   metric. No registry, no MCP tools.
-  - **Scenario 1A — base DWH tables only.** Only the shared base tables
+  - **Scenario 1A — Workspace-only (base tables).** Only the shared base tables
     (`dim_customers`, `fact_invoices`, `fact_refunds`) are visible.
-  - **Scenario 1B — + domain warehouse code.** The base tables **plus** the Finance and Marketing
+  - **Scenario 1B — Workspace-only (base tables + domain repositories).** The base tables **plus** the Finance and Marketing
     domain warehouse tables/functions are exposed, so the model can find similar existing code.
-- **Scenario 2 — registry-aware authoring.** Instead of reasoning over raw files, the engineer works
+- **Scenario 2 — Registry-aware authoring.** Instead of reasoning over raw files, the engineer works
   through the **DRY Artifact Registry** — its **registry service methods** (intent search + binding
   resolution) and **comparison service methods** (code verification) — reached through a **thin MCP
   server** and driven by the **DRY Reuse agent**. Authority, not similarity, decides what is reused.
@@ -78,7 +81,7 @@ Constraints:
 
 ---
 
-## Scenario 1A — Standard Copilot, DWH tables only
+## Scenario 1A — Workspace-only (base tables)
 
 **Workspace exposed:** `registry-aware-authoring/scenarios/scenario-1a/workspace/` — the shared DWH base tables only
 (`dim_customers`, `fact_invoices`, `fact_refunds`).
@@ -103,7 +106,7 @@ different ARPAC numbers, and no pipeline fails.
 
 ---
 
-## Scenario 1B — Standard Copilot, domain repositories included
+## Scenario 1B — Workspace-only (base tables + domain repositories)
 
 **Workspace exposed:** `registry-aware-authoring/scenarios/scenario-1b/workspace/` — base DWH tables **plus** the
 Finance and Marketing domain repositories.

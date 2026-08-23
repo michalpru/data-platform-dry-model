@@ -1,4 +1,4 @@
-# Scenario 1B — Standard Copilot authoring, warehouse **+** domain repos
+# Scenario 1B — Workspace-only (base tables + domain repositories)
 
 **Workspace exposed to Copilot:** the base warehouse tables *and* two domain repositories.
 **Engines:** the shared DWH and the finance-domain run on **Snowflake**; the marketing-domain runs
