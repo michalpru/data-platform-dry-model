@@ -46,9 +46,7 @@ One scoring rule matters up front, because it looks harsh and is deliberate. A r
 
 ### Scenario 1A — Workspace-only (base tables): the duplication amplifier
 
-With only base tables visible, every model does the same thing: it builds ARPAC from first principles. It sums raw invoice amounts, and — depending on the run — nets refunds itself, filters to USD by hand, and reaches for `dim_customers.is_active` as the definition of "active customer."
-
-The SQL runs. It looks correct. And it silently re-implements three governed rules that already exist as owned artifacts (billable-event assembly, revenue recognition, currency normalization) while using the **wrong** active-customer definition — `dim_customers.is_active` is a 12-month operational order flag, not the certified enterprise-wide customer status definition. Nothing fails. Two dashboards now show two different ARPAC numbers, and no pipeline complains.
+This is the baseline. With only base tables visible and nothing reusable to find, every model builds ARPAC from first principles — summing raw invoice amounts, netting refunds by hand, and reaching for `dim_customers.is_active` (a 12-month order flag, not the certified customer status). The SQL runs and looks correct, yet it silently re-implements three governed rules (billable-event assembly, revenue recognition, currency normalization) and uses the wrong active-customer definition. Nothing fails; two dashboards now show two different ARPAC numbers. This is the *duplication amplifier* — the failure the later scenarios build on.
 
 ### Scenario 1B — Workspace-only (base tables + domain repositories): similarity without authority
 
