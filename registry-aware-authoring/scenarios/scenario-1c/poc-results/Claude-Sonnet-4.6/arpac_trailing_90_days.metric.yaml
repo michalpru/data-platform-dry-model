@@ -1,0 +1,118 @@
+metric: arpac_trailing_90_days_usd
+display_name: Trailing-90-Day ARPAC (USD)
+description: >
+  Average Revenue per Active Customer over the trailing 90 days, denominated in USD.
+  Intended for executive dashboards that require a standardised ARPAC definition
+  they can adopt by querying finance.metrics.arpac_trailing_90_days directly.
+
+grain: one row per metric_date (CURRENT_DATE at query time)
+
+formula: net_recognized_revenue_usd / active_customer_count
+
+window:
+  type: trailing
+  length_days: 90
+  anchor: CURRENT_DATE()
+
+numerator:
+  name: net_recognized_revenue_usd
+  description: >
+    Net USD revenue over the trailing 90 days, restricted to customers in the
+    active-customer denominator.  Delegated entirely to
+    FINANCE.LOGIC.RECOGNIZE_REVENUE(start, end), which unions POSTED invoices and
+    APPROVED refunds/credit notes from FINANCE.DATASETS.FACT_BILLABLE_EVENTS and
+    converts all source currencies to USD via FINANCE.LOGIC.NORMALIZE_CURRENCY.
+    Revenue from non-active customers is excluded before aggregation.
+  source: FINANCE.LOGIC.RECOGNIZE_REVENUE(DATEADD(DAY,-90,CURRENT_DATE()), CURRENT_DATE())
+  filters:
+    - CUSTOMER_ID IN (active_customer_denominator)
+  aggregation: SUM(RECOGNIZED_REVENUE_USD)
+  reused_artifact: finance.logic.recognize_revenue
+  reuse_rationale: >
+    Certified finance function that nets invoices and refunds, applies recognition
+    timing (RECOGNITION_DATE), and normalises currency via normalize_currency.
+    No revenue or FX logic is re-implemented in the metric view.
+
+denominator:
+  name: active_customer_count
+  description: >
+    COUNT(DISTINCT customer_id) for customers with at least one POSTED invoice
+    in the trailing 90 days.  Reuses the active-customer rule from
+    sales.datasets.active_customer_90d — the definition already used by the
+    executive trailing-90-day reporting layer.
+  sources:
+    - table: shared.dim_customers
+      role: customer universe
+    - table: shared.fact_invoices
+      role: activity signal
+      filters:
+        - invoice_status = 'POSTED'
+        - invoice_date >= DATEADD(DAY, -90, CURRENT_DATE())
+        - invoice_date <= CURRENT_DATE()
+  aggregation: COUNT(DISTINCT customer_id)
+  reused_artifact: sales.datasets.active_customer_90d
+  reuse_rationale: >
+    The date-series view active_customer_90d encodes the executive-dashboard
+    active-customer rule (POSTED invoice in trailing 90 days). The metric view
+    inlines the equivalent single-date slice using Snowflake DATEADD syntax
+    (semantically identical to Spark date_sub used in the source view).
+
+dependencies:
+  - shared.dim_customers
+  - shared.fact_invoices
+  - FINANCE.LOGIC.RECOGNIZE_REVENUE
+  - FINANCE.DATASETS.FACT_BILLABLE_EVENTS       # called indirectly via RECOGNIZE_REVENUE
+  - FINANCE.LOGIC.NORMALIZE_CURRENCY            # called indirectly via RECOGNIZE_REVENUE
+  - FINANCE.DATASETS.DIM_EXCHANGE_RATES         # called indirectly via NORMALIZE_CURRENCY
+
+output:
+  sql_file: arpac_trailing_90_days.sql
+  view_name: finance.metrics.arpac_trailing_90_days
+  platform: Snowflake
+  columns:
+    - name: metric_date
+      type: DATE
+      description: Date the metric was computed (CURRENT_DATE at query time).
+    - name: active_customer_count
+      type: NUMBER
+      description: Denominator — distinct customers with a POSTED invoice in the trailing 90 days.
+    - name: net_recognized_revenue_usd
+      type: NUMBER(18,2)
+      description: Numerator — net recognized USD revenue over the trailing 90 days, active customers only.
+    - name: arpac_trailing_90_days_usd
+      type: NUMBER(18,2)
+      description: ARPAC = net_recognized_revenue_usd / active_customer_count. NULL when active_customer_count = 0.
+
+reuse_notes:
+  - >
+    sales.datasets.active_customer_90d reused as the active-customer definition.
+    Original is a Databricks/Spark SQL date-series view; the metric view inlines
+    the equivalent single-date slice in Snowflake SQL (DATEADD vs date_sub).
+  - >
+    FINANCE.LOGIC.RECOGNIZE_REVENUE reused as the sole revenue computation
+    mechanism.  It handles invoice/refund netting, recognition timing, and
+    multi-currency FX conversion — no revenue logic is duplicated in the metric.
+  - >
+    FINANCE.LOGIC.NORMALIZE_CURRENCY and FINANCE.DATASETS.FACT_BILLABLE_EVENTS
+    are reused transitively through RECOGNIZE_REVENUE.  They are listed as
+    dependencies for impact-analysis traceability but not called directly.
+
+assumptions:
+  - >
+    Active-customer window anchors on invoice_date (transaction date).
+    RECOGNIZE_REVENUE uses RECOGNITION_DATE (which may differ when POSTED_DATE
+    is populated). Both windows span the same 90-day calendar range.
+  - >
+    RECOGNIZE_REVENUE returns only IS_RECOGNIZABLE = TRUE events and applies
+    NET_AMOUNT sign conventions (negative for refunds) so no additional
+    filtering is needed in the metric view.
+  - >
+    ARPAC returns NULL (not 0) when active_customer_count = 0 (NULLIF guard)
+    to avoid a misleading zero value.
+  - >
+    Active customers with zero recognized revenue in the period are included
+    in the denominator (correctly diluting ARPAC) with a net contribution of 0
+    via the LEFT JOIN.
+  - >
+    Multi-currency revenue is handled by NORMALIZE_CURRENCY inside
+    RECOGNIZE_REVENUE; all amounts are returned in USD.

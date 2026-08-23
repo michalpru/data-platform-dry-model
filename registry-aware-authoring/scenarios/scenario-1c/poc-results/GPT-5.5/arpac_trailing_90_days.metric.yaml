@@ -1,0 +1,59 @@
+name: arpac_trailing_90d
+display_name: Trailing 90-Day ARPAC
+description: >
+  Average Revenue per Active Customer for executive reporting. The metric divides
+  net recognized revenue in USD over the trailing 90-day window by the distinct
+  count of active customers in the same reporting window. Revenue is counted only
+  for customers included in the active-customer denominator.
+status: proposed
+domain: executive_reporting
+grains:
+  - reporting_date
+unit: USD
+formula: net_recognized_revenue_usd_90d / active_customer_count_90d
+window:
+  type: trailing
+  size: 90
+  unit: day
+  inclusive: true
+  lower_bound: reporting_date - 90 days
+  upper_bound: reporting_date
+numerator:
+  name: net_recognized_revenue_usd_90d
+  description: >
+    Sum of recognized revenue in USD for active customers over the trailing
+    90-day reporting window. Refunds and credit notes are included through the
+    reused recognized-revenue logic, so the numerator is net of those events.
+  source: FINANCE.LOGIC.RECOGNIZE_REVENUE
+  expression: COALESCE(SUM(recognized_revenue_usd), 0)
+  filters:
+    - recognition_date between reporting_date - 90 days and reporting_date
+    - customer_id is in the active-customer denominator for reporting_date
+denominator:
+  name: active_customer_count_90d
+  description: >
+    Distinct count of customers marked active by the existing executive-dashboard
+    active-customer definition.
+  source: sales.datasets.active_customer_90d
+  expression: COUNT(DISTINCT customer_id)
+  filters:
+    - is_active_customer_90d = TRUE
+reused_artifacts:
+  - name: sales.datasets.active_customer_90d
+    role: denominator
+    reason: Existing trailing-90-day active-customer definition used by executive dashboards.
+  - name: FINANCE.LOGIC.RECOGNIZE_REVENUE
+    role: numerator
+    reason: Existing reusable function for recognized revenue in USD over a date range.
+  - name: FINANCE.DATASETS.FACT_BILLABLE_EVENTS
+    role: numerator input
+    reason: Existing net billable-event dataset combining invoice and refund events.
+  - name: FINANCE.LOGIC.NORMALIZE_CURRENCY
+    role: numerator dependency
+    reason: Existing currency conversion function used by recognized-revenue logic.
+implementation: arpac_trailing_90_days.sql
+validation_rules:
+  - active_customer_count_90d >= 0
+  - net_recognized_revenue_usd_90d may be negative when refunds exceed invoices
+  - arpac_usd_90d is null when active_customer_count_90d is zero
+  - numerator includes only customer_id values present in the denominator for the same reporting_date
