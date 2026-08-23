@@ -1,8 +1,9 @@
 # ARPAC Registry-Aware Authoring PoC — Results Analysis
 
 > Analysis of the PoC runs for **Scenario 1A — Workspace-only (base tables)**,
-> **Scenario 1B — Workspace-only (base tables + domain repositories)**, and
-> **Scenario 2 — Registry-aware authoring** across three models
+> **Scenario 1B — Workspace-only (base tables + domain repositories)**,
+> **Scenario 1C — Workspace-only (all existing codebase)**, and **Scenario 2 — Registry-aware
+> authoring** across three models
 > (**GPT-5.5**, **Claude Sonnet 4.6**, **Claude Opus 4.8**), scored against the
 > failure patterns catalogued in §2 and the goals in
 > [demo-walkthrough.md](demo-walkthrough.md) and [README.md](README.md).
@@ -10,8 +11,8 @@
 - Scope analyzed: `scenarios/<scenario>/poc-results/<model>/`
 - Method: each run is checked against the failure patterns in §2; §3 links every model and
   scenario to the patterns it hit or avoided.
-- Task: does **Scenario 2 — Registry-aware authoring** prevent the silent duplication that the
-  workspace-only scenarios (1A/1B) produce?
+- Task: does **Scenario 2 — Registry-aware authoring** prevent the silent duplication and
+  wrong-artifact selection that the workspace-only scenarios (1A/1B/1C) produce?
 
 ---
 
@@ -21,24 +22,27 @@ Reuse can only happen if the artifact is reachable. This table anchors every jud
 a model cannot be faulted for not reusing something it could not see, and the *whole point* of
 Scenario 2 is that the registry makes certified, cross-engine artifacts reachable.
 
-| Artifact | Authority / intent | 1A workspace | 1B workspace | 2 (registry + workspace) |
-|---|---|:---:|:---:|:---:|
-| `shared.dim_customers` (`.is_active`) | 12-month order flag — **NOT** to be reused as active def | ✓ | ✓ | ✓ |
-| `shared.fact_invoices` | base table | ✓ | ✓ | ✓ |
-| `shared.fact_refunds` | base table | ✓ | ✓ | ✓ |
-| `finance.dim_exchange_rates` | base FX table | ✗ | ✓ | ✓ |
-| `finance.invoice_revenue` | **retired** view — **NOT** to be reused | ✗ | ✓ | ✓ |
-| `finance.normalize_currency` | shared FX logic | ✗ | ✓ | ✓ |
-| `finance.fact_billable_events` | canonical event stream (invoices ∪ refunds) | ✗ | ✗ | ✓ |
-| `finance.logic.recognize_revenue` | **certified** — **intended reuse** (numerator) | ✗ | ✗ | ✓ |
-| `sales.commercial_customer_status_90d` | **certified** — **intended reuse** (denominator) | ✗ | ✗ | ✓ |
-| `marketing.logic.active_customer` | domain-local login rule — **NOT** to be reused | ✗ | ✓ | ✗ |
+| Artifact | Authority / intent | 1A workspace | 1B workspace | 1C workspace | 2 (registry + workspace) |
+|---|---|:---:|:---:|:---:|:---:|
+| `shared.dim_customers` (`.is_active`) | 12-month order flag — **NOT** to be reused as active def | ✓ | ✓ | ✓ | ✓ |
+| `shared.fact_invoices` | base table | ✓ | ✓ | ✓ | ✓ |
+| `shared.fact_refunds` | base table | ✓ | ✓ | ✓ | ✓ |
+| `finance.dim_exchange_rates` | base FX table | ✗ | ✓ | ✓ | ✓ |
+| `finance.invoice_revenue` | **retired** view — **NOT** to be reused | ✗ | ✓ | ✓ | ✓ |
+| `finance.normalize_currency` | shared FX logic | ✗ | ✓ | ✓ | ✓ |
+| `finance.fact_billable_events` | canonical event stream (invoices ∪ refunds) | ✗ | ✗ | ✓ | ✓ |
+| `finance.logic.recognize_revenue` | **certified** — **intended reuse** (numerator) | ✗ | ✗ | ✓ | ✓ |
+| `sales.commercial_customer_status_90d` | **certified** — **intended reuse** (denominator) | ✗ | ✗ | ✓ | ✓ |
+| `sales.active_customer_90d` | Sales billed-customer proxy — **NOT** to be reused | ✗ | ✗ | ✓ | ✗ |
+| `marketing.logic.active_customer` | domain-local login rule — **NOT** to be reused | ✗ | ✓ | ✓ | ✗ |
 
 **Key consequence:** in **1A** the correct active-customer and revenue-recognition artifacts do not
 exist, so *no model can be correct* — divergence is guaranteed. In **1B** the *retired* revenue view
 and the *marketing* active rule are visible while the certified ones are not, so similarity search
-actively leads models toward the wrong artifacts. Only in **2** are the certified artifacts (and the
-Databricks-only status view) reachable at all.
+actively leads models toward the wrong artifacts. In **1C** both certified artifacts become visible,
+but the Sales invoice-only look-alike does too: code availability improves the numerator outcome but
+still supplies no authority signal for the denominator. Only in **2** does the registry make that
+authority explicit and resolve its runtime binding.
 
 ### The active-customer definition trap
 
@@ -168,6 +172,25 @@ no way to reach the *certified* active definition, so it invented a substitute (
 activity) — still not the governed answer. **No model can fully succeed in 1B**, confirming the PoC
 thesis that similarity without authority is unsafe.
 
+### Scenario 1C — all existing codebase
+
+| Decision point (failure pattern) | GPT-5.5 | Sonnet 4.6 | Opus 4.8 |
+|---|:--:|:--:|:--:|
+| Reuses `recognize_revenue` (certified numerator) | ✅ | ✅ | ✅ |
+| Reuses `commercial_customer_status_90d` (certified denominator) | ❌ chose `active_customer_90d` | ❌ chose `active_customer_90d` | ❌ chose `active_customer_90d` |
+| No re-derivation of revenue / refund / currency (A1–A3) | ✅ | ✅ | ✅ |
+| Avoids Sales billed-customer proxy (B2/B3) | ❌ | ❌ | ❌ |
+| Handles the Snowflake ↔ Databricks boundary (C1/C2) | ❌ direct cross-engine reference | ✅ logic port, no bridge | ✅ logic port, no bridge |
+| Restricts numerator to active customers (C4) | ✅ | ✅ | ✅ |
+| Parameterized reporting date, not `CURRENT_DATE()` (C3) | ✅ | ❌ | ❌ |
+
+**Observation:** exposing all source code produces a material but incomplete improvement. Every model
+reuses the certified numerator; every model nevertheless chooses the Sales `active_customer_90d`
+look-alike over the certified `commercial_customer_status_90d`. The certified view's unresolved Sales
+dependencies make it less convenient, while the look-alike is executable from `shared.*` tables. This
+is not a failure of retrieval: both candidates were retrieved. It is a failure of authority — no
+source file identifies which definition is the certified executive denominator.
+
 ### Scenario 2 — registry-aware authoring
 
 | Decision point (failure pattern) | GPT-5.5 | Sonnet 4.6 | Opus 4.8 |
@@ -230,6 +253,7 @@ scenarios: `is_active` in 1A and the Marketing rule in 1B are both simply a zero
 |---|:--:|:--:|:--:|
 | 1A | ❌ No | ❌ No | ❌ No |
 | 1B | ❌ No | ❌ No | ❌ No |
+| 1C | ❌ No | ❌ No | ❌ No |
 | 2 | ✅ Yes | ✅ Yes | ✅ Yes |
 
 ### Scenario 1A — workspace, base tables only
@@ -269,6 +293,25 @@ the date), not from getting ARPAC right. If anything 1B is the more dangerous fa
 looks more complete while still resting on the retired revenue view and a non-enterprise
 active-customer rule.
 
+### Scenario 1C — workspace, all existing codebase
+
+| Governed component | GPT-5.5 | Sonnet 4.6 | Opus 4.8 |
+|---|:--:|:--:|:--:|
+| Certified active-customer def (A4, 4) | 0 | 0 | 0 |
+| Certified revenue recognition (A1, 3) | 3 | 3 | 3 |
+| Refund netting (A2, 2) | 2 | 2 | 2 |
+| Currency normalization (A3, 2) | 2 | 2 | 2 |
+| Cross-engine composition (C1/C2, 2) | 0 | 2 | 2 |
+| Active-only numerator (C4, 1) | 1 | 1 | 1 |
+| Reproducible date (C3, 1) | 1 | 0 | 0 |
+| **Total** | **9 / 15** | **10 / 15** | **10 / 15** |
+
+All three models now score the numerator components because `recognize_revenue` is visible and reused.
+All three score zero on the highest-weighted component because they select the Sales invoice-only
+look-alike rather than the certified commercial-status definition. GPT also receives no cross-engine
+points for referencing the Databricks view directly from Snowflake; Sonnet and Opus port the rule,
+which avoids that unsupported join but does not make the selected denominator governed.
+
 ### Scenario 2 — registry-aware authoring
 
 | Governed component | GPT-5.5 | Sonnet 4.6 | Opus 4.8 |
@@ -289,20 +332,19 @@ bridge-object name (C2). Namespace and two-layer-structure differences are regis
 
 ### Aggregate (normalized to 100)
 
-| Model | 1A | 1B | 2 |
-|---|:--:|:--:|:--:|
-| **GPT-5.5** | 27% | 40% | 100% |
-| **Sonnet 4.6** | 27% | 33% | 93% |
-| **Opus 4.8** | 27% | 33% | 100% |
+| Model | 1A | 1B | 1C | 2 |
+|---|:--:|:--:|:--:|:--:|
+| **GPT-5.5** | 27% | 40% | 60% | 100% |
+| **Sonnet 4.6** | 27% | 33% | 67% | 93% |
+| **Opus 4.8** | 27% | 33% | 67% | 100% |
 
-**The point of the matrix:** workspace-only authoring **fails for every model in both 1A and 1B**
-(≤40%), no matter how much workspace context is added or how careful the model is — every
-workspace-only run scores **zero on the two decisive components** (certified active definition A4 and
-certified recognition A1), because those definitions are simply not reachable. The 1B totals edge
-above 1A only on incidental, low-weight sub-components, never on the parts that make ARPAC correct.
-Registry-aware authoring **passes for every model** (≥93%). The jump is not a model-quality effect;
-it is the registry supplying the authority and cross-engine reach that no amount of workspace search
-can — the PoC's core finding.
+**The point of the matrix:** workspace-only authoring **fails for every model in 1A, 1B, and 1C**
+(≤67%). More workspace context produces real partial improvement: in 1C all models reuse the
+certified recognition rule. But every workspace-only run still scores **zero on the decisive
+active-customer component** (A4), because code does not declare which visible candidate is the
+certified enterprise denominator. Registry-aware authoring **passes for every model** (≥93%). The
+gap is not a model-quality effect; it is the registry supplying governed authority and cross-engine
+binding information that workspace search alone cannot supply.
 
 ---
 
@@ -312,7 +354,7 @@ can — the PoC's core finding.
 
 - **Scenario 2 fully reproduced the intended outcome across all three models.** Every model reused
   both certified artifacts, composed only the missing ratio, and refused the retired/base-table
-  paths. The registry converted a task that every workspace-only model fails (1A/1B: ≤40%) into one
+  paths. The registry converted a task that every workspace-only model fails (1A/1B/1C: ≤67%) into one
   that every model passes (2: ≥93%).
 - **Cross-engine surfacing worked.** All three models detected that the active-customer view is
   Databricks-only with no Snowflake binding, and none silently invented a bridge and shipped it as
@@ -323,12 +365,15 @@ can — the PoC's core finding.
 - **"One identity, multiple bindings" was exercised.** GPT resolved `recognize_revenue` to its **dbt
   macro** binding while Opus/Sonnet used the **Snowflake UDF** — both correctly treated as the same
   certified capability, not duplication.
-- **The 1A/1B failure modes reproduced as designed**, validating the PoC's narrative: 1A silently
-  re-derives; 1B reuses the wrong-but-similar artifacts.
+- **The 1A/1B/1C failure modes reproduced as designed**, validating the PoC's narrative: 1A silently
+  re-derives; 1B reuses the wrong-but-similar artifacts; 1C reaches the right numerator but still
+  selects a wrong denominator without an authority signal.
 
 ### What did not work / weaknesses observed
 
-- **1B fails uniformly on correctness; only its *visibility* varies by model.** Sonnet and GPT
+- **1B and 1C fail uniformly on governed correctness; only their partial scores vary by model.** In
+  1C, all models reuse `recognize_revenue` but choose the Sales invoice-only look-alike for the
+  denominator. In 1B, Sonnet and GPT
   reused the wrong artifacts and asserted the Marketing rule was "the authoritative active-customer
   definition"; Opus invented its own substitute instead. All three scored zero on the two decisive
   components (A4, A1) and none delivered the correct governed ARPAC — 1B is a failure for all three.
@@ -355,10 +400,10 @@ Concretely, for the same prompt, the registry gave the engineer:
 1. **Authority, not just similarity.** The engineer reused the *certified* revenue and active-customer
    definitions instead of the retired view and Marketing rule that 1B's similarity search surfaced.
    Two dashboards now compute one comparable ARPAC number.
-2. **Reach beyond the workspace and across engines.** `recognize_revenue` and
-   `commercial_customer_status_90d` are invisible to 1A/1B workspace search; the registry exposed
-   them and resolved the correct physical binding per runtime (Snowflake UDF / dbt macro / Databricks
-   view).
+2. **Authority and binding resolution beyond code search.** `recognize_revenue` and
+  `commercial_customer_status_90d` are invisible to 1A/1B workspace search; in 1C they are visible,
+  but the registry is still what identifies the correct definition and resolves its physical binding
+  per runtime (Snowflake UDF / dbt macro / Databricks view).
 3. **A shrunk authoring surface.** The engineer wrote only the ARPAC ratio (and a thin components
    join) instead of re-deriving revenue recognition, refund netting, currency normalization and the
    activity window — four governed rules avoided.
@@ -375,13 +420,13 @@ Concretely, for the same prompt, the registry gave the engineer:
 **Yes — the results are satisfying and do reflect the value of the DRY Artifact Registry**, with
 caveats worth acting on.
 
-- The **1A → 1B → 2 progression is demonstrated clearly and reproducibly**: divergence (1A),
-  confident wrong-reuse (1B), canonical composition (2). The registry moves a model-dependent,
-  error-prone task to a near-deterministic correct one.
-- The value is **uniform across models, not model-dependent**: every workspace-only run (1A and 1B,
-  all three models) fails to deliver the correct governed ARPAC (≤40%), and every registry-aware run
-  passes (≥93%). The registry — not model quality — is what closes the gap. That is the cleanest
-  possible statement of the PoC's thesis: the limitation is the *approach*, not the model.
+- The **1A → 1B → 1C → 2 progression is demonstrated clearly and reproducibly**: divergence (1A),
+  confident wrong-reuse (1B), partial improvement but a wrong denominator (1C), canonical
+  composition (2). The registry moves a model-dependent, error-prone task to a near-deterministic
+  correct one.
+- The value is **uniform across models, not model-dependent**: every workspace-only run (1A, 1B,
+  and 1C, all three models) fails to deliver the correct governed ARPAC (≤67%), and every
+  registry-aware run passes (≥93%). The registry — not model quality — is what closes the gap.
 
 ### Recommended changes
 
@@ -393,10 +438,10 @@ caveats worth acting on.
 | **Prompt** | Two-layer composition not enforced (GPT merged) | State that the components dataset and the metric are **separate reusable artifacts**, so the per-customer dataset is independently consumable. |
 | **Registry methods** | Cross-engine gap is surfaced but there is no first-class "missing binding" result type | Consider a structured `resolve_binding` response field (e.g. `status: missing_target_binding`, `bound_on: [...]`) so agents handle the gap uniformly instead of prose. |
 | **Registry methods** | ARPAC didn't pre-exist, so `search_artifacts` returned nothing (correct) | Optionally add a `register_artifact` path so the "safe to author, then register" step the `compare` verdict recommends can be closed in-loop. |
-| **PoC framing** | Aggregate 1B % varies by incidental sub-components and can mask the uniform failure | Headline the **decisive verdict** (correct governed ARPAC delivered? No for every workspace-only run) rather than the percentage; keep the component breakdown for detail. |
+| **PoC framing** | Partial scores improve from 1A through 1C but can mask the uniform failure | Headline the **decisive verdict** (correct governed ARPAC delivered? No for every workspace-only run) rather than the percentage; keep the component breakdown for detail. |
 
 **Bottom line:** the PoC achieves its goal. Scenario 2 authoring is governed, cross-engine, and
-duplication-free across every model tested, and the 1A/1B baselines fail in exactly the ways the
+duplication-free across every model tested, and the 1A/1B/1C baselines fail in exactly the ways the
 whitepaper predicts. The remaining work is tightening the agent/prompt so the generated artifacts are
 registry-ready by construction (namespace, two-layer structure, no fabricated bindings) and making the
 Verify stage an explicit, recorded output.

@@ -67,7 +67,7 @@ fully governed — certified numerator, clean composition, confident commentary 
 | Claude Sonnet 4.6 | ✅ reused certified | ❌ `active_customer_90d` decoy | ❌ **No** |
 | Claude Opus 4.8 | ✅ reused certified | ❌ `active_customer_90d` decoy | ❌ **No** |
 
-Scored on the same 15-point correctness rubric as 1A/1B/2, every model lands at **≈60% and still
+Scored on the same 15-point correctness rubric as 1A/1B/2, the models land at **60–67% and still
 fails**: the numerator components (recognition A1, netting A2, currency A3) now all score, but the
 single highest-weighted component — the certified active-customer definition (**A4**) — scores
 **zero**, because a wrong artifact was chosen. Model-level differences are minor and offsetting:
@@ -78,14 +78,14 @@ Snowflake (no fabricated bridge) but anchored on `CURRENT_DATE()` (C3). None of 
 | Model | 1A | 1B | 1C | 2 |
 |---|:--:|:--:|:--:|:--:|
 | GPT-5.5 | 27% | 40% | 60% | 100% |
-| Claude Sonnet 4.6 | 27% | 33% | 60% | 93% |
-| Claude Opus 4.8 | 27% | 33% | 60% | 100% |
+| Claude Sonnet 4.6 | 27% | 33% | 67% | 93% |
+| Claude Opus 4.8 | 27% | 33% | 67% | 100% |
 
-A **higher** partial score than 1B with the **same** verdict is the sharpest form of the PoC's
-warning: **more visible code buys more convincing output, not a correct one.** Only the registry
-(Scenario 2) carries the fact that closes the gap — *which* of the three active-customer definitions
-is the certified enterprise denominator — a governance fact absent from every line of the source, no
-matter how much of it is exposed.
+A **higher** partial score than 1B with the **same** verdict shows the boundary clearly: **more visible
+code improves partial correctness, but it does not identify the correct governed composition.** Only
+the registry (Scenario 2) carries the fact that closes the gap — *which* of the three active-customer
+definitions is the certified enterprise denominator — a governance fact absent from every line of the
+source, no matter how much of it is exposed.
 
 See the per-model outputs in [`GPT-5.5/`](GPT-5.5/), [`Claude-Sonnet-4.6/`](Claude-Sonnet-4.6/), and
 [`Claude-Opus-4.8/`](Claude-Opus-4.8/), and the full failure-pattern analysis in

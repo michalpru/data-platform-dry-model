@@ -15,7 +15,7 @@ ARPAC does not exist yet as a governed metric. But its parts do. **Net recognize
 
 So the real task is not "write ARPAC from scratch." It is "compose ARPAC for executive reporting **from definitions already approved as company-wide canonicals**." That is a reuse problem, and it is exactly where AI-assisted authoring is supposed to help.
 
-This article reports a small proof of concept that tested how well it does. The result is the interesting part: when the AI coding assistant could use only the code available in its workspace, **none of the models produced the correct governed metric** — even when that workspace contained the *entire* codebase — and giving it more code made the answer more confident and more wrong.
+This article reports a small proof of concept that tested how well it does. The result is the interesting part: when the AI coding assistant could use only the code available in its workspace, **none of the models produced the correct governed metric** — even when that workspace contained the *entire* codebase. More code improved partial correctness, but it neither identified the governed definition the metric required nor resolved the missing runtime binding for it.
 
 ---
 
@@ -96,10 +96,12 @@ Scored on the single question — *did it deliver the correct governed ARPAC?* �
 | Model | 1A (base tables) | 1B (base tables + domain repos) | 1C (all existing codebase) | 2 (registry-aware) |
 |---|:--:|:--:|:--:|:--:|
 | **GPT-5.5** | 27% | 40% | 60% | 100% |
-| **Claude Sonnet 4.6** | 27% | 33% | 60% | 93% |
-| **Claude Opus 4.8** | 27% | 33% | 60% | 100% |
+| **Claude Sonnet 4.6** | 27% | 33% | 67% | 93% |
+| **Claude Opus 4.8** | 27% | 33% | 67% | 100% |
 
-The verdict for every workspace-only run — all three models across 1A, 1B, and 1C — is the same: **no, the governed ARPAC was not delivered.** The climb from 1A (27%) to 1B (33–40%) to 1C (60%) tracks only incidental gains — reusing an FX function, parameterizing a date, and in 1C finally reaching the certified recognition rule for the numerator — never the one decisive part the denominator turns on: *which* of the visible active-customer definitions is the certified one. Even with the entire codebase in view, that fact is not in the code, so 1C scores higher and still fails. (Full rubric and per-component scores: [poc-results.md](poc-results.md); Scenario 1C detail: [scenarios/scenario-1c/poc-results/README.md](scenarios/scenario-1c/poc-results/README.md).)
+The verdict for every workspace-only run — all three models across 1A, 1B, and 1C — is the same: **no, the governed ARPAC was not delivered.** The climb from 1A (27%) to 1B (33–40%) to 1C (60–67%) is meaningful partial progress: in 1C every model reaches the certified recognition rule for the numerator. But every model still misses the decisive denominator fact — *which* of the visible active-customer definitions is the certified one. Even with the entire codebase in view, that authority is not in the code, so 1C scores higher and still fails. (Full rubric and per-component scores: [poc-results.md](poc-results.md); Scenario 1C detail: [scenarios/scenario-1c/poc-results/README.md](scenarios/scenario-1c/poc-results/README.md).)
+
+These results are **use-case-specific**, not precise predictions for every metric or codebase. A different mix of visible artifacts could produce better or worse workspace-only results. The PoC instead shows a repeated tendency: when several plausible definitions exist, code access alone does not establish which one is authoritative or how to consume it in the target runtime.
 
 ---
 
@@ -162,7 +164,7 @@ The outcome held across all three models. Every one:
 - resolved one logical identity to the right binding per runtime — a Snowflake UDF *or* a dbt macro for recognition, a Databricks view for active status — so the *same* certified definition was referenced regardless of engine, rather than re-implemented per stack;
 - and, when the active-customer status resolved only to Databricks while the target engine was Snowflake, surfaced the missing binding as an integration requirement rather than silently shipping a cross-engine join — two of the three invented nothing, while the third flagged the gap but minted a placeholder Snowflake name (its single deduction, 14/15).
 
-The scoreboard jump from ≤60% to ≥93% is not a model-quality effect; it reflects that only the registry made the certified inputs and their bindings reachable and surfaced their governed authority — something no amount of workspace search can supply, not even the whole codebase in Scenario 1C.
+The scoreboard jump from ≤67% to ≥93% is not a model-quality effect; it reflects that only the registry surfaced governed authority and the required bindings — information that workspace search cannot supply, not even with the whole codebase in Scenario 1C.
 
 Scenario 2 was not flawless — the models needed steering on registry-readiness polish (a consistent namespace; keeping the components dataset separate from the metric), and the fabricated binding above was a small correctness deduction, not merely cosmetic. None of it changed the outcome: every model produced the correctly-governed ARPAC composition — reusing the certified definitions and flagging, not faking, the one missing cross-engine binding, which stays an explicit integration precondition rather than a live cross-engine execution. And none of this replaces dbt or the semantic layer: those remain the primary mechanisms for implementing and consuming reuse, while the registry adds the organization-level *certified* status and the cross-engine, multi-implementation bindings that a single project graph or semantic layer does not hold (see [README §10](README.md), [poc-results.md](poc-results.md)). The PoC exercises an enterprise-wide canonical, but the same registry model also governs domain-scoped canonicals within a single domain — the adoption boundary is heterogeneity and criticality, not enterprise scope alone.
 
