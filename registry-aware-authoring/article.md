@@ -36,13 +36,14 @@ The prompt is the same business intent in every run: "I need a trailing-90-day A
 - Numerator = net recognized revenue in USD, over the trailing 90 days, counting *only* active customers
 - Denominator = the count of active customers using the definition used in other executive dashboards... 
 Reuse existing definitions, datasets, or functions where appropriate, and explain what was reused"
-(Full prompts and recorded runs: [demo walkthrough](demo-walkthrough.md).) Each scenario's repositories are mocked and deliberately scoped, so the test isolates *which context the assistant can reach*.
 
-One scoring rule matters up front, because it looks harsh and is deliberate. A run is graded on **one** question: *did it deliver the correct, governed ARPAC?* If a model cannot produce a component because the certified definition was unreachable, that scores **zero** — exactly like getting it wrong. The workspace-only scenarios deliberately withhold direct warehouse and catalog access; an MCP tool for either could solve that reachability gap. The test asks whether the additional governance facts needed to select and bind the correct definition are available.
+Full prompts and recorded runs are documented in [demo walkthrough](demo-walkthrough.md). Each scenario's repositories are mocked and deliberately scoped, so the test isolates *which context the assistant can reach*.
+
+**One deliberately harsh grading question** decides each run: *did it deliver the correct, governed ARPAC?* If a needed composable artifact like was unreachable, that component scores **zero**, exactly like getting it wrong. The workspace-only scenarios withhold direct warehouse and catalog access (an MCP tool for either could close that reachability gap); the test asks whether the governance facts needed to select and bind the correct definition are available.
 
 ---
 
-## Why exposing the code workspace to Copilot doesn't deliver governed reuse
+## Why exposing the code workspace to AI Coding Asssitant doesn't deliver governed reuse
 
 ### Scenario 1A — Workspace-only (base tables): the duplication amplifier
 
@@ -50,7 +51,7 @@ This is the baseline. With only base tables visible and nothing reusable to find
 
 ### Scenario 1B — Workspace-only (base tables + domain repositories): similarity without authority
 
-The obvious fix is to give the AI coding assistant more to work with, so Scenario 1B adds some artifacts (functions an datasets) from the domain repositories. This is where the result becomes counter-intuitive, and where the article's headline sits: **more context did not fix the answer — it made the wrong one more convincing.**
+The obvious fix is to give the AI coding assistant more to work with, so Scenario 1B adds some artifacts (functions and datasets) from the domain repositories. This is where the result becomes counter-intuitive, and where the article's headline sits: **more context did not fix the answer — it made the wrong one more convincing.**
 
 With domain code visible, the models found similar artifacts and reused them — the wrong ones:
 
@@ -91,11 +92,13 @@ AI-assisted authoring makes it cheap to *write* code and to *find* something tha
 
 Scored on the single question — *did it deliver the correct governed ARPAC?* — the workspace-only setups fail for every model:
 
-| Model | 1A (base tables) | 1B (base tables + domain repos) | 1C (all existing codebase) | 2 (registry-aware) |
+| Model | 1A (base tables) | 1B (base tables + selected domain repos) | 1C (all existing codebase) | 2 (registry-aware) |
 |---|:--:|:--:|:--:|:--:|
 | **GPT-5.5** | 27% | 40% | 60% | 100% |
 | **Claude Sonnet 4.6** | 27% | 33% | 67% | 93% |
 | **Claude Opus 4.8** | 27% | 33% | 67% | 100% |
+
+Each percentage is the run's score on a 15-point rubric — points awarded across the governed components (recognition, refund netting, currency, activity window, the certified active-customer definition, and correct composition/binding) — expressed as a fraction of the 15 available.
 
 The verdict for every workspace-only run — all three models across 1A, 1B, and 1C — is the same: **no, the governed ARPAC was not delivered.** The climb from 1A (27%) to 1B (33–40%) to 1C (60–67%) is meaningful partial progress: in 1C every model reaches the certified recognition rule for the numerator. But every model still misses the decisive denominator fact — *which* of the visible active-customer definitions is the certified one. Even with the entire codebase in view, that authority is not in the code, so 1C scores higher and still fails. (Full rubric and per-component scores: [poc-results.md](poc-results.md); Scenario 1C detail: [scenarios/scenario-1c/poc-results/README.md](scenarios/scenario-1c/poc-results/README.md).)
 
@@ -103,15 +106,15 @@ These results are **use-case-specific**, not precise predictions for every metri
 
 ---
 
-## The governance control plane: exposing the registry to Copilot
+## The governance control plane: exposing the registry to AI coding assistant
 
 ### What the registry is
 
-The turning point in the PoC is a small **DRY Artifact Registry** — the concept introduced in the [whitepaper](https://michalpru.github.io/data-platform-dry-model/). It is not a new warehouse or catalog. It is a thin **reuse-governance metadata** layer over the repositories, warehouses, and catalogs that already exist, adding only the facts they do not hold: a stable logical identity per artifact, its lifecycle state, reuse intent and scope, owner, and its **implementation bindings** — the physical objects (a warehouse UDF, a dbt macro, a Databricks view) that realise the same logical definition across engines and dialects. As the whitepaper describes, it stores manifests for the three reuse interfaces — **callable logic, queryable datasets, and semantic contracts** — as a vendor-neutral reuse architecture. It stores metadata and pointers; it never stores or executes code.
+The turning point in the PoC is a small **DRY Artifact Registry** — the concept introduced in the [whitepaper](https://michalpru.github.io/data-platform-dry-model/). It is not a new warehouse or catalog. It is a thin **reuse-governance metadata** layer over the repositories, warehouses, and catalogs that already exist, adding only the facts they do not hold: a stable logical identity per artifact, its lifecycle state, reuse intent and scope, owner, and its **implementation bindings** — the physical objects (a warehouse UDF, a dbt macro, a Databricks table/view) that realise the same logical definition across engines and dialects. As the whitepaper describes, it stores manifests for the three reuse interfaces — **callable logic, queryable datasets, and semantic contracts** — as a vendor-neutral reuse architecture. It stores metadata and pointers; it never stores or executes code.
 
-This is what separates it from generic code retrieval, and heads off the *"isn't this just RAG?"* objection. The registry is **not** a code- or data-distribution mechanism and never sits in the query-execution path; its lookup runs over *governance metadata*, not over a corpus of source. Where workspace similarity answers *"what looks like this,"* the registry answers the question the task actually turns on: *which definition is authoritative, for what scope, and how do I bind to it from my runtime.* Retrieval surfaces candidates; the registry surfaces the *declared, governed* authority and the runtime bindings. Put differently: RAG is a retrieval technique, the registry is a reuse-governance control plane — a retrieval system could even index the registry's records, but retrieval alone cannot certify an artifact, choose its runtime binding, or make anyone accountable for it.
+The registry is **not** a code- or data-distribution mechanism and never sits in the query-execution path; its lookup runs over *governance metadata*, not a corpus of source. Where workspace similarity answers *"what looks like this,"* the registry answers what the task turns on: *which definition is authoritative, for what scope, and how do I bind to it from my runtime.* That also answers *"isn't this just RAG?"* A retrieval system could index registry records, but retrieval alone cannot certify an artifact, choose its runtime binding, or hold anyone accountable for it.
 
-Direct warehouse and data-catalog MCP tools can also expose deployed objects, schemas, lineage, and any governance metadata that their systems maintain. They may therefore close the **reachability** gap in Scenarios 1A and 1B. If they consistently expose cross-domain certification, lifecycle, reuse scope, logical identity, and target-runtime bindings, they can provide or implement the same governance capability described here. This PoC does not compare those tools. Its registry is a vendor-neutral layer that consolidates those facts across repositories, warehouses, and catalogs when no one source carries them all.
+Warehouse MCP tools can expose deployed objects and schemas; catalog MCP tools can add lineage and the governance metadata their systems maintain. They may therefore close the **reachability** gap in Scenarios 1A and 1B, and could provide this capability if they consistently expose the same governed metadata. This PoC does not compare those tools. The registry instead acts as an integration layer: it combines source-control declarations with repository, warehouse, catalog, and lineage signals into one normalized reuse-governance view. That avoids requiring every source system to carry the full metadata set or relying on the AI to infer authority and bindings from disparate signals.
 
 ### What was implemented
 
