@@ -1,4 +1,4 @@
-# Scenario 2 — `compare_code` verification battery
+# Scenario 2 — `compare_code` verification suite
 
 This folder holds **recorded evidence** that the DRY registry's reuse-detection service
 (`compare_code`) actually fires — beyond the single "safe to author" check shown in the
@@ -28,7 +28,7 @@ MCP `compare` tool and the CLI both call. Nothing here is hand-edited.
     (comments stripped, lower-cased, reflowed) → normalization should collapse it to a direct match.
   The other inputs are **not** crafted: the negative control and the positive controls are real files
   (a model-generated `scenario-1a` output, the three generated Scenario 2 outputs, and the PySpark
-  `active_customer.py`), so the battery mixes synthetic probes with genuine AI output.
+  `active_customer.py`), so the suite mixes synthetic probes with genuine AI output.
 - **[`results/`](results/)** — the **raw `compare_code` JSON payload** for each run (similarity
   signals + governance evidence + summary), exactly as the CLI/MCP tool returns it. Each file is one
   comparison. **Which input a result belongs to is encoded in the filename** and mapped in the

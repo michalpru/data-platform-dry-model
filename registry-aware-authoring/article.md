@@ -116,13 +116,11 @@ These results are **use-case-specific**, not precise predictions for every metri
 
 The turning point in the PoC is a small **DRY Artifact Registry** — the concept introduced in the [whitepaper](https://michalpru.github.io/data-platform-dry-model/). It is not a new warehouse or catalog. It is a thin **reuse-governance metadata** layer over the repositories, warehouses, and catalogs that already exist, adding only the facts they do not hold: a stable logical identity per artifact, its lifecycle state, reuse intent and scope, owner, and its **implementation bindings** — the physical objects (a warehouse UDF, a dbt macro, a Databricks table/view) that realise the same logical definition across engines and dialects. As the whitepaper describes, it stores manifests for the three reuse interfaces — **callable logic, queryable datasets, and semantic contracts** — as a vendor-neutral reuse architecture. It stores metadata and pointers; it never stores or executes code.
 
-The PoC uses a small **DRY Artifact Registry** — the reuse-governance control plane introduced in the [whitepaper](https://michalpru.github.io/data-platform-dry-model/). It is not a new warehouse, catalog, or code store. It is a vendor-neutral metadata layer that gives each reusable artifact a stable logical identity, lifecycle, reuse scope, owner, and **implementation bindings** — the pointers to the physical objects (warehouse UDFs, dbt macros, Databricks tables, etc.). It governs three reuse interfaces — **callable logic, queryable datasets, and semantic contracts** — through manifests; it never stores the implementation code, and never sits in the query-execution path.
+The PoC uses a small **DRY Artifact Registry** — the reuse-governance control plane introduced in the [whitepaper](https://michalpru.github.io/data-platform-dry-model/). It is not a new warehouse, catalog, or code store. It is a vendor-neutral metadata layer that gives each reusable artifact a stable logical identity, lifecycle, reuse scope, owner, and **implementation bindings** — the pointers to the physical objects (warehouse UDFs, dbt macros, Databricks tables, etc.). It governs three reuse interfaces — **callable logic, queryable datasets, and semantic contracts** — through manifests. It stores metadata, implementation bindings, and derived signals such as structural fingerprints, but never the implementation code and it never sits in the query-execution path.
 
 Workspace code search in the IDE can answer *“what looks similar?”* The registry answers the governed question: *“which definition is approved for this scope, and how is it consumed from this runtime?”* It is not RAG in itself: retrieval can surface registry records, but it cannot by itself certify an artifact, select a runtime binding, or establish ownership and lifecycle accountability.
 
 Warehouse- and catalog-backed MCP servers may expose deployed objects, schemas, lineage, and some of these governance facts, potentially closing the reachability gap in Scenarios 1A–1C. This PoC does not compare those tools. The registry’s role is to normalize the required reuse-governance metadata from source control, repositories, warehouses, catalogs, and lineage systems, so an assistant need not infer authority or bindings from disparate signals. For background, see [The Missing Control Plane For Reuse Measurement](https://michalpru.github.io/data-platform-dry-model/publications/whitepaper-data-platform-dry-model.html#the-missing-control-plane-for-reuse-measurement).
-
-
 
 
 ### What exactly was implemented in the PoC
@@ -139,7 +137,7 @@ The PoC exposes the registry to the assistant as a thin, layered stack that maps
 
 Notably, the Python services **never call an LLM**. They return structured evidence; the agent reads that evidence and acts. The determinism lives in the tools; the language understanding lives in the model.
 
-### Workspace search vs. registry services
+### Workspace search vs. Registry services
 
 Both approaches find candidates. Only one of them carries the governed authority — which definition is certified, for what scope, who owns it, and how to bind to it.
 
@@ -161,15 +159,26 @@ For ARPAC, discovery finds no existing metric, so the agent decomposes the formu
 
 ### Checking code that already exists
 
-Discovery is intent-first, but the registry also works **code-first**. When an engineer has already written a transformation and wants to know whether something similar already exists, `compare_code` takes that code, normalizes it into an AST and a language-neutral feature profile, and scores it against the registered artifacts. It returns not just a similarity signal — with an optional, advisory **embedding** comparison to catch structurally-divergent rewrites the AST baseline would miss — but the **governance evidence** behind each match: which artifact it resembles, its lifecycle and owner, and a recommended action. Similarity is a candidate; authority still comes from the registry, not from the score. One scoring difference is by design: a production build-time gate would typically score against *persisted* derived signals in the registry — normalized AST fingerprints, and for embedding similarity a stored vector corpus — whereas this PoC persists none, reading each registered artifact's source (via a representative binding's `source` pointer) from the workspace and computing the AST fingerprint and any embeddings on the fly, then discarding them (a demo convenience, not a production design). These are the whitepaper's build-time duplication-detection signals (§4.3.3 — AST structural fingerprinting plus advisory embeddings) brought forward to authoring time; a recorded [verification battery](scenarios/scenario-2/verification/) with positive and negative controls confirms the detector both fires on real duplication and stays quiet on correctly-composed reuse.
+Discovery is intent-first, but the registry also works **code-first**. When an engineer has already written a transformation, `compare_code` normalizes it into an AST and a language-neutral feature profile — with an optional, advisory **embedding** signal for structurally-divergent rewrites the AST baseline would miss — and scores it against every registered artifact. What it returns is not just a similarity number but the **governance evidence** behind each match: the artifact it resembles, its lifecycle and owner, and a recommended action. Similarity is only a candidate; authority still comes from the registry, not the score. These are the whitepaper's build-time duplication-detection signals (§4.3.3 — AST structural fingerprinting plus advisory embeddings) brought forward to authoring time; a recorded [verification suite](scenarios/scenario-2/code-similarity-verification/) with positive *and* negative controls confirms the detector both **fires on real duplication and stays quiet on correctly-composed reuse**. (This PoC computes each fingerprint on the fly and persists none; a production gate would score against *persisted* derived signals instead — the trade-off is detailed in that suite's [README](scenarios/scenario-2/code-similarity-verification/README.md).)
 
-The same call is the agent's closing **Verify** step by design: find composables first, author only the missing part, then compare the result back so it cannot silently re-implement a governed artifact. In these PoC runs that check was exercised directly through the CLI over the generated SQL — it returns *no strong match, safe to author*, because the revenue, netting, currency and activity-window rules are referenced, not re-derived. A recorded [verification battery](scenarios/scenario-2/verification/) backs this with positive *and* negative controls: re-derived revenue trips `PARTIAL_REIMPLEMENTATION` against the certified billable-event rule, a reimplemented legacy view surfaces the **retired** `invoice_revenue` artifact, a reformatted copy of the certified UDF scores a `DIRECT_MATCH` through normalization, and the three governed Scenario 2 outputs each return *safe to author* — so the detector demonstrably fires, not just stays quiet. Wiring the agent to run and persist that verdict with every generated artifact — rather than exercising it via the CLI — is a still-open step, not something the recorded generation runs prove.
+That same call is the agent's closing **Verify** step: author only the missing part, then compare the result back so a governed artifact cannot be silently re-implemented. Run over the Scenario 2 SQL, it returns *no strong match, safe to author* — the revenue, netting, currency and activity-window rules are referenced, not re-derived. The recorded negative controls make the same point in reverse: a re-derived revenue rule, a reimplemented **retired** view, and a reformatted copy of the certified UDF are each surfaced with their lifecycle. One honest gap remains: in these runs the check ran through the CLI, so wiring the agent to run **and persist** that verdict with every generated artifact is still open.
 
 Because the MCP server and the CLI are thin clients over the **same** Lookup & Compare services, an engineer does not need the agent to use them: `search`, `recommend`, `resolve-binding`, and `compare` are callable from the command line for an ad-hoc check at authoring time, or as a build-time CI gate so the same comparison fires before merge.
 
+
+
 ### Scenario 2 — Registry-aware authoring: results
 
-**Decisive verdict: correct governed ARPAC — Yes for all three models; both registered decoys rejected.** The outcome held across all three models. Every one:
+**Decisive verdict: correct governed ARPAC — Yes for all three models; both registered decoys rejected.**
+
+| Scenario | GPT-5.5 | Sonnet 4.6 | Opus 4.8 |
+|---|:--:|:--:|:--:|
+| 1A | ❌ No | ❌ No | ❌ No |
+| 1B | ❌ No | ❌ No | ❌ No |
+| 1C | ❌ No | ❌ No | ❌ No |
+| 2 | ✅ Yes | ✅ Yes | ✅ Yes |
+
+The outcome held across all three models. Every one:
 
 - reused the certified `recognize_revenue` (numerator) and `commercial_customer_status_90d` (denominator), authoring **only** the missing ARPAC ratio;
 - rejected the retired `invoice_revenue` view and the base-table re-derivation that 1A/1B fell into;

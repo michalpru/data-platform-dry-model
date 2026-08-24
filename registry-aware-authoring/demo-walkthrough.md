@@ -354,20 +354,20 @@ instead surface as `PARTIAL_REIMPLEMENTATION` against their certified canonicals
 > the comparison is the deliberate starting point — a verification request — not the automatic tail
 > of intent-first authoring.
 
-### Verifying the detector actually fires — recorded battery
+### Verifying the detector actually fires — recorded suite
 
 The *safe-to-author* verdict above only proves the tool is **quiet** on a correctly-composed output.
-To show it also **fires** on real duplication, a recorded control battery lives in
-[`scenarios/scenario-2/verification/`](scenarios/scenario-2/verification/). It runs the *same*
+To show it also **fires** on real duplication, a recorded control suite lives in
+[`scenarios/scenario-2/code-similarity-verification/`](scenarios/scenario-2/code-similarity-verification/). It runs the *same*
 `ReuseDetectionService.compare_code` (via the CLI) over a mix of real and crafted inputs and stores
-every raw JSON payload under [`verification/results/`](scenarios/scenario-2/verification/results/):
+every raw JSON payload under [`code-similarity-verification/results/`](scenarios/scenario-2/code-similarity-verification/results/):
 
-- **`verification/probes/`** — small, known-answer inputs that simulate code an engineer just wrote,
+- **`code-similarity-verification/probes/`** — small, known-answer inputs that simulate code an engineer just wrote,
   hand-authored from the real certified/retired sources: a fresh reimplementation of the **retired**
   invoice-revenue view, an **alias-renamed** copy of the certified `recognize_revenue` UDF, and a
   **reformat-only** copy of that same UDF.
-- **`verification/results/`** — one raw `compare_code` payload per run; the input each result maps to
-  is recorded in the [verification README table](scenarios/scenario-2/verification/README.md).
+- **`code-similarity-verification/results/`** — one raw `compare_code` payload per run; the input each result maps to
+  is recorded in the [verification README table](scenarios/scenario-2/code-similarity-verification/README.md).
 
 What the recorded runs show:
 

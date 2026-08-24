@@ -297,7 +297,7 @@ See [demo-walkthrough.md](demo-walkthrough.md) for the full narrative with real 
   gate: `ast_scorer` (`sqlglot`/Python `ast`, normalized), the optional advisory embedding tier, a
   language-neutral `feature_scorer` for cross-language pairs, and — kept deliberately separate — the
   DRY Reuse **agent** as the LLM that reasons over the structured evidence (the Python services never
-  call an LLM). A recorded [verification battery](scenarios/scenario-2/verification/) proves the
+  call an LLM). A recorded [verification suite](scenarios/scenario-2/code-similarity-verification/) proves the
   detector fires with positive *and* negative controls (a retired-artifact reimplementation and a
   reformatted certified UDF are both caught; the three composed Scenario 2 outputs return *safe to
   author*). Exercising it via the CLI as the closing Verify step — versus auto-invoking and
