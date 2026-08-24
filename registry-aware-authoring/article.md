@@ -39,7 +39,7 @@ Reuse existing definitions, datasets, or functions where appropriate, and explai
 
 Full prompts and recorded runs are documented in [demo walkthrough](demo-walkthrough.md). Each scenario's repositories are mocked and deliberately scoped, so the test isolates *which context the assistant can reach*.
 
-**One deliberately harsh grading question** decides each run: *did it deliver the correct, governed ARPAC?* If a needed composable artifact like was unreachable, that component scores **zero**, exactly like getting it wrong. The workspace-only scenarios withhold direct warehouse and catalog access (an MCP tool for either could close that reachability gap); the test asks whether the governance facts needed to select and bind the correct definition are available.
+**One deliberately harsh grading question** decides each run: *did it deliver the correct, governed ARPAC?* If a needed composable artifact was unreachable, that component scores **zero**, exactly like getting it wrong. The workspace-only scenarios withhold direct warehouse and catalog access (an MCP tool for either could close that reachability gap); the test asks whether the governance facts needed to select and bind the correct definition are available.
 
 ---
 
@@ -96,7 +96,7 @@ Scored on the single question — *did it deliver the correct governed ARPAC?* �
 |---|:--:|:--:|:--:|:--:|
 | **GPT-5.5** | 27% | 40% | 60% | 100% |
 | **Claude Sonnet 4.6** | 27% | 33% | 67% | 93% |
-| **Claude Opus 4.8** | 27% | 33% | 67% | 100% |
+| **Claude Opus 4.8** | 27% | 33% | 67% | 93% |
 
 Each percentage is the run's score on a 15-point rubric — points awarded across the governed components (recognition, refund netting, currency, activity window, the certified active-customer definition, and correct composition/binding) — expressed as a fraction of the 15 available.
 
@@ -160,16 +160,17 @@ Because the MCP server and the CLI are thin clients over the **same** Lookup & C
 
 ### Scenario 2 — Registry-aware authoring: results
 
-The outcome held across all three models. Every one:
+**Decisive verdict: correct governed ARPAC — Yes for all three models; both registered decoys rejected.** The outcome held across all three models. Every one:
 
 - reused the certified `recognize_revenue` (numerator) and `commercial_customer_status_90d` (denominator), authoring **only** the missing ARPAC ratio;
 - rejected the retired `invoice_revenue` view and the base-table re-derivation that 1A/1B fell into;
-- resolved one logical identity to the right binding per runtime — a Snowflake UDF *or* a dbt macro for recognition, a Databricks view for active status — so the *same* certified definition was referenced regardless of engine, rather than re-implemented per stack;
-- and, when the active-customer status resolved only to Databricks while the target engine was Snowflake, surfaced the missing binding as an integration requirement rather than silently shipping a cross-engine join — two of the three invented nothing, while the third flagged the gap but minted a placeholder Snowflake name (its single deduction, 14/15).
+- rejected the two newly registered domain-local look-alikes — the Sales billed proxy and the Marketing login proxy — while retaining the certified enterprise denominator;
+- resolved the registered Snowflake UDF binding for revenue and the Databricks view binding for active status, so the certified definitions were referenced rather than re-implemented;
+- and, when the active-customer status resolved only to Databricks while the target engine was Snowflake, surfaced the missing binding as an integration requirement rather than silently shipping a cross-engine join — two of the three invented nothing, while the third flagged the gap but minted a provisional Snowflake name.
 
-The scoreboard jump from ≤67% to ≥93% is not a model-quality effect; it reflects that, in this PoC, the registry surfaced governed authority and the required bindings — information that workspace search cannot supply, not even with the whole codebase in Scenario 1C. 
+The scoreboard jump from ≤67% to ≥93% is not a model-quality effect; it reflects that, in this PoC, the registry surfaced governed authority and the required bindings — information that workspace search cannot supply, not even with the whole codebase in Scenario 1C. The two 93% scores (Sonnet and Opus) trail GPT's 100% by a single point each — the reproducible reporting date (C3): both anchored the output to `CURRENT_DATE()` instead of a parameterized as-of date, a production-reproducibility nit rather than a governed-reuse miss.
 
-Scenario 2 was not flawless — the models needed steering on registry-readiness polish (a consistent namespace; keeping the components dataset separate from the metric), and the fabricated binding above was a small correctness deduction, not merely cosmetic. None of it changed the outcome: every model produced the correctly-governed ARPAC composition — reusing the certified definitions and flagging, not faking, the one missing cross-engine binding, which stays an explicit integration precondition rather than a live cross-engine execution. And none of this replaces dbt or the semantic layer: those remain the primary mechanisms for implementing and consuming reuse, while the registry adds the organization-level *certified* status and the cross-engine, multi-implementation bindings that a single project graph or semantic layer does not hold (see [README §10](README.md), [poc-results.md](poc-results.md)). The PoC exercises an enterprise-wide canonical, but the same registry model also governs domain-scoped canonicals within a single domain — the adoption boundary is heterogeneity and criticality, not enterprise scope alone.
+Scenario 2 was not flawless — the models needed steering on registry-readiness polish (a consistent namespace; a per-customer components grain; a reproducible as-of date), and one model minted a provisional Snowflake name for the missing cross-engine binding while still flagging it as a required integration step. None of it changed the outcome: every model produced the correctly-governed ARPAC composition — reusing the certified definitions and flagging, not faking, the one missing cross-engine binding, which stays an explicit integration precondition rather than a live cross-engine execution. And none of this replaces dbt or the semantic layer: those remain the primary mechanisms for implementing and consuming reuse, while the registry adds the organization-level *certified* status and the cross-engine, multi-implementation bindings that a single project graph or semantic layer does not hold (see [README §10](README.md), [poc-results.md](poc-results.md)). The PoC exercises an enterprise-wide canonical, but the same registry model also governs domain-scoped canonicals within a single domain — the adoption boundary is heterogeneity and criticality, not enterprise scope alone.
 
 ---
 

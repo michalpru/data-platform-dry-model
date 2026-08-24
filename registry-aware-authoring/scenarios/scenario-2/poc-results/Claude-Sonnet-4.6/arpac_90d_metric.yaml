@@ -1,0 +1,57 @@
+apiVersion: dry.platform/v1
+kind: Metric
+metadata:
+  fqn: exec.metrics.arpac_90d.v1
+  title: ARPAC – Average Revenue Per Active Customer (Trailing 90 Days)
+  description: >
+    Executive KPI: net recognized revenue in USD over the trailing 90 days,
+    divided by the distinct count of active customers as of the reporting date.
+    Only revenue from customers who are in the active set is counted in the
+    numerator (non-active customer revenue is excluded).
+    Formula: SUM(NET_RECOGNIZED_REVENUE_USD) / COUNT(DISTINCT CUSTOMER_ID).
+  owner:
+    team: exec-analytics
+    escalation: exec-data-oncall
+  lifecycle:
+    state: shared           # promote to certified once active-customer Snowflake binding gap is resolved
+  registry:
+    publish: true
+    interfaceType: semantic_contract
+
+spec:
+  model: exec.semantic.arpac_90d_components.v1
+  type: ratio
+  numerator: net_recognized_revenue_usd
+  denominator: active_customer_count
+  time:
+    defaultGrain: day
+    windowType: trailing
+    windowDays: 90
+  allowedDimensions:
+    - REPORTING_DATE
+  compatibility:
+    policy: backward-compatible
+    deprecationWindowDays: 90
+
+reuses:
+  - fqn: sales.datasets.commercial_customer_status_90d.v1
+    role: denominator_population
+    authority: REGISTERED_CANONICAL | certified | enterprise_canonical
+    note: >
+      Enterprise executive active-customer definition. IS_ACTIVE_COMMERCIAL_90D = TRUE
+      filtered to REPORTING_DATE = CURRENT_DATE. This is the same definition used by
+      all other executive dashboards, ensuring denominator consistency.
+      BINDING GAP: no Snowflake warehouse binding is registered; see components dataset.
+  - fqn: finance.logic.recognize_revenue.v1
+    role: numerator_revenue
+    authority: REGISTERED_CANONICAL | certified | enterprise_canonical
+    note: >
+      Snowflake binding: FINANCE.LOGIC.RECOGNIZE_REVENUE(P_START_DATE DATE, P_END_DATE DATE).
+      Certified enterprise net recognized revenue (USD) function. Reads
+      FINANCE.DATASETS.FACT_BILLABLE_EVENTS and nets refunds via signed NET_AMOUNT;
+      consumers must not re-derive revenue from raw invoices.
+  - fqn: finance.datasets.invoice_revenue.v1
+    role: explicitly_excluded
+    note: >
+      Lifecycle: retired. This artifact was NOT used. It skipped refunds/credit notes
+      and applied no recognition-timing rules. Superseded by finance.logic.recognize_revenue.v1.

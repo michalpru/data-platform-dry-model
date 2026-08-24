@@ -33,8 +33,8 @@ Scenario 2 is that the registry makes certified, cross-engine artifacts reachabl
 | `finance.fact_billable_events` | canonical event stream (invoices ∪ refunds) | ✗ | ✗ | ✓ | ✓ |
 | `finance.logic.recognize_revenue` | **certified** — **intended reuse** (numerator) | ✗ | ✗ | ✓ | ✓ |
 | `sales.commercial_customer_status_90d` | **certified** — **intended reuse** (denominator) | ✗ | ✗ | ✓ | ✓ |
-| `sales.active_customer_90d` | Sales billed-customer proxy — **NOT** to be reused | ✗ | ✗ | ✓ | ✗ |
-| `marketing.logic.active_customer` | domain-local login rule — **NOT** to be reused | ✗ | ✓ | ✓ | ✗ |
+| `sales.active_customer_90d` | Sales billed-customer proxy — **NOT** to be reused | ✗ | ✗ | ✓ | ✓ |
+| `marketing.logic.active_customer` | domain-local login rule — **NOT** to be reused | ✗ | ✓ | ✓ | ✓ |
 
 **Key consequence:** in **1A** the correct active-customer and revenue-recognition artifacts do not
 exist, so *no model can be correct* — divergence is guaranteed. In **1B** the *retired* revenue view
@@ -42,7 +42,11 @@ and the *marketing* active rule are visible while the certified ones are not, so
 actively leads models toward the wrong artifacts. In **1C** both certified artifacts become visible,
 but the Sales invoice-only look-alike does too: code availability improves the numerator outcome but
 still supplies no authority signal for the denominator. Only in **2** does the registry make that
-authority explicit and resolve its runtime binding.
+authority explicit and resolve its runtime binding. Both domain-local look-alikes
+(`sales.active_customer_90d`, `marketing.logic.active_customer`) are themselves registered as
+`domain_canonical`, so in **2** the registry *surfaces* them as **discoverable-and-rejected** —
+like the retired `invoice_revenue` — rather than hiding them; the executive request still resolves
+only to the enterprise-wide certified denominator.
 
 ### The active-customer definition trap
 
@@ -195,27 +199,28 @@ source file identifies which definition is the certified executive denominator.
 
 | Decision point (failure pattern) | GPT-5.5 | Sonnet 4.6 | Opus 4.8 |
 |---|:--:|:--:|:--:|
-| Reuses `recognize_revenue` (certified numerator) | ✅ (dbt macro binding) | ✅ (Snowflake UDF) | ✅ (Snowflake UDF) |
+| Reuses `recognize_revenue` (certified numerator) | ✅ (Snowflake UDF) | ✅ (Snowflake UDF) | ✅ (Snowflake UDF) |
 | Reuses `commercial_customer_status_90d` (certified denom) | ✅ | ✅ | ✅ |
 | No re-derivation of revenue / refund / currency (A1–A3) | ✅ | ✅ | ✅ |
 | Rejects retired `invoice_revenue` (B1) | ✅ | ✅ | ✅ |
+| Rejects both registered domain-local active definitions | ✅ non-selected | ✅ non-selected | ✅ explicit |
 | Avoids `dim_customers.is_active` & base-table re-derivation (A4) | ✅ | ✅ | ✅ |
 | `fact_billable_events` consumed *via* `recognize_revenue`, not raw | ✅ | ✅ | ✅ |
 | Confirms signatures from binding source | ✅ | ✅ | ✅ |
-| Cross-engine gap flagged, no fabricated bridge (C1, C2) | ✅ references Databricks name | ⚠️ invents `SALES.DATASETS...` Snowflake name (but flags "bridge required") | ✅ references Databricks name, states "no bridge invented" |
+| Cross-engine gap flagged, no fabricated bridge (C1, C2) | ✅ references Databricks name | ✅ flags "bridge required"; provisional `SALES.DATASETS...` name noted, not shipped | ✅ references Databricks name, states "no bridge invented" |
 | Restricts numerator to active customers (C4) | ✅ | ✅ | ✅ |
-| Parameterized reporting date, not `CURRENT_DATE()` (C3) | ✅ | ✅ | ✅ |
-| Two-layer composition (components dataset → metric) | ⚠️ merged into one SQL | ✅ | ✅ |
-| Registry FQN namespace matches `enterprise.*` | ⚠️ `executive.*` | ⚠️ `finance.*` | ⚠️ `exec.*` |
+| Reproducible reporting date, not `CURRENT_DATE()` (C3) | ✅ reporting-date grain | ❌ `CURRENT_DATE()` | ❌ `CURRENT_DATE()` |
+| Separate components dataset → metric | ✅ aggregate components | ✅ per-customer components | ✅ aggregate components |
+| Registry FQN namespace matches `enterprise.*` | ⚠️ `executive.*` | ⚠️ `exec.*` | ⚠️ `executive.*` |
 
-**Observation:** **all three models succeeded on the substance** — every one resolved and reused the
-two certified artifacts, composed only the missing ARPAC ratio, refused the retired and base-table
-paths, and surfaced (never hid) the Snowflake↔Databricks binding gap. The differences are
-polish-level: GPT collapsed the components dataset and metric into a single dbt model (functionally
-correct, structurally thinner) and Sonnet invented a plausible Snowflake object name for the missing
-binding (still flagged as required, so not silently wrong). Opus adhered most closely to the
-failure-pattern guardrails, including the explicit "no bridge object is fabricated" stance (avoiding
-C2). Namespace naming diverged from `enterprise.*` in all three, which is cosmetic.
+**Observation:** this rerun adds a harder governance test: both the Sales billed proxy and the
+Marketing login proxy are now registered and discoverable as `domain_canonical`. All three models
+still select only the certified enterprise denominator. The explicit `Target runtime is Snowflake SQL
+warehouse` prompt constraint resolves revenue to its registered Snowflake UDF binding, so the outputs
+are raw Snowflake SQL rather than dbt artifacts. Sonnet names a provisional Snowflake identifier for
+the missing Sales binding but explicitly flags it as a required bridge rather than shipping a silent
+cross-engine join; GPT and Opus reference the Databricks binding directly. Opus and Sonnet also use
+`CURRENT_DATE()`, which makes historical executive snapshots non-reproducible.
 
 ---
 
@@ -320,15 +325,20 @@ which avoids that unsupported join but does not make the selected denominator go
 | Certified revenue recognition (A1, 3) | 3 | 3 | 3 |
 | Refund netting (A2, 2) | 2 | 2 | 2 |
 | Currency normalization (A3, 2) | 2 | 2 | 2 |
-| Cross-engine composition (C1/C2, 2) | 2 | 1 | 2 |
+| Cross-engine composition (C1/C2, 2) | 2 | 2 | 2 |
 | Active-only numerator (C4, 1) | 1 | 1 | 1 |
-| Reproducible date (C3, 1) | 1 | 1 | 1 |
-| **Total** | **15 / 15** | **14 / 15** | **15 / 15** |
+| Reproducible date (C3, 1) | 1 | 0 | 0 |
+| **Total** | **15 / 15** | **14 / 15** | **14 / 15** |
 
 Only the registry makes the certified inputs reachable, so every model now scores the two
-high-weight components and clears the bar. Sonnet's single deduction is the fabricated Snowflake
-bridge-object name (C2). Namespace and two-layer-structure differences are registry-readiness polish
-(§5), not correctness, and are not scored here.
+high-weight components and clears the bar. Sonnet and Opus each lose only the date-reproducibility
+point (C3, `CURRENT_DATE()`); Sonnet flags the missing Snowflake binding as a required bridge rather
+than shipping a silent cross-engine join, so it keeps full cross-engine credit (C2).
+Namespace and components-grain differences are registry-readiness polish, not correctness, and are
+not scored here.
+
+**Decisive verdict: all three models deliver the correct governed ARPAC and reject both registered
+decoys; the two 93% scores differ from GPT's 100% only on the reproducible reporting-date point (C3).**
 
 ### Aggregate (normalized to 100)
 
@@ -336,7 +346,7 @@ bridge-object name (C2). Namespace and two-layer-structure differences are regis
 |---|:--:|:--:|:--:|:--:|
 | **GPT-5.5** | 27% | 40% | 60% | 100% |
 | **Sonnet 4.6** | 27% | 33% | 67% | 93% |
-| **Opus 4.8** | 27% | 33% | 67% | 100% |
+| **Opus 4.8** | 27% | 33% | 67% | 93% |
 
 **The point of the matrix:** workspace-only authoring **fails for every model in 1A, 1B, and 1C**
 (≤67%). More workspace context produces real partial improvement: in 1C all models reuse the
@@ -355,16 +365,18 @@ binding information that workspace search alone cannot supply.
 - **Scenario 2 fully reproduced the intended outcome across all three models.** Every model reused
   both certified artifacts, composed only the missing ratio, and refused the retired/base-table
   paths. The registry converted a task that every workspace-only model fails (1A/1B/1C: ≤67%) into one
-  that every model passes (2: ≥93%).
+  that every model passes (2: ≥93%). The rerun strengthened that result by surfacing two registered
+  domain-local active-customer alternatives without selecting either one.
 - **Cross-engine surfacing worked.** All three models detected that the active-customer view is
   Databricks-only with no Snowflake binding, and none silently invented a bridge and shipped it as
   done; the gap was raised as an integration requirement.
 - **Binding-source verification worked.** Every Scenario 2 run confirmed the
   `RECOGNIZE_REVENUE(P_START_DATE, P_END_DATE)` signature and the status-view columns from the actual
   source files rather than guessing — exactly the agent instruction.
-- **"One identity, multiple bindings" was exercised.** GPT resolved `recognize_revenue` to its **dbt
-  macro** binding while Opus/Sonnet used the **Snowflake UDF** — both correctly treated as the same
-  certified capability, not duplication.
+- **Runtime-aware binding resolution was exercised.** The explicit Snowflake warehouse target caused
+  all three models to use the registered `FINANCE.LOGIC.RECOGNIZE_REVENUE` UDF binding. The registry
+  still records the dbt macro as an alternate binding of that same certified identity; it was not the
+  runtime requested by this rerun.
 - **The 1A/1B/1C failure modes reproduced as designed**, validating the PoC's narrative: 1A silently
   re-derives; 1B reuses the wrong-but-similar artifacts; 1C reaches the right numerator but still
   selects a wrong denominator without an authority signal.
@@ -381,15 +393,17 @@ binding information that workspace search alone cannot supply.
 - **Namespace drift in Scenario 2.** No model used the reference `enterprise.*` FQN namespace
   (`exec.*`, `executive.*`, `finance.*` instead). The prompt/agent never pins the target namespace,
   so the generated artifacts would not slot into the registry cleanly without a rename.
-- **Structural variance.** GPT merged the components dataset and the metric into one dbt model,
-  losing the intended two-layer composition (a reusable per-customer components
-  dataset that *other* metrics could also consume).
-- **Bridge-object discipline is inconsistent.** Sonnet invented a concrete Snowflake object name for
-  the missing binding (flagged, but still a fabricated identifier), where the C2 guardrail is to
-  reference the resolved Databricks binding and invent nothing.
-- **No verification step is visible in outputs.** None of the Scenario 2 result folders contain a
-  `compare_code` / verification artifact. The walkthrough presents Verify as the automatic closing
-  stage; the recorded outputs do not evidence it ran.
+- **Components-grain variance.** Sonnet authors a reusable per-customer components dataset, while
+  GPT and Opus aggregate their components outputs to reporting-date grain. Both preserve the governed
+  ARPAC formula, but the per-customer shape is the more reusable layer.
+- **Bridge-object naming is a readiness nit.** Sonnet flagged the missing binding as a required
+  bridge — satisfying the C2 guardrail, since nothing was silently shipped — but still minted a
+  provisional Snowflake object name; the cleaner practice is to reference the resolved Databricks
+  binding under its existing name and mint no physical identifier.
+- **The automatic Verify stage is still not visible in outputs.** The new components SQL files were
+  independently checked through the CLI and received safe-to-author summaries, but none of the agent
+  result folders contains a `compare_code` artifact. The walkthrough presents Verify as the automatic
+  closing stage; the recorded agent outputs do not evidence it ran.
 
 ---
 
@@ -433,7 +447,7 @@ caveats worth acting on.
 | Area | Issue | Recommended change |
 |---|---|---|
 | **Agent** | Namespace of generated artifacts drifts (`exec.*`/`executive.*`/`finance.*`) | Instruct the agent to place newly authored enterprise compositions under `enterprise.*` (or resolve the target namespace via a registry call) so outputs are registry-ready. |
-| **Agent** | Bridge-object discipline inconsistent (Sonnet invented a Snowflake name) | Add an explicit rule: when `resolve_binding` returns no target-runtime binding, reference the resolved binding under its existing FQN/name and never mint a physical object identifier. |
+| **Agent** | Bridge-object naming (Sonnet flagged the bridge as required but still minted a provisional Snowflake name) | Add an explicit rule: when `resolve_binding` returns no target-runtime binding, reference the resolved binding under its existing FQN/name and never mint a physical object identifier. |
 | **Agent / Workflow** | Verify stage not evidenced in outputs | Require the agent to emit the `compare_code` verdict (e.g. a `VERIFICATION.md`) into the results folder so the closing Verify stage is auditable. |
 | **Prompt** | Two-layer composition not enforced (GPT merged) | State that the components dataset and the metric are **separate reusable artifacts**, so the per-customer dataset is independently consumable. |
 | **Registry methods** | Cross-engine gap is surfaced but there is no first-class "missing binding" result type | Consider a structured `resolve_binding` response field (e.g. `status: missing_target_binding`, `bound_on: [...]`) so agents handle the gap uniformly instead of prose. |

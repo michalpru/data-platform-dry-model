@@ -1,0 +1,41 @@
+apiVersion: dry.platform/v1
+kind: SemanticModel
+metadata:
+  fqn: exec.semantic.arpac_90d_components.v1
+  title: ARPAC 90-Day Components Semantic Model
+  description: >
+    Semantic model over the ARPAC 90-day components dataset. Exposes the
+    active-customer count (denominator) and net-recognized-revenue-USD sum
+    (numerator) measures that the ARPAC metric combines into a ratio.
+  owner:
+    team: exec-analytics
+    escalation: exec-data-oncall
+  lifecycle:
+    state: shared
+  registry:
+    publish: true
+    interfaceType: semantic_contract
+
+spec:
+  entity:
+    name: ActiveCustomerRevenue
+    grain: CUSTOMER_ID
+  sourceDataset: exec.metrics.arpac_90d_components.v1
+  dimensions:
+    - name: REPORTING_DATE
+      type: date
+    - name: CUSTOMER_ID
+      type: number
+  measures:
+    - name: active_customer_count
+      type: count_distinct
+      expr: CUSTOMER_ID
+      description: Distinct count of active customers (ARPAC denominator)
+    - name: net_recognized_revenue_usd
+      type: sum
+      expr: NET_RECOGNIZED_REVENUE_USD
+      description: >
+        Sum of net recognized revenue in USD across active customers (ARPAC numerator).
+        Certified via finance.logic.recognize_revenue.v1.
+  compatibility:
+    policy: backward-compatible

@@ -4,7 +4,7 @@
 
 The governed artifacts this scenario resolves against are the **pure-YAML** manifests in
 [`registry-manifests/`](registry-manifests/) (`shared/` base tables plus `domains/finance/` and
-`domains/sales/`). The registry holds no code; each binding's `source` points into
+`domains/sales/` and `domains/marketing/`). The registry holds no code; each binding's `source` points into
 [`workspace/`](workspace/), the mocked repositories where the real implementations live. The
 `workspace/enterprise/` tree is the **empty authoring target** the agent writes into.
 
@@ -27,9 +27,12 @@ The governed artifacts this scenario resolves against are the **pure-YAML** mani
 
    Contrast with the workspace pick-ups from scenario 1B that the registry keeps out of the
    result: the legacy `finance.datasets.invoice_revenue.v1` is registered but carries
-   `lifecycle: retired` (superseded), so it is **discoverable-and-rejected**; the marketing
-   active-customer rule is **domain-local and never registered**, so registry-aware authoring
-   never surfaces it at all. Either way the engineer lands on the certified definition.
+   `lifecycle: retired` (superseded), so it is **discoverable-and-rejected**; the two domain-local
+   active-customer look-alikes — the Sales `sales.datasets.active_customer_90d.v1` billed proxy
+   (POSTED invoice only) and the Marketing `marketing.logic.active_customer.v1` portal-login rule —
+   are registered as `domain_canonical`, so they are **discoverable-and-rejected** too: surfaced by
+   search, but not selected for this executive request because neither is an enterprise-wide
+   canonical. Either way the engineer lands on the certified definition.
 4. **Resolve bindings — across engines.** `resolve_binding(...)` returns the physical object for each component's runtime/dialect. Revenue resolves to a **Snowflake** UDF; the active-customer status resolves to a **Databricks** view — and to **no Snowflake binding at all**. The registry *surfaces* that cross-engine gap rather than hiding it: the components dataset references the resolved Databricks binding under an explicit "reachable from Snowflake once a binding is provisioned" precondition, and flags provisioning that binding as an integration requirement. No bridge object is fabricated.
 5. **Author only what is missing** — the components dataset `enterprise.datasets.customer_arpac_components_90d` and the ARPAC ratio `enterprise.semantic.arpac_90d` on top of it.
 6. **(Optional) verify.** `compare_code` the generated SQL against the registry to confirm it does not re-implement governed logic.
@@ -70,3 +73,5 @@ registry records that the macro and the UDF are one capability — and spans the
 dbt on Snowflake never sees (the Sales active-customer view lives on Databricks).
 
 See [`../../poc-results.md`](../../poc-results.md) for the recorded model results. The full narrated run with real command output is [`../../demo-walkthrough.md`](../../demo-walkthrough.md) (Scenario 2).
+The current rerun summary and per-model deliverables are in
+[`poc-results/README.md`](poc-results/README.md).

@@ -1,0 +1,65 @@
+version: 1
+
+metric:
+  fqn: executive.metrics.arpac_90d.v1
+  title: Trailing 90-Day Average Revenue per Active Customer
+  interface_type: metric
+  owner: executive-analytics
+  lifecycle: proposed
+  runtime: snowflake
+  dialect: snowflake
+  definition: >
+    Net recognized revenue in USD over the trailing 90 days divided by the distinct count of
+    active customers at reporting-date grain. Revenue is counted only for customers included in
+    the active-customer denominator.
+  formula: net_recognized_revenue_usd_90d / nullif(active_customer_count_90d, 0)
+  grain:
+    - reporting_date
+  components_dataset:
+    ref: EXECUTIVE_METRICS.ARPAC_90D_COMPONENTS
+    source: arpac_90d_components.sql
+    columns:
+      reporting_date: Reporting date for the trailing 90-day window.
+      net_recognized_revenue_usd_90d: Numerator, summed only for active customers.
+      active_customer_count_90d: Denominator, distinct active customers.
+  metric_view:
+    ref: EXECUTIVE_METRICS.ARPAC_90D
+    source: arpac_90d_metric.sql
+    measure: arpac_90d_usd
+  reuses:
+    - artifact: sales.datasets.commercial_customer_status_90d.v1
+      binding: sales.datasets.commercial_customer_status_90d
+      runtime: databricks
+      dialect: databricks
+      object_type: view
+      owner: sales-analytics
+      lifecycle: certified
+      purpose: >
+        Denominator membership and reporting-date grain using the executive-dashboard active
+        customer definition.
+      contract_confirmed_from: ../../workspace/sales/datasets/commercial_customer_status_90d.sql
+      confirmed_columns:
+        - customer_id
+        - reporting_date
+        - is_active_commercial_90d
+    - artifact: finance.logic.recognize_revenue.v1
+      binding: FINANCE.LOGIC.RECOGNIZE_REVENUE
+      runtime: warehouse
+      dialect: snowflake
+      object_type: udf
+      owner: finance-analytics
+      lifecycle: certified
+      purpose: Numerator revenue recognition and USD normalization.
+      contract_confirmed_from: ../../workspace/finance/logic/recognize_revenue.sql
+      confirmed_signature: FINANCE.LOGIC.RECOGNIZE_REVENUE(P_START_DATE DATE, P_END_DATE DATE)
+      confirmed_outputs:
+        - CUSTOMER_ID
+        - RECOGNIZED_REVENUE_USD
+  preconditions:
+    - >
+      sales.datasets.commercial_customer_status_90d is a certified active-customer binding but is
+      currently registered only for Databricks. Snowflake execution requires provisioning or
+      exposing that exact registered binding to the Snowflake warehouse; this definition does not
+      invent a bridge object.
+  exclusions:
+    - Revenue from customers not present in the active-customer denominator is excluded.

@@ -70,8 +70,9 @@ delivered the correct governed metric** — and adding more code made it worse, 
 - **The DRY Reuse agent workflow:** Business intent → Registry discovery → Reuse plan + binding
   resolution → Copilot-authored composition → Registry comparison.
 - **Scenario 2 results:** all three models reused both certified artifacts, composed only the missing
-  ratio, rejected the retired/base-table paths, and **flagged the Snowflake↔Databricks gap instead of
-  fabricating a bridge**. Scoreboard jump to ≥93%.
+  ratio, rejected the retired/base-table paths and the two registered domain-local active-customer
+  look-alikes, and **flagged the Snowflake↔Databricks gap instead of fabricating a bridge**.
+  Scoreboard jump to ≥93%.
 - **Two-point "why not just dbt / the semantic layer"** (cross-engine identity; ref-able ≠ certified),
   link README §10 for the rest.
 

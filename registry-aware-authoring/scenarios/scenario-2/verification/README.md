@@ -33,7 +33,9 @@ MCP `compare` tool and the CLI both call. Nothing here is hand-edited.
   signals + governance evidence + summary), exactly as the CLI/MCP tool returns it. Each file is one
   comparison. **Which input a result belongs to is encoded in the filename** and mapped in the
   [recorded-results table](#recorded-results) below (input → scope → verdict); the payload itself
-  records scope/method/matches/summary but not the query path.
+  records scope/method/matches/summary but not the query path. Controls 8a–8c below are the
+  current Snowflake-rerun CLI summaries; their raw JSON was not persisted, so the `08-*` files remain
+  the historical pre-rerun payloads rather than evidence for those updated rows.
 
 Each comparison feeds **one authored file** (left side) against **the whole registry** (right side):
 for every registered artifact, `compare_code` follows a **representative** binding's `source` pointer
@@ -91,7 +93,7 @@ would typically persist the derived signals instead.
 - Python 3.10, `dry-registry` PoC package, run from `registry-aware-authoring/registry/`.
 - `sqlglot` 30.12 present (SQL AST normalization). `sentence-transformers` **absent** — so the
   optional embedding tier degrades gracefully (control 7).
-- Control plane: `python -m dry_registry.cli ingest` → 9 registered artifacts.
+- Control plane: `python -m dry_registry.cli ingest` → 11 registered artifacts.
 
 ## Reproduce
 
@@ -117,9 +119,9 @@ Add `--json` for the raw payload, `--scope workspace` for the no-governance cont
 | 6 | **Normalization robustness** — alias-renamed UDF copy | `probes/probe_recognize_revenue_aliased.sql` | registry | ast | `finance.logic.recognize_revenue.v1` | certified | `PARTIAL_REIMPLEMENTATION` | 0.46 | Renamed params/aliases still rank the true certified source **#1** — a harder semantic-equivalence case. |
 | 6b | **Normalization robustness** — reformat-only UDF copy | `probes/probe_recognize_revenue_reformatted.sql` | registry | ast | `finance.logic.recognize_revenue.v1` | certified | **`DIRECT_MATCH`** | 0.93 (ast 1.00) | Comments stripped, lower-cased, reflowed — normalization collapses the cosmetics to a perfect structural match. |
 | 7 | **Embedding tier** — graceful degradation | `probes/probe_recognize_revenue_aliased.sql` | registry | ast | `finance.logic.recognize_revenue.v1` | certified | `PARTIAL_REIMPLEMENTATION` | 0.46 | With the `vector` extra absent, records the warning "Embeddings unavailable … used the deterministic feature-profile signal instead" and still returns a usable verdict. |
-| 8a | **Positive control** — Scenario 2 GPT-5.5 | `poc-results/GPT-5.5/arpac_trailing_90d_components.sql` | registry | ast | `finance.logic.recognize_revenue.v1` | certified | `INSUFFICIENT_EVIDENCE` | 0.12 | **Safe to author**: the composition *references* certified artifacts by binding rather than copying their logic, so structural similarity is low by design. |
-| 8b | **Positive control** — Scenario 2 Sonnet 4.6 | `poc-results/Claude-Sonnet-4.6/arpac_components.sql` | registry | ast | `finance.logic.recognize_revenue.v1` | certified | `PARTIAL_REIMPLEMENTATION` | 0.15 | **Safe to author** overall; a weak concept overlap is flagged advisory, not blocking. |
-| 8c | **Positive control** — Scenario 2 Opus 4.8 | `poc-results/Claude-Opus-4.8/exec/reporting/arpac_active_customer_revenue_90d.sql` | registry | ast | `sales.datasets.commercial_customer_status_90d.v1` | certified | `INSUFFICIENT_EVIDENCE` | 0.19 | **Safe to author**: references certified inputs; no strong structural duplicate. |
+| 8a | **Positive control** — Scenario 2 GPT-5.5 | `poc-results/GPT-5.5/arpac_90d_components.sql` | registry | ast | `sales.datasets.active_customer_90d.v1` | certified | `INSUFFICIENT_EVIDENCE` | 0.27 | **Safe to author**: references the certified inputs rather than copying their logic; the Sales proxy shares only broad active-customer terms. |
+| 8b | **Positive control** — Scenario 2 Sonnet 4.6 | `poc-results/Claude-Sonnet-4.6/arpac_90d_components.sql` | registry | ast | `sales.datasets.commercial_customer_status_90d.v1` | certified | `INSUFFICIENT_EVIDENCE` | 0.31 | **Safe to author** overall; explanatory comments produce advisory feature-overlap warnings, but the top-level summary remains safe. |
+| 8c | **Positive control** — Scenario 2 Opus 4.8 | `poc-results/Claude-Opus-4.8/arpac_90d_components.sql` | registry | ast | `finance.datasets.invoice_revenue.v1` | retired | `INSUFFICIENT_EVIDENCE` | 0.17 | **Safe to author**: references certified inputs; no strong structural duplicate. |
 
 ### How to read this
 
@@ -135,5 +137,6 @@ Add `--json` for the raw payload, `--scope workspace` for the no-governance cont
   combined scores with a `PARTIAL_REIMPLEMENTATION` label against a `certified`/`retired` artifact
   are exactly the advisory signal the design intends.
 
-Per-model closing-verify verdicts are also written next to each generated artifact as
-`poc-results/<model>/VERIFICATION.md`.
+These positive-control checks were run through the CLI after generation. They are not agent-emitted
+`VERIFICATION.md` artifacts; the current rerun summary records that limitation in
+[`../poc-results/README.md`](../poc-results/README.md).

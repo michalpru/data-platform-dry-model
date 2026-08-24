@@ -79,7 +79,7 @@ Snowflake (no fabricated bridge) but anchored on `CURRENT_DATE()` (C3). None of 
 |---|:--:|:--:|:--:|:--:|
 | GPT-5.5 | 27% | 40% | 60% | 100% |
 | Claude Sonnet 4.6 | 27% | 33% | 67% | 93% |
-| Claude Opus 4.8 | 27% | 33% | 67% | 100% |
+| Claude Opus 4.8 | 27% | 33% | 67% | 93% |
 
 A **higher** partial score than 1B with the **same** verdict shows the boundary clearly: **more visible
 code improves partial correctness, but it does not identify the correct governed composition.** Only

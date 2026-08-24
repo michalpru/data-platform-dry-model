@@ -76,6 +76,7 @@ Constraints:
 - Do NOT read registry-aware-authoring/README.md, registry-aware-authoring/demo-walkthrough.md, or any other documentation file. Derive artifact identity, authority and bindings from what the registry tools return, not from documentation.
 - Do NOT read registry-aware-authoring/scenarios/scenario-2/registry-manifests/ directly — query the registry through the MCP tools only.
 - DO read a resolved binding's `source` file under registry-aware-authoring/scenarios/scenario-2/workspace/ to confirm exact column names, parameters and function signatures before you reference them — this is the binding's implementation source, NOT the registry-manifests/ directory. Never guess a signature; if a source file cannot be read, mark those identifiers UNCONFIRMED.
+- Target runtime is Snowflake SQL warehouse.
 - Generate output into registry-aware-authoring/scenarios/scenario-2/poc-results/<model_name>/ directory.
 ```
 
@@ -173,7 +174,7 @@ pip install -e ".[sql,mcp]"
 # 3. Populate the SQLite store the MCP server reads from
 #    --db must come before the subcommand; run from registry-aware-authoring\registry so $pwd resolves correctly
 python -m dry_registry.cli --db "$pwd\.dry_registry.sqlite" ingest
-# Confirm: "Ingested 9 registered artifacts ... into ...\registry-aware-authoring\registry\.dry_registry.sqlite"
+# Confirm: "Ingested 11 registered artifacts ... into ...\registry-aware-authoring\registry\.dry_registry.sqlite"
 ```
 
 Then in VS Code:
@@ -241,7 +242,7 @@ implementations. `resolve_binding` selects the right one for the target runtime:
 
 ```powershell
 python -m dry_registry.cli resolve-binding sales.datasets.commercial_customer_status_90d.v1 --runtime databricks
-python -m dry_registry.cli resolve-binding finance.logic.recognize_revenue.v1 --runtime dbt
+python -m dry_registry.cli resolve-binding finance.logic.recognize_revenue.v1 --runtime warehouse --dialect snowflake
 ```
 
 ```
@@ -249,16 +250,17 @@ Binding resolution for sales.datasets.commercial_customer_status_90d.v1 (runtime
 
   ► recommended: databricks/databricks prod: sales.datasets.commercial_customer_status_90d (view)
 
-Binding resolution for finance.logic.recognize_revenue.v1 (runtime=dbt, dialect=None):
+Binding resolution for finance.logic.recognize_revenue.v1 (runtime=warehouse, dialect=snowflake):
 
-  ► recommended: dbt/snowflake prod: dry_finance_macros.recognized_revenue_relation (macro)
+  ► recommended: warehouse/snowflake prod: FINANCE.LOGIC.RECOGNIZE_REVENUE (udf)
   alternatives:
-    - warehouse/snowflake prod: FINANCE.LOGIC.RECOGNIZE_REVENUE
+    - dbt/snowflake prod: dry_finance_macros.recognized_revenue_relation
 ```
 
 The result carries authority the workspace never had: lifecycle state, owner, reuse intent, and
-the recommended physical object per engine. Revenue resolves to Snowflake (UDF or dbt macro); the
-active-customer status resolves to a Databricks view — two engines, one registry query.
+the recommended physical object per engine. For this run's explicit Snowflake warehouse target,
+revenue resolves to the UDF; the active-customer status resolves to a Databricks view — two engines,
+one registry query.
 
 `recognize_revenue` is one certified identity with two Snowflake-stack bindings: the native UDF
 and a dbt macro. A dbt model reuses it with `{{ recognized_revenue_relation(...) }}`; a raw-SQL
@@ -298,10 +300,10 @@ Verification is the **closing step of the intent-first workflow** — the *Verif
 agent's Discover → Resolve → Compose → Verify loop. The DRY Reuse agent's instructions require it to
 call `compare_code` on the code it just authored against the registry scope once composing is done,
 without the engineer selecting the code or triggering the check manually. This is an **implemented
-service capability, not yet evidenced as an automatic recorded agent step**: in this PoC the service
-was exercised via the CLI against each generated output and the verdicts recorded alongside them (see
-[`poc-results/<model>/VERIFICATION.md`](scenarios/scenario-2/poc-results/)), but the original
-generation records do not prove the agent invoked and persisted the check on its own.
+service capability, not yet evidenced as an automatic recorded agent step**: the current Snowflake
+rerun was checked through the CLI after generation, and the summaries are recorded in
+[`poc-results/README.md`](scenarios/scenario-2/poc-results/README.md). The agent result folders do
+not prove that it invoked and persisted the check on its own.
 
 Because the composition references the certified bindings
 (`enterprise.datasets.customer_arpac_components_90d`, which in turn calls the certified
