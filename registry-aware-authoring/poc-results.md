@@ -42,7 +42,7 @@ and the *marketing* active rule are visible while the certified ones are not, so
 actively leads models toward the wrong artifacts. In **1C** both certified artifacts become visible,
 but the Sales invoice-only look-alike does too: code availability improves the numerator outcome but
 still supplies no authority signal for the denominator. Only in **2** does the registry make that
-authority explicit and resolve its runtime binding. Both domain-local look-alikes
+authority explicit and resolve the artifacts' runtime bindings. Both domain-local look-alikes
 (`sales.active_customer_90d`, `marketing.logic.active_customer`) are themselves registered as
 `domain_canonical`, so in **2** the registry *surfaces* them as **discoverable-and-rejected** —
 like the retired `invoice_revenue` — rather than hiding them; the executive request still resolves
@@ -137,6 +137,11 @@ scored in §4.
 
 Legend: ✅ pattern avoided / correct outcome · ⚠️ defensible-but-flawed · ❌ failure pattern hit ·
 `n/a` not reachable in this scenario. Codes in parentheses map to the failure patterns in §2.
+
+These are evidence-based diagnostic matrices, not the scoring rubric: their rows record decisions
+observable in each run, so row counts vary. Scenario 1C has the same source artifacts as Scenario 2;
+what it lacks is the registry's explicit authority, lifecycle, and runtime-binding metadata. The
+fixed seven-component rubric used to score every scenario appears in §4.
 
 ### Scenario 1A — base DWH tables only
 
@@ -330,8 +335,8 @@ which avoids that unsupported join but does not make the selected denominator go
 | Reproducible date (C3, 1) | 1 | 0 | 0 |
 | **Total** | **15 / 15** | **14 / 15** | **14 / 15** |
 
-Only the registry makes the certified inputs reachable, so every model now scores the two
-high-weight components and clears the bar. Sonnet and Opus each lose only the date-reproducibility
+The registry makes the certified inputs' authority and runtime bindings explicit, so every model now
+scores the two high-weight components and clears the bar. Sonnet and Opus each lose only the date-reproducibility
 point (C3, `CURRENT_DATE()`); Sonnet flags the missing Snowflake binding as a required bridge rather
 than shipping a silent cross-engine join, so it keeps full cross-engine credit (C2).
 Namespace and components-grain differences are registry-readiness polish, not correctness, and are

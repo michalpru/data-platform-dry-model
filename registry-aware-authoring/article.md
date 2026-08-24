@@ -32,6 +32,10 @@ The PoC runs the same ARPAC task through four authoring setups and three current
 | **Workspace-only (all existing codebase)** | **Scenario 1C** | The *entire* codebase across every domain — including the certified recognition logic and active-customer definition as source — the most optimistic workspace assumption |
 | **Registry-aware authoring** | **Scenario 2** | The **DRY Artifact Registry**, exposed as structured tools over a thin MCP server and driven by the custom **DRY Reuse agent** |
 
+### Authoring-time Reuse Architecture 
+This diagram depicts what is exposed to an AI coding assistant when an analytics engineer performs their task (Code workspace-only vs Registry-aware authoring)
+![Authoring-time Reuse Architecture](../publications/assets-diagrams/authoring-time-reuse-architecture.jpg)
+
 The prompt is the same business intent in every run: "I need a trailing-90-day ARPAC metric for executive reporting...
 - Numerator = net recognized revenue in USD, over the trailing 90 days, counting *only* active customers
 - Denominator = the count of active customers using the definition used in other executive dashboards... 
@@ -43,7 +47,7 @@ Full prompts and recorded runs are documented in [demo walkthrough](demo-walkthr
 
 ---
 
-## Why exposing the code workspace to AI Coding Asssitant doesn't deliver governed reuse
+## Why exposing only the code workspace to AI Coding Asssitant doesn't deliver governed reuse
 
 ### Scenario 1A — Workspace-only (base tables): the duplication amplifier
 
@@ -92,11 +96,11 @@ AI-assisted authoring makes it cheap to *write* code and to *find* something tha
 
 Scored on the single question — *did it deliver the correct governed ARPAC?* — the workspace-only setups fail for every model:
 
-| Model | 1A (base tables) | 1B (base tables + selected domain repos) | 1C (all existing codebase) | 2 (registry-aware) |
+| Model | 1A (base tables) | 1B (base tables + selected domain repos) | 1C (all existing codebase) | **2 (registry-aware)** |
 |---|:--:|:--:|:--:|:--:|
-| **GPT-5.5** | 27% | 40% | 60% | 100% |
-| **Claude Sonnet 4.6** | 27% | 33% | 67% | 93% |
-| **Claude Opus 4.8** | 27% | 33% | 67% | 93% |
+| **GPT-5.5** | 27% | 40% | 60% | **100%** |
+| **Claude Sonnet 4.6** | 27% | 33% | 67% | **93%** |
+| **Claude Opus 4.8** | 27% | 33% | 67% | **93%** |
 
 Each percentage is the run's score on a 15-point rubric — points awarded across the governed components (recognition, refund netting, currency, activity window, the certified active-customer definition, and correct composition/binding) — expressed as a fraction of the 15 available.
 
@@ -112,11 +116,16 @@ These results are **use-case-specific**, not precise predictions for every metri
 
 The turning point in the PoC is a small **DRY Artifact Registry** — the concept introduced in the [whitepaper](https://michalpru.github.io/data-platform-dry-model/). It is not a new warehouse or catalog. It is a thin **reuse-governance metadata** layer over the repositories, warehouses, and catalogs that already exist, adding only the facts they do not hold: a stable logical identity per artifact, its lifecycle state, reuse intent and scope, owner, and its **implementation bindings** — the physical objects (a warehouse UDF, a dbt macro, a Databricks table/view) that realise the same logical definition across engines and dialects. As the whitepaper describes, it stores manifests for the three reuse interfaces — **callable logic, queryable datasets, and semantic contracts** — as a vendor-neutral reuse architecture. It stores metadata and pointers; it never stores or executes code.
 
-The registry is **not** a code- or data-distribution mechanism and never sits in the query-execution path; its lookup runs over *governance metadata*, not a corpus of source. Where workspace similarity answers *"what looks like this,"* the registry answers what the task turns on: *which definition is authoritative, for what scope, and how do I bind to it from my runtime.* That also answers *"isn't this just RAG?"* A retrieval system could index registry records, but retrieval alone cannot certify an artifact, choose its runtime binding, or hold anyone accountable for it.
+The PoC uses a small **DRY Artifact Registry** — the reuse-governance control plane introduced in the [whitepaper](https://michalpru.github.io/data-platform-dry-model/). It is not a new warehouse, catalog, or code store. It is a vendor-neutral metadata layer that gives each reusable artifact a stable logical identity, lifecycle, reuse scope, owner, and **implementation bindings** — the pointers to the physical objects (warehouse UDFs, dbt macros, Databricks tables, etc.). It governs three reuse interfaces — **callable logic, queryable datasets, and semantic contracts** — through manifests; it never stores the implementation code, and never sits in the query-execution path.
 
-Warehouse- and catalog-backed MCP servers can expose deployed objects, schemas, lineage, and whatever governance metadata their connected systems maintain. They may therefore close the **reachability** gap in Scenarios 1A and 1B, and could provide this capability if they consistently expose the same governed metadata. This PoC does not compare those tools. The registry instead acts as an integration layer: it combines source-control declarations with repository, warehouse, catalog, and lineage signals into one normalized reuse-governance view. That avoids requiring every source system to carry the full metadata set or relying on the AI to infer authority and bindings from disparate signals.
+Workspace code search in the IDE can answer *“what looks similar?”* The registry answers the governed question: *“which definition is approved for this scope, and how is it consumed from this runtime?”* It is not RAG in itself: retrieval can surface registry records, but it cannot by itself certify an artifact, select a runtime binding, or establish ownership and lifecycle accountability.
 
-### What was implemented in the PoC
+Warehouse- and catalog-backed MCP servers may expose deployed objects, schemas, lineage, and some of these governance facts, potentially closing the reachability gap in Scenarios 1A–1C. This PoC does not compare those tools. The registry’s role is to normalize the required reuse-governance metadata from source control, repositories, warehouses, catalogs, and lineage systems, so an assistant need not infer authority or bindings from disparate signals. For background, see [The Missing Control Plane For Reuse Measurement](https://michalpru.github.io/data-platform-dry-model/publications/whitepaper-data-platform-dry-model.html#the-missing-control-plane-for-reuse-measurement).
+
+
+
+
+### What exactly was implemented in the PoC
 
 The PoC exposes the registry to the assistant as a thin, layered stack that maps directly onto Chapter 4 of the whitepaper:
 
