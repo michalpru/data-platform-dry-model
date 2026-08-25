@@ -13,17 +13,17 @@ They open their IDE, describe the metric to an AI coding assistant and let it dr
 
 ARPAC does not exist yet as a governed metric. But its parts do. **Net recognized revenue** and **active customers** are among the most reused concepts in any company, defined and redefined across warehouses, notebooks, and BI tools. Each typically has several valid but different definitions: some intentionally scoped to a domain like Marketing or Finance rather than approved company-wide, others legacy or retired code still sitting in repositories or warehouses where an AI coding assistant can mistake them for valid reuse candidates.
 
-So the real task is not to write ARPAC from scratch. It is "compose ARPAC for executive reporting **from the relevant, correct definitions already approved as company-wide canonicals**." That is a reuse problem, and it is exactly where AI-assisted authoring is supposed to help.
+So the real task is not to write ARPAC from scratch. It is "compose ARPAC for executive reporting **from the relevant functions or datasets already approved as company-wide canonicals**." That is a reuse problem, and it is exactly where AI-assisted authoring is supposed to help.
 
-This article reports a small proof of concept that tested how well it does. The result is the interesting part: when the AI coding assistant could use only the code available in its workspace, **none of the models produced the correct governed metric** — even when that workspace contained the *entire* codebase. More code improved partial correctness, but it neither identified the governed definition the metric required nor resolved the missing runtime binding for it.
+This article reports a small proof of concept that tested how well it does. The result is the interesting part: when the AI coding assistant could use only the code available in its workspace, **none of the models produced the correct governed metric**, even when that workspace contained the *entire* codebase. More code improved partial correctness, but it neither identified the governed definition the metric required nor resolved the missing runtime binding for it.
 
 ---
 
 ## The test: one metric, three models, four setups
-The diagram below maps the ARPAC use case across the enterprise data platform, highlighting the two certified enterprise definitions that the governed metric should reuse.
-![Data Landscape In The PoC](../publications/assets-diagrams/registry-aware-authoring-poc-scenarios.jpg)
+The diagram below maps the ARPAC use case across the enterprise data platform, highlighting the artifacts exposed for AI coding assistant and the two certified enterprise definitions (marked green) that the governed metric should reuse. Additionally it has been assumed that the company uses different tools/enignes to test how AI models will handle cross-platform bindings. Snowflake and Databricks have been chosen as examples.
+![Data Landscape In The PoC](../publications/assets-diagrams/registry-aware-authoring-poc-scenarios.jpg){width=70%}
 
-The PoC runs the same ARPAC task through four authoring setups and three current models — **GPT-5.5**, **Claude Sonnet 4.6**, and **Claude Opus 4.8**. In this Poc the GitHub Copilot was used with VS Code IDE and certain artifacts exposed for the models:
+The PoC runs the same ARPAC task through four authoring setups and three current models: **GPT-5.5**, **Claude Sonnet 4.6**, and **Claude Opus 4.8**. In this Poc the GitHub Copilot was used with VS Code IDE. Below are the certain artifacts exposed for the models:
 
 | Authoring setup | Scenario | What the AI coding assistant can use |
 |---|---|---|
