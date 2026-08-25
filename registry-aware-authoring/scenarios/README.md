@@ -1,58 +1,33 @@
 # Scenario workspaces (what Copilot *sees* in each scenario)
 
-These three directories make the walkthrough's three scenarios concrete. Each `scenario-*`
-folder is a **self-contained illustration of the workspace an analytics engineer + Copilot are
-given** for the same task:
+Each `scenario-*` folder is a self-contained illustration of the workspace an analytics engineer +
+Copilot are given for the same task: build a trailing-90-day **ARPAC** (Average Revenue per Active
+Customer) for executive reporting, reusing governed definitions instead of rebuilding them.
 
-> "Create a trailing-90-day **ARPAC** (Average Revenue per Active Customer) for executive
-> reporting. ARPAC = net recognized revenue in USD ÷ number of active customers. Reuse existing
-> definitions, datasets or logic where appropriate."
+These are **demonstration inputs**, not wired into the registry engine. The governed artifacts the
+engine indexes are the pure-YAML manifests in
+[`scenario-2/registry-manifests/`](scenario-2/registry-manifests/); the code their bindings point at
+lives in [`scenario-2/workspace/`](scenario-2/workspace/); the executable engine, CLI and MCP server
+live in [`../registry/`](../registry/).
 
-They are **demonstration inputs**, not wired into the registry engine. The governed artifacts the
-engine actually indexes live as pure-YAML manifests in
-[`scenario-2/registry-manifests/`](scenario-2/registry-manifests/), and the code their bindings
-point at lives in [`scenario-2/workspace/`](scenario-2/workspace/);
-the executable engine, CLI and MCP server live in [`../registry/`](../registry/). The narrated
-run with real command output is [`../demo-walkthrough.md`](../demo-walkthrough.md).
-
-| Authoring setup | Scenario | What the workspace exposes | What Copilot does | Failure / success |
-|---|---|---|---|---|
-| **Workspace-only (base tables)** | [**Scenario 1A**](scenario-1a/) | Base warehouse tables only — Snowflake (`dim_customers`, `fact_invoices`, `fact_refunds`) | Authors ARPAC from first principles | Re-implements revenue recognition; ignores currency; uses the wrong (12-month) active flag |
-| **Workspace-only (base tables + domain repositories)** | [**Scenario 1B**](scenario-1b/) | Base tables (Snowflake) **+** Finance (Snowflake) and Marketing (Databricks) domain repositories | Reuses the most *similar* artifacts it finds | Reuses a **retired** invoice-revenue view (skips refunds) and a **marketing** active-customer rule (logins) on a **different engine** — similarity ≠ authority |
-| **Registry-aware authoring** | [**Scenario 2**](scenario-2/) | The **DRY Artifact Registry** (via CLI / MCP agent) | Searches by intent, checks lifecycle & ownership, resolves bindings, composes | Reuses the certified revenue + active-customer definitions; authors only the ratio |
-
-## SQL dialect convention (Task 8)
-
-The scenarios simulate **heterogeneous warehouse technologies**, because cross-engine duplication is
-exactly the problem the registry exists to govern:
-
-| Repository / domain | Engine & dialect |
-|---|---|
-| `shared` DWH | Snowflake |
-| `finance-domain` | Snowflake |
-| `marketing-domain` | Databricks (PySpark + Spark SQL) |
-| `enterprise-analytics` (the ARPAC author) | Snowflake |
-
-Two rules keep this realistic without becoming noise:
-
-1. **Existing source artifacts are written in their home engine's dialect** — finance marts in
-   Snowflake, marketing logic in PySpark. Each file is single-dialect and internally consistent
-   (never four dialects mixed in one query).
-2. **Authored ARPAC uses the consumer's single dialect.** Enterprise-analytics runs Snowflake, so
-   the generated ARPAC is Snowflake SQL calling the resolved Snowflake bindings directly — that is
-   what makes it *executable*. Reuse is still surface-neutral: the certified `recognize_revenue` is
-   one identity with two bindings on the Snowflake stack — the native UDF and a dbt macro
-   (`dry_finance_macros.recognized_revenue_relation`) — so a dbt author resolves the macro and a raw-SQL author
-   resolves the UDF, both the *same* governed definition. Cross-*engine* reuse lives at the platform
-   level, where the marketing active-customer rule runs on Databricks. Portability is demonstrated by
-   the **binding set in the registry**, not by writing un-executable ANSI.
+| Scenario | Workspace exposed | Outcome |
+|---|---|---|
+| [**1A** — base tables](scenario-1a/) | Base warehouse tables only (Snowflake) | Authors ARPAC from first principles — re-derives revenue, ignores currency, wrong active flag |
+| [**1B** — base + domain repos](scenario-1b/) | Base tables **+** Finance (Snowflake) & Marketing (Databricks) repos | Reuses a **retired** view and a **marketing** login rule — similarity ≠ authority |
+| [**1C** — all existing codebase](scenario-1c/) | The *entire* codebase, incl. the certified logic exposed as source | Reuses the certified numerator, but still picks the Sales look-alike denominator |
+| [**2** — registry-aware](scenario-2/) | The **DRY Artifact Registry** (CLI / MCP agent) | Resolves the certified definitions + bindings; authors only the ratio |
 
 ## The intended contrasts
 
-| Concept | Scenario 1A picks | Scenario 1B picks | Scenario 2 picks (authoritative) |
-|---|---|---|---|
-| Revenue | raw `fact_invoices` sums (no recognition, no refunds, no FX) | `finance.invoice_revenue` (retired view; skips refunds) | `finance.logic.recognize_revenue.v1` (certified, Snowflake) |
-| Active customer | `dim_customers.is_active` (12-month order flag) | `marketing.logic.active_customer` (portal logins) | `sales.datasets.commercial_customer_status_90d.v1` (certified 90-day commercial activity, Databricks) |
+| Concept | 1A picks | 1B picks | 1C picks | 2 picks (authoritative) |
+|---|---|---|---|---|
+| Revenue | raw `fact_invoices` sums | `finance.invoice_revenue` (retired) | `recognize_revenue` (certified) | `finance.logic.recognize_revenue.v1` (certified) |
+| Active customer | `dim_customers.is_active` (12-mo flag) | `marketing…active_customer` (logins) | `sales…active_customer_90d` (look-alike) | `sales.datasets.commercial_customer_status_90d.v1` (certified) |
 
-Only the registry (scenario 2) knows the **lifecycle** (certified / shared / retired) and
-**ownership** that separate an authoritative definition from a plausible-looking copy.
+Only the registry (Scenario 2) carries the **lifecycle** (certified / shared / retired) and
+**ownership** that separate an authoritative definition from a plausible-looking copy. The scenarios
+also span **heterogeneous engines** (Snowflake for the shared DWH, Finance and the enterprise author;
+Databricks for Sales and Marketing) — cross-engine duplication is exactly what the registry governs.
+
+- **Narrated run with real command output & VS Code screenshots:** [`../demo-walkthrough.md`](../demo-walkthrough.md)
+- **Recorded results & scoring (single source):** [`../poc-results.md`](../poc-results.md)

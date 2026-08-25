@@ -1,13 +1,13 @@
-# Three-scenario walkthrough: authoring ARPAC
+# Scenario walkthrough: authoring ARPAC
 
 > Task: build **ARPAC = Average Revenue per Active Customer** for the executive dashboard,
 > reusing enterprise-certified definitions instead of rebuilding them.
 
-The three scenarios map to the authoring-time rows of the whitepaper's *Duplication Detection and
-Prevention Techniques* table (§4.3.3). **Scenario 1A — Workspace-only (base tables)** and
-**Scenario 1B — Workspace-only (base tables + domain repositories)** have no registry access.
-**Scenario 2 — Registry-aware authoring** is **registry-backed canonical resolution** (high
-confidence, prevention at authoring time).
+The scenarios map to the authoring-time rows of the whitepaper's *Duplication Detection and
+Prevention Techniques* table (§4.3.3). The three **workspace-only** setups — **Scenario 1A (base
+tables)**, **Scenario 1B (base tables + domain repositories)**, and **Scenario 1C (all existing
+codebase)** — have no registry access. **Scenario 2 — Registry-aware authoring** is
+**registry-backed canonical resolution** (high confidence, prevention at authoring time).
 
 > **How this PoC extends the whitepaper.** In the whitepaper, the three *detection techniques* —
 > structural fingerprinting (AST), embedding-based similarity, and LLM-based analysis — sit at
@@ -17,15 +17,15 @@ confidence, prevention at authoring time).
 > — so a likely reimplementation surfaces while the engineer is still typing, not only after the
 > PR is opened.
 >
-> **Two integration surfaces.** The workspace-only scenarios (1A/1B) use standard Copilot with
+> **Two integration surfaces.** The workspace-only scenarios (1A/1B/1C) use standard Copilot with
 > workspace file context. Scenario 2 uses a **custom DRY Reuse agent** over a thin MCP server for
 > registry-aware authoring.
 
 ---
 
-## The three scenarios
+## The scenarios
 
-Two authoring setups are compared — the first split into two workspace-exposure levels:
+Two authoring setups are compared — the first split into three workspace-exposure levels:
 
 - **Scenario 1 — workspace-exposed DWH codebase.** The data-warehouse codebase is exposed in the
   VS Code workspace and **standard Copilot** (the AI model) reasons over those files to build the
@@ -34,6 +34,9 @@ Two authoring setups are compared — the first split into two workspace-exposur
     (`dim_customers`, `fact_invoices`, `fact_refunds`) are visible.
   - **Scenario 1B — Workspace-only (base tables + domain repositories).** The base tables **plus** the Finance and Marketing
     domain warehouse tables/functions are exposed, so the model can find similar existing code.
+  - **Scenario 1C — Workspace-only (all existing codebase).** The *entire* codebase across every
+    domain is exposed — including the certified logic as source — the most optimistic workspace
+    assumption.
 - **Scenario 2 — Registry-aware authoring.** Instead of reasoning over raw files, the engineer works
   through the **DRY Artifact Registry** — its **registry service methods** (intent search + binding
   resolution) and **comparison service methods** (code verification) — reached through a **thin MCP
@@ -45,7 +48,7 @@ Two authoring setups are compared — the first split into two workspace-exposur
 
 Three models were tested in each scenario: **GPT-5.5**, **Claude Sonnet 4.6**, and **Claude Opus 4.8**.
 
-### Scenarios 1A and 1B — base prompt
+### Scenarios 1A, 1B and 1C — base prompt
 
 ```
 I need a trailing-90-day ARPAC (Average Revenue per Active Customer) metric for executive reporting. Deliver a reusable ARPAC metric definition that other executive dashboards can adopt.
@@ -56,7 +59,7 @@ I need a trailing-90-day ARPAC (Average Revenue per Active Customer) metric for 
 
 To accomplish this task please use only the code in the /registry-aware-authoring/scenarios/<scenario>/workspace directory. Please ignore all other files from other directories.
 
-Do NOT use the DRY registry or any MCP tools (e.g. search_artifacts, get_artifact, recommend_composition, resolve_binding). Scenarios 1A/1B are standard Copilot with workspace files only — rely solely on the files in that workspace directory.
+Do NOT use the DRY registry or any MCP tools (e.g. search_artifacts, get_artifact, recommend_composition, resolve_binding). Scenarios 1A/1B/1C are standard Copilot with workspace files only — rely solely on the files in that workspace directory.
 
 Generate output into /registry-aware-authoring/scenarios/<scenario>/poc-results/<model_name>/ directory.
 ```
@@ -87,6 +90,10 @@ Constraints:
 **Workspace exposed:** `registry-aware-authoring/scenarios/scenario-1a/workspace/` — the shared DWH base tables only
 (`dim_customers`, `fact_invoices`, `fact_refunds`).
 
+*VS Code setup (input) — Claude Opus 4.8:*
+
+![Scenario 1A input — base-tables-only workspace and the ARPAC prompt in VS Code (Claude Opus 4.8)](../publications/assets-diagrams/scenario-1a-claude-opus-4.8.-input.jpg)
+
 **What the models do.** With no domain logic visible, every tested model generates ARPAC from
 first principles straight from the raw base tables. The SQL runs and looks correct, but silently
 re-derives three governed rules:
@@ -103,7 +110,12 @@ reaches review or production as new "original" code.
 This is the whitepaper's *"AI assistant as duplication amplifier."* Two dashboards now show two
 different ARPAC numbers, and no pipeline fails.
 
-**Results:** `registry-aware-authoring/scenarios/scenario-1a/poc-results/<model_name>/`
+*Generated ARPAC (output) — Claude Opus 4.8:*
+
+![Scenario 1A output — ARPAC authored from base tables (Claude Opus 4.8)](../publications/assets-diagrams/scenario-1a-claude-opus-4.8.-output.jpg)
+
+**Results & scoring:** [`poc-results.md`](poc-results.md) — recorded model outputs live under
+[`scenarios/scenario-1a/poc-results/`](scenarios/scenario-1a/poc-results/).
 
 ---
 
@@ -111,6 +123,10 @@ different ARPAC numbers, and no pipeline fails.
 
 **Workspace exposed:** `registry-aware-authoring/scenarios/scenario-1b/workspace/` — base DWH tables **plus** the
 Finance and Marketing domain repositories.
+
+*VS Code setup (input) — Claude Sonnet 4.6:*
+
+![Scenario 1B input — base tables plus Finance & Marketing repos in VS Code (Claude Sonnet 4.6)](../publications/assets-diagrams/scenario-1b-claude-sonnet-4.6.-input.jpg)
 
 **What the models do.** With domain code visible, models find similar artifacts through workspace
 search. However, *availability and similarity do not imply authority*:
@@ -123,7 +139,12 @@ search. However, *availability and similarity do not imply authority*:
   (`FINANCE.DATASETS.FACT_BILLABLE_EVENTS`) exist only as deployed warehouse objects, invisible
   to workspace search.
 
-**Results:** `registry-aware-authoring/scenarios/scenario-1b/poc-results/<model_name>/`
+*Generated ARPAC (output) — Claude Sonnet 4.6:*
+
+![Scenario 1B output — reuse of the retired view and marketing rule (Claude Sonnet 4.6)](../publications/assets-diagrams/scenario-1b-claude-sonnet-4.6.-output.jpg)
+
+**Results & scoring:** [`poc-results.md`](poc-results.md) — recorded model outputs live under
+[`scenarios/scenario-1b/poc-results/`](scenarios/scenario-1b/poc-results/).
 
 ### Why workspace similarity alone is not enough
 
@@ -143,6 +164,37 @@ The three gaps the whitepaper names:
 3. **Similarity ≠ semantics.** The active-customer divergence (`dim_customers.is_active`, a 12-month
    flag, vs the certified 90-day status) barely registers as a structural signal, yet it is the
    most consequential error.
+
+---
+
+## Scenario 1C — Workspace-only (all existing codebase)
+
+**Workspace exposed:** `registry-aware-authoring/scenarios/scenario-1c/workspace/` — the *entire*
+codebase across every domain, including the certified `recognize_revenue` logic and the certified
+`commercial_customer_status_90d` view exposed as source. This is the most optimistic workspace-only
+assumption (unlikely in practice, since workspace search only sees what is open), granted to test
+whether broad code access alone is enough for governed reuse.
+
+*VS Code setup (input) — GPT-5.5:*
+
+![Scenario 1C input — whole-codebase workspace and the ARPAC prompt in VS Code (GPT-5.5)](../publications/assets-diagrams/scenario-1c-gpt-5.5.-input.jpg)
+
+**What the models do.** With the whole codebase visible, every model reuses the certified
+`recognize_revenue` for the numerator — recognition, refund netting and currency normalization are
+delegated, not re-derived. But the denominator fails again: three "active customer" definitions are
+now visible side by side — the certified `commercial_customer_status_90d`, a Sales
+`active_customer_90d` look-alike (POSTED invoice only), and the Marketing login rule. Every model
+picks the look-alike and rejects the certified view, because the certified one depends on Sales
+tables not materialized in the workspace (so it "does not run") while the look-alike reads the
+always-present shared tables. Runnability decided the answer; authority never entered into it,
+because nothing in the source encodes it.
+
+*Generated ARPAC (output) — GPT-5.5:*
+
+![Scenario 1C output — certified numerator but a look-alike denominator (GPT-5.5)](../publications/assets-diagrams/scenario-1c-gpt-5.5.-output.jpg)
+
+**Results & scoring:** [`poc-results.md`](poc-results.md) — recorded model outputs live under
+[`scenarios/scenario-1c/poc-results/`](scenarios/scenario-1c/poc-results/).
 
 ---
 
@@ -386,6 +438,25 @@ CLI as the closing Verify step is *not* the same as the agent auto-invoking and 
 verdict on every generated artifact — that wiring is still an open step (see
 [poc-results.md](poc-results.md) §5).
 
+### Recorded run — Claude Opus 4.8
+
+*VS Code setup (input) — DRY Reuse agent selected, registry MCP tools loaded:*
+
+![Scenario 2 input — DRY Reuse agent and registry MCP tools in VS Code (Claude Opus 4.8)](../publications/assets-diagrams/scenario-2-claude-opus-4.8-input.jpg)
+
+*Agent run (output) — Discover → Resolve → Compose → Verify:*
+
+![Scenario 2 output — registry discovery of the ARPAC components (Claude Opus 4.8)](../publications/assets-diagrams/scenario-2-claude-opus-4.8-output1.jpg)
+
+![Scenario 2 output — binding resolution across Snowflake and Databricks (Claude Opus 4.8)](../publications/assets-diagrams/scenario-2-claude-opus-4.8-output2.jpg)
+
+![Scenario 2 output — the governed ARPAC composition (Claude Opus 4.8)](../publications/assets-diagrams/scenario-2-claude-opus-4.8-output3.jpg)
+
+![Scenario 2 output — compare_code verification of the authored SQL (Claude Opus 4.8)](../publications/assets-diagrams/scenario-2-claude-opus-4.8-output4.jpg)
+
+**Results & scoring:** [`poc-results.md`](poc-results.md) — recorded model outputs live under
+[`scenarios/scenario-2/poc-results/`](scenarios/scenario-2/poc-results/).
+
 ### Impact analysis (optional)
 
 Before promoting a change to any building block, check who breaks:
@@ -435,12 +506,12 @@ Add `--json` to any command to get the raw structured payload the MCP tools also
 
 ## Side-by-side summary
 
-| | Scenario 1A | Scenario 1B | Scenario 2 |
-|---|---|---|---|
-| Workspace visible | DWH base tables only | Base tables + domain repos | DRY Artifact Registry (MCP) |
-| Finds similar code | ✗ | ✓ (workspace only) | ✓ (whole platform) |
-| Knows which is **canonical/certified** | ✗ | ✗ | ✓ |
-| Sees warehouse-only / other-repo artifacts | ✗ | ✗ | ✓ |
-| Distinguishes reuse from duplication (bindings) | ✗ | ✗ | ✓ |
-| Impact analysis before change | ✗ | ✗ | ✓ |
-| Net effect on ARPAC | divergent, undetected | maybe reused, unverified | canonical by composition |
+| | Scenario 1A | Scenario 1B | Scenario 1C | Scenario 2 |
+|---|---|---|---|---|
+| Workspace visible | DWH base tables only | Base tables + domain repos | Entire codebase | DRY Artifact Registry (MCP) |
+| Finds similar code | ✗ | ✓ (workspace only) | ✓ (whole workspace) | ✓ (whole platform) |
+| Knows which is **canonical/certified** | ✗ | ✗ | ✗ | ✓ |
+| Sees warehouse-only / other-repo artifacts | ✗ | ✗ | ✓ (as source) | ✓ |
+| Distinguishes reuse from duplication (bindings) | ✗ | ✗ | ✗ | ✓ |
+| Impact analysis before change | ✗ | ✗ | ✗ | ✓ |
+| Net effect on ARPAC | divergent, undetected | maybe reused, unverified | certified numerator, wrong denominator | canonical by composition |

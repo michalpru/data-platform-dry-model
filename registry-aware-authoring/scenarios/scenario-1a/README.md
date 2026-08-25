@@ -13,19 +13,10 @@ workspace/
             └── fact_refunds.sql
 ```
 
-**What happens.** Copilot has no enterprise business definitions for *recognized revenue* or
-*active customer*. It authors ARPAC "from first principles" using the visible warehouse assets and
-makes three governance mistakes:
+With no governed definitions visible, every model authors ARPAC from first principles — silently
+re-deriving revenue recognition, skipping currency normalization, and misusing `dim_customers.is_active`
+(a 12-month order flag) as the active-customer definition. The *duplication amplifier* baseline.
 
-1. **Revenue** = raw `POSTED` invoice amounts — no revenue-recognition rules, and refunds/credit
-   notes (`fact_refunds`) are never netted.
-2. **Currency** is ignored — there is no exchange-rate table in this workspace, so mixed-currency
-   `invoice_amount` values are summed as if all USD.
-3. **Active customer** = `dim_customers.is_active`, a *12-month order* flag, **not** the certified
-   90-day commercial-activity definition used by other executive dashboards.
-
-The result runs and looks plausible, but the number is **not comparable** to governed ARPAC.
-Nothing in this workspace can detect the divergence.
-
-See the recorded Scenario 1A model results and failure-pattern analysis in
-[`../../poc-results.md`](../../poc-results.md).
+- **Setup & narrated run:** [`../../demo-walkthrough.md`](../../demo-walkthrough.md) (Scenario 1A)
+- **Recorded results & scoring:** [`../../poc-results.md`](../../poc-results.md)
+- **Raw model outputs:** [`poc-results/`](poc-results/)

@@ -25,26 +25,11 @@ workspace/
             └── active_customer.py       ← Databricks PySpark rule (portal logins, NOT enterprise)
 ```
 
-**What happens.** Copilot can now discover reusable implementations across the workspace and, quite
-reasonably, reuses the ones that look most similar to the request:
+More context, less safety: models reuse the most *similar* code they find — the **retired**
+`invoice_revenue` view (skips refunds) and the Marketing portal-login rule — on two different engines
+(Snowflake + Databricks). Similarity and availability are not authority, and the certified
+definitions are invisible to workspace search.
 
-- **Revenue** → `finance.invoice_revenue`. It is a real, working view that normalizes currency —
-  but it is the **retired** legacy approach: it computes revenue from `POSTED` invoices only and
-  **skips refunds and credit notes**, and it has no recognition-timing rules. It was superseded by
-  the certified `recognize_revenue` logic, yet it is still in the repo.
-- **Active customer** → `marketing.logic.active_customer`. A Python function encoding a
-  **marketing-specific** rule (a customer is active if they logged into the Marketing Portal in the
-  window). This is not the enterprise commercial-activity definition.
-
-Both artifacts are discoverable and look reusable. **Similarity and availability are not business
-authority** — this is the core Scenario 1B failure the whitepaper names. Workspace search can rank by
-resemblance, but it cannot tell you that `invoice_revenue` is *retired* or that the marketing rule
-is *not enterprise-approved*. Only the registry (scenario 2) carries lifecycle and ownership.
-
-Worse, the two picks live on **different engines**: the revenue view is Snowflake, the
-active-customer rule is a Databricks PySpark job. Composing them forces the engineer to export the
-Databricks output and land it in Snowflake — a brittle cross-warehouse hop that similarity search
-never surfaces.
-
-See the recorded Scenario 1B model results and failure-pattern analysis in
-[`../../poc-results.md`](../../poc-results.md).
+- **Setup & narrated run:** [`../../demo-walkthrough.md`](../../demo-walkthrough.md) (Scenario 1B)
+- **Recorded results & scoring:** [`../../poc-results.md`](../../poc-results.md)
+- **Raw model outputs:** [`poc-results/`](poc-results/)

@@ -8,70 +8,17 @@ The governed artifacts this scenario resolves against are the **pure-YAML** mani
 [`workspace/`](workspace/), the mocked repositories where the real implementations live. The
 `workspace/enterprise/` tree is the **empty authoring target** the agent writes into.
 
-## The registry-aware workflow (intent-first)
+The agent searches by **intent**, checks lifecycle/ownership, resolves bindings across engines (a
+Snowflake UDF for revenue, a Databricks view for active status), rejects the retired
+`invoice_revenue` and the two registered domain-local look-alikes, and authors **only** the missing
+ARPAC composition — nothing governed is re-implemented. The cross-engine gap (no Snowflake binding
+for the Databricks active-customer view) is *surfaced*, not faked.
 
-1. **Search the whole intent first.** `search_artifacts("ARPAC", interface_type="semantic_contract")`.
-   If a certified ARPAC already existed, reuse it and stop.
-2. **No single match? Recommend a composition.** The agent decomposes the ARPAC formula in the
-   prompt into its components and calls
-   `recommend_composition("ARPAC", ["net recognized revenue", "active customers"])`, which resolves
-   each component to the **enterprise-wide certified** artifact **and** its binding, and flags
-   anything missing. Domain-local canonicals and base tables (`fact_billable_events`,
-   `dim_customers`) are not selected for this executive request.
-3. **Check lifecycle & ownership.** The registry returns authority the workspace never had:
+The [`code-similarity-verification/`](code-similarity-verification/) folder holds recorded
+`compare_code` controls proving the detector fires on real duplication and stays quiet on
+correctly-composed reuse.
 
-   | Component | Resolved artifact | Lifecycle | Owner | Engine |
-   |---|---|---|---|---|
-   | Recognize revenue | `finance.logic.recognize_revenue.v1` | certified | finance-analytics | Snowflake |
-   | Commercial customer status | `sales.datasets.commercial_customer_status_90d.v1` | certified | sales-analytics | **Databricks** |
-
-   Contrast with the workspace pick-ups from scenario 1B that the registry keeps out of the
-   result: the legacy `finance.datasets.invoice_revenue.v1` is registered but carries
-   `lifecycle: retired` (superseded), so it is **discoverable-and-rejected**; the two domain-local
-   active-customer look-alikes — the Sales `sales.datasets.active_customer_90d.v1` billed proxy
-   (POSTED invoice only) and the Marketing `marketing.logic.active_customer.v1` portal-login rule —
-   are registered as `domain_canonical`, so they are **discoverable-and-rejected** too: surfaced by
-   search, but not selected for this executive request because neither is an enterprise-wide
-   canonical. Either way the engineer lands on the certified definition.
-4. **Resolve bindings — across engines.** `resolve_binding(...)` returns the physical object for each component's runtime/dialect. Revenue resolves to a **Snowflake** UDF; the active-customer status resolves to a **Databricks** view — and to **no Snowflake binding at all**. The registry *surfaces* that cross-engine gap rather than hiding it: the components dataset references the resolved Databricks binding under an explicit "reachable from Snowflake once a binding is provisioned" precondition, and flags provisioning that binding as an integration requirement. No bridge object is fabricated.
-5. **Author only what is missing** — the components dataset `enterprise.datasets.customer_arpac_components_90d` and the ARPAC ratio `enterprise.semantic.arpac_90d` on top of it.
-6. **(Optional) verify.** `compare_code` the generated SQL against the registry to confirm it does not re-implement governed logic.
-
-## Verifying the output (`compare_code`)
-
-The closing step is code-first: feed the generated SQL back through `compare_code` to confirm the
-composition *references* governed logic rather than re-deriving it. A recorded
-[**verification suite**](code-similarity-verification/) exercises this with positive *and* negative controls and
-stores the raw JSON — the three Scenario 2 outputs each return *safe to author*, while re-derived
-revenue, a reimplemented **retired** view, and a reformatted copy of the certified UDF all make the
-detector fire (down to a `DIRECT_MATCH` on the reformat-only copy). Those are the whitepaper's
-build-time duplication-detection signals — AST structural fingerprinting plus advisory embeddings
-(§4.3.3) — run here at authoring time; see [`code-similarity-verification/README.md`](code-similarity-verification/README.md) for the
-per-control mapping.
-
-
-## SQL dialect (Task 8)
-
-The enterprise-analytics domain runs on **Snowflake**, so both authored artifacts recorded in the
-Scenario 2 model results are **Snowflake SQL**. The catch is that only *one* of the
-two governed inputs is native to Snowflake: `recognize_revenue` resolves to a Snowflake UDF, but
-`commercial_customer_status_90d` resolves to a **Databricks** view — and `resolve_binding(...,
-runtime=warehouse)` returns **no Snowflake binding** for it. The registry's value is that it
-*surfaces* this cross-engine gap; the components dataset
-recorded under `scenarios/scenario-2/poc-results/<model_name>/`
-references the resolved Databricks binding under an explicit "reachable from Snowflake once a binding
-is provisioned" precondition and flags provisioning it as an integration requirement. **No bridge
-object is fabricated** — actually provisioning one (a portable-SQL binding, or a shared/federated
-view registered as an *additional* binding on the artifact) is out of scope for this PoC.
-
-Portability is not lost; it moves into the registry. `recognize_revenue` is one certified identity
-with two bindings on the Snowflake stack — the native UDF and a **dbt macro**
-(`dry_finance_macros.recognized_revenue_relation`). A dbt model reuses it with `{{ recognized_revenue_relation(...) }}`;
-a raw-SQL author calls the UDF; both are the *same* governed definition. `resolve_binding … --runtime dbt`
-returns the macro, `--runtime warehouse` the UDF. dbt solves reuse *inside* dbt on one engine; the
-registry records that the macro and the UDF are one capability — and spans the Databricks stack that
-dbt on Snowflake never sees (the Sales active-customer view lives on Databricks).
-
-See [`../../poc-results.md`](../../poc-results.md) for the recorded model results. The full narrated run with real command output is [`../../demo-walkthrough.md`](../../demo-walkthrough.md) (Scenario 2).
-The current rerun summary and per-model deliverables are in
-[`poc-results/README.md`](poc-results/README.md).
+- **Architecture (registry service + comparison service + MCP + agent):** [`../../README.md`](../../README.md) (§7)
+- **Setup & narrated run with real output:** [`../../demo-walkthrough.md`](../../demo-walkthrough.md) (Scenario 2)
+- **Recorded results & scoring:** [`../../poc-results.md`](../../poc-results.md)
+- **Raw model outputs:** [`poc-results/`](poc-results/)

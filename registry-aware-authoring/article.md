@@ -34,8 +34,11 @@ The PoC runs the same ARPAC task through four authoring setups and three current
 | **Registry-aware authoring** | **Scenario 2** | The **DRY Artifact Registry**, exposed as structured tools over a thin MCP server and driven by the custom **DRY Reuse agent** |
 
 ### Authoring-time Reuse Architecture 
-This diagram depicts what is exposed to an AI coding assistant when an analytics engineer performs their task (Code workspace-only vs Registry-aware authoring)
-![Authoring-time Reuse Architecture](../publications/assets-diagrams/authoring-time-reuse-architecture.jpg)
+This diagram depicts what is exposed to an AI coding assistant when an analytics engineer performs their task:
+-  Code workspace-only: Scenarios 1A/1B/1C
+- Registry-aware authoring: Scenario 2
+
+<img src="../publications/assets-diagrams/authoring-time-reuse-architecture.jpg" alt="Authoring-time Reuse Architecture" width="85%">
 
 The prompt is the same business intent in every run: "I need a trailing-90-day ARPAC metric for executive reporting...
 - Numerator = net recognized revenue in USD, over the trailing 90 days, counting *only* active customers
@@ -44,7 +47,7 @@ Reuse existing definitions, datasets, or functions where appropriate, and explai
 
 Full prompts and recorded runs are documented in [demo walkthrough](demo-walkthrough.md). Each scenario's repositories are mocked and deliberately scoped, so the test isolates *which context the assistant can reach*.
 
-**One deliberately harsh grading question** decides each run: *did it deliver the correct, governed ARPAC?* If a needed composable artifact was unreachable, that component scores **zero**, exactly like getting it wrong. The workspace-only scenarios withhold direct warehouse and catalog access (an MCP tool for either could close that reachability gap); the test asks whether the governance facts needed to select and bind the correct definition are available.
+**One deliberately harsh grading question** decides each run: *did it deliver the correct, governed ARPAC?* If a needed composable artifact was unreachable, that component scores **zero**, exactly like getting it wrong. The workspace-only scenarios withhold direct warehouse and catalog access; MCP tools could improve that *reachability* (as discussed later), but reaching an object is not the same as knowing which definition is authoritative. The test asks whether the governance facts needed to select and bind the correct definition are available.
 
 ---
 
@@ -52,17 +55,22 @@ Full prompts and recorded runs are documented in [demo walkthrough](demo-walkthr
 
 ### Scenario 1A — Workspace-only (base tables): the duplication amplifier
 
-This is the baseline. With only base tables visible and nothing reusable to find, every model builds ARPAC from first principles — summing raw invoice amounts, netting refunds by hand, and reaching for `dim_customers.is_active` (a 12-month order flag, not the certified customer status). The SQL runs and looks correct, yet it silently re-implements three governed rules (billable-event assembly, revenue recognition, currency normalization) and uses the wrong active-customer definition. Nothing fails; two dashboards now show two different ARPAC numbers. This is the *duplication amplifier* — the failure the later scenarios build on.
+This is the baseline. With only base tables visible and nothing reusable to find, every model builds ARPAC from first principles: summing raw invoice amounts, netting refunds by hand, and reaching for `dim_customers.is_active` (a 12-month order flag, not the certified customer status). The SQL runs and looks correct, yet it silently re-implements three governed rules (billable-event assembly, revenue recognition, currency normalization) and uses the wrong active-customer definition. Nothing fails; two dashboards now show two different ARPAC numbers. This is the *duplication amplifier* — the failure the later scenarios build on.
+
+See the [detailed Scenario 1A results and per-model analysis](scenarios/scenario-1a/README.md).
+
 
 ### Scenario 1B — Workspace-only (base tables + domain repositories): similarity without authority
 
-The obvious fix is to give the AI coding assistant more to work with, so Scenario 1B adds some artifacts (functions and datasets) from the domain repositories. This is where the result becomes counter-intuitive, and where the article's headline sits: **more context did not fix the answer — it made the wrong one more convincing.**
+The obvious fix is to give the AI coding assistant more to work with, so Scenario 1B adds some artifacts (functions and datasets) from the domain repositories. This is where the result becomes counter-intuitive, and where the article's headline sits: **more context did not fix the answer, but it made the wrong one more convincing.**
 
 With domain code visible, the models found similar artifacts and reused them — the wrong ones:
 
 - The Finance repo contains `invoice_revenue` — a **retired** view that skips refunds. Nothing in the code repository says "retired," so models reused it and reproduced a known defect
 - The Marketing repo contains a login-based active-customer rule — a **domain-local** definition never certified as enterprise-level canonical. Two of the three models translated it to SQL and explicitly labelled it *"the authoritative active-customer definition used by executive dashboards."*
 - Meanwhile the actually-certified recognition function and the certified active-customer status view were **invisible to workspace search** because they exist only as deployed warehouse objects and in repositories that were never checked out. A direct warehouse or catalog MCP tool could expose them; that tool was intentionally outside this workspace-only setup.
+
+See the [detailed Scenario 1B results and per-model analysis](scenarios/scenario-1b/README.md).
 
 ### Scenario 1C — Workspace-only (all existing codebase): reachable but not distinguishable
 
@@ -71,6 +79,8 @@ Scenario 1C grants the **most optimistic** workspace assumption possible: the as
 With the whole codebase visible, all three models finally get the **numerator** right — they discover and reuse the certified `recognize_revenue`, so revenue recognition, refund netting, and currency normalization are delegated rather than re-derived. But the **denominator** fails again, and more instructively: three plausible "active customer" definitions are now visible side by side — the certified `commercial_customer_status_90d` (paid invoice *or* active subscription *or* committed order), a Sales `active_customer_90d` look-alike (POSTED invoice only), and the Marketing login rule. **Every model chose the look-alike** and explicitly rejected the certified view — because the certified definition depends on Sales tables that are not materialized in the workspace and therefore "does not run," while the look-alike reads the always-present shared tables. Runnability decided the answer; **authority never entered into it**, because nothing in the source encodes it.
 
 The output looks *more* trustworthy than 1A or 1B — a certified numerator, a clean composition, confident commentary — while silently using the wrong denominator, understating the active-customer count and overstating ARPAC. More visible code bought more convincing output, not a correct one.
+
+See the [detailed Scenario 1C results and per-model analysis](scenarios/scenario-1c/poc-results/README.md).
 
 ### The failure modes, in one place
 Across the runs, the workspace-only setups fail in four recurring ways — each one *silent*, because the SQL is valid:
