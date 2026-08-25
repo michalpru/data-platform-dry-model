@@ -6,7 +6,7 @@
 
 ---
 
-## An analytics engineer is asked for one number
+## 1. An analytics engineer is asked for one number
 
 An analytics engineer is handed a familiar task: build **ARPAC: Average Revenue per Active Customer** (trailing 90 days) for an executive dashboard. 
 They open their IDE, describe the metric to an AI coding assistant and let it draft the SQL.
@@ -19,7 +19,7 @@ This article reports a small proof of concept that tested how well it does. The 
 
 ---
 
-## The test: one metric, three models, four setups
+## 2. The test: one metric, three models, four setups
 The diagram below maps the ARPAC use case across the enterprise data platform, highlighting the artifacts exposed for AI coding assistant and the two certified enterprise definitions (marked green) that the governed metric should reuse. Additionally it has been assumed that the company uses different tools/enignes to test how AI models will handle cross-platform bindings. Snowflake and Databricks have been chosen as examples.
 
 <img src="../publications/assets-diagrams/registry-aware-authoring-poc-scenarios.jpg" alt="Data Landscape In The PoC" width="80%">
@@ -51,7 +51,7 @@ Full prompts and recorded runs are documented in [demo walkthrough](demo-walkthr
 
 ---
 
-## Why exposing only the code workspace to AI Coding Asssitant doesn't deliver governed reuse
+## 3. Why exposing only the code workspace to AI Coding Asssitant doesn't deliver governed reuse
 
 ### Scenario 1A — Workspace-only (base tables): the duplication amplifier
 
@@ -60,7 +60,7 @@ This is the baseline. With only base tables visible and nothing reusable to find
 - picks the **wrong active-customer definition**: `dim_customers.is_active`, a 12-month order flag, not the certified 90-day commercial status. 
 The SQL runs and looks correct, and none of the models flagged the definition as ungoverned — GPT framed `is_active` as the "executive-aligned" active-customer definition, and Sonnet and Opus went further, calling it "the authoritative active-customer flag" and "the enterprise active-customer definition" — so the result reads as trustworthy even as two dashboards quietly diverge. That is the *duplication amplifier*: with nothing certified to reuse, the assistant re-derives governed logic and no one notices.
 
-See the [recorded run and VS Code screenshots](demo-walkthrough.md#scenario-1a--workspace-only-base-tables), and the [detailed Scenario 1A per-model results](poc-results.md#scenario-1a--base-dwh-tables-only).
+See the [Recorded run](demo-walkthrough.md#scenario-1a--workspace-only-base-tables), and the [Detailed Scenario 1A per-model results](poc-results.md#scenario-1a--base-dwh-tables-only).
 
 
 ### Scenario 1B — Workspace-only (base tables + domain repositories): similarity without authority
@@ -73,47 +73,47 @@ With domain code visible, the models found similar artifacts and reused them —
 - The Marketing repo contains a login-based active-customer rule — a **domain-local** definition never certified as enterprise-level canonical. Two of the three models translated it to SQL and explicitly labelled it *"the authoritative active-customer definition used by executive dashboards."*
 - Meanwhile the actually-certified recognition function and the certified active-customer status view were **invisible to workspace search** because they exist only as deployed warehouse objects or in repositories that were never checked out.
 
-See the [recorded run and VS Code screenshots](demo-walkthrough.md#scenario-1b--workspace-only-base-tables--domain-repositories), and the [detailed Scenario 1B results and per-model analysis](scenarios/scenario-1b/README.md).
+See the [Recorded run](demo-walkthrough.md#scenario-1b--workspace-only-base-tables--domain-repositories), and the [Detailed Scenario 1B results and per-model analysis](scenarios/scenario-1b/README.md).
 
 ### Scenario 1C — Workspace-only (all existing codebase): reachable but not distinguishable
 
-Scenario 1C grants the **most optimistic** workspace assumption possible: the assistant sees the *entire* codebase at once — every domain repository checked out and every warehouse object exposed as source, including the certified `recognize_revenue` logic and `commercial_customer_status_90d` definition. Assuming an assistant has and searches every repository and deployed object across every domain is not realistic, but the PoC grants it anyway to test the strongest version of "just give the AI more code." Even so, **it still does not compose the metric correctly**.
+Scenario 1C grants the **most optimistic** workspace assumption possible: the assistant sees the *entire* codebase at once — every domain repository checked out and every warehouse object exposed as source, including the certified `recognize_revenue` logic and `commercial_customer_status_90d` definition. Assuming an assistant reaches and searches every repository and deployed object across every domain is hardly realistic, but the PoC grants it anyway to test the strongest version of "just give the AI more code." Even so, **it still does not compose the metric correctly**.
 
-With the whole codebase visible, all three models finally get the **numerator** right — they discover and reuse the certified `recognize_revenue`, so revenue recognition, refund netting, and currency normalization are delegated rather than re-derived. 
-However the **denominator** fails again, and more instructively: three plausible "active customer" definitions are now visible side by side: 
-- the certified `commercial_customer_status_90d` (paid invoice *or* active subscription *or* committed order), 
-- a Sales `active_customer_90d` look-alike (POSTED invoice only), 
-- and the Marketing login rule. 
-**Every model chose the look-alike** and explicitly rejected the certified view — because the certified definition references Sales tables that aren't materialized in the workspace, so its SQL would fail to run, while the look-alike reads the always-present shared tables. Runnability decided the answer; **authority never entered into it**, because nothing in the source encodes it.
+#### What went right
+All three models finally get the **numerator** right — they discover and reuse the certified `recognize_revenue`, so revenue recognition, refund netting, and currency normalization are delegated rather than re-derived.
 
-The output looks *more* trustworthy than 1A or 1B — a certified numerator, a clean composition, confident commentary — while silently using the wrong denominator, understating the active-customer count and overstating ARPAC. More visible code bought more convincing output, not a correct one.
+#### What fails again, and more instructively
+Three plausible "active customer" definitions exist: the certified `commercial_customer_status_90d`, a Sales-owned look-alike, and the Marketing login rule — and **every model chose the look-alike** over the certified view. Two things drove the choice: the models read and cast the look-alike as the "executive-style" active-customer rule, and where a model did weigh the certified view, it rejected it as non-runnable, because it depends on upstream tables not materialized in the workspace. Authority never entered in, as nothing in the source encodes it
 
-See the [recorded run and VS Code screenshots](demo-walkthrough.md#scenario-1c--workspace-only-all-existing-codebase), and the [detailed Scenario 1C results and per-model analysis](scenarios/scenario-1c/poc-results/README.md).
+The 1C output only looks more trustworthy than it did in the previous scenarios: a certified numerator, a clean composition, confident commentary, even as it silently uses the wrong denominator, understating the active-customer count and overstating ARPAC. **More visible code bought more convincing output, not a correct one**.
+
+See the [Recorded run](demo-walkthrough.md#scenario-1c--workspace-only-all-existing-codebase), and the [Detailed Scenario 1C results and per-model analysis](scenarios/scenario-1c/poc-results/README.md).
 
 ### The failure modes, in one place
-Across the runs, the workspace-only setups fail in four recurring ways — each one *silent*, because the SQL is valid:
+Across the runs, the workspace-only setups fail in four recurring ways (even when the SQL syntax is correct):
 
-- **Re-deriving governed logic** from raw tables (recognition, refund netting, currency, activity window).
-- **Reusing similar-but-wrong artifacts**: a retired view, or a domain-local rule promoted to "enterprise."
-- **Cross-engine and composition defects**: joining a Snowflake view to a Databricks rule as if a bridge existed.
-- **False confidence**: a well-commented result presented with no governance caveat.
+- **Re-deriving governed logic** from raw tables (recognition, refund netting, currency, activity window)
+- **Reusing similar-but-wrong artifacts**: a retired view, or a domain-local rule promoted to an enterprise canonical
+- **Cross-engine and composition defects**: combining a Snowflake revenue-recognition UDF with a Databricks active-customer view as if a cross-engine binding existed
+- **False confidence**: a well-commented result presented with no governance caveat
+
 
 ### What AI cannot infer from code alone
 Even when an AI coding assistant can search the exposed domain code, workspace search ranks matches only by textual and structural similarity. The decisive information is **not in the source**. Even with perfect search over every repository, an assistant cannot read off:
 
-- **Authority** — is this the certified definition, or one of five look-alikes?
-- **Reuse intent and scope** — was this built to be reused enterprise-wide, within one domain, or never?
-- **Lifecycle** — is it shared, certified, deprecated, or retired?
-- **Ownership** — who is accountable for it, and can approve a change?
-- **Implementation bindings** — even if the right logic is found, how is it consumed from *this* engineer's runtime and dialect?
+- **Authority**: is this the approved, canonical definition for this scope, or a convincing look-alike?
+- **Reuse intent and scope**: was this built to be reused enterprise-wide, within one domain, or never?
+- **Lifecycle**: is it shared, certified, deprecated, or retired?
+- **Ownership**: who is accountable for it, and can approve a change?
+- **Implementation bindings**: even if the right logic is found, how is it consumed from the engineer's runtime and dialect?
 
-And there is a coverage limit on top of the semantic one: **workspace search only sees what is open.** Assuming an assistant will have, and will search every relevant repository and every deployed warehouse object across every domain is not realistic. Widening the workspace does not resolve this; it just adds more places a retired, local, or irrelevant artifact can be picked up with false confidence.
+And there is a coverage limit on top of the semantic one: **workspace search only sees what is open.** Assuming an assistant will search every relevant repository and every deployed warehouse object across every domain is not realistic. Widening the workspace does not resolve this; it just adds more places a retired, local, or irrelevant artifact can be picked up with false confidence.
 
-AI-assisted authoring makes it cheap to *write* code and to *find* something that looks reusable. It does not answer the question the task actually turns on: **what should be reused.** That answer requires governance context that spans the repositories — and does not live in any of them.
+AI-assisted authoring makes it **cheap to write code and to find something that looks reusable**. It does not answer the question the task actually turns on: **what should be reused.** That answer requires governance context that spans the repositories, and typically does not live in any of them.
 
 ### The scoreboard
 
-Scored on the single question — *did it deliver the correct governed ARPAC?* — the workspace-only setups fail for every model:
+Scored on the single question — **did it deliver the correct governed ARPAC?** — the workspace-only setups fail for every model:
 
 | Model | 1A (base tables) | 1B (base tables + selected domain repos) | 1C (all existing codebase) | **2 (registry-aware)** |
 |---|:--:|:--:|:--:|:--:|
@@ -121,15 +121,15 @@ Scored on the single question — *did it deliver the correct governed ARPAC?* �
 | **Claude Sonnet 4.6** | 27% | 33% | 67% | **93%** |
 | **Claude Opus 4.8** | 27% | 33% | 67% | **93%** |
 
-Each percentage is the run's score on a 15-point rubric — points awarded across the governed components (recognition, refund netting, currency, activity window, the certified active-customer definition, and correct composition/binding) — expressed as a fraction of the 15 available.
+Each percentage is the run's score on a 15-point rubric: points awarded across the governed components (recognition, refund netting, currency, activity window, the certified active-customer definition, and correct composition/binding) — expressed as a fraction of the 15 available. See the [detailed scoreboard and per-scenario scoring](poc-results.md#4-scoring-matrix) for the full rubric and point-by-point breakdown.
 
-The verdict for every workspace-only run — all three models across 1A, 1B, and 1C — is the same: **no, the governed ARPAC was not delivered.** The climb from 1A (27%) to 1B (33–40%) to 1C (60–67%) is meaningful partial progress: in 1C every model reaches the certified recognition rule for the numerator. But every model still misses the decisive denominator fact — *which* of the visible active-customer definitions is the certified one. Even with the entire codebase in view, that authority is not in the code, so 1C scores higher and still fails. (Full rubric and per-component scores: [poc-results.md](poc-results.md); Scenario 1C detail: [scenarios/scenario-1c/poc-results/README.md](scenarios/scenario-1c/poc-results/README.md).)
+The verdict is the same for every workspace-only run: **no governed ARPAC.** The climb from 1A (27%) to 1B (33–40%) to 1C (60–67%) is real but partial — more visible code raises partial correctness, and confidence, but never reaches a correct result.
 
-These results are **use-case-specific**, not precise predictions for every metric or codebase. A different mix of visible artifacts could produce better or worse workspace-only results. The PoC instead shows a repeated tendency: when several plausible definitions exist, code access alone does not establish which one is authoritative or how to consume it in the target runtime.
+These results are **use-case-specific**, not a benchmark: a different mix of visible artifacts could score higher or lower. What repeats is the tendency — when several plausible definitions exist, code access alone cannot establish which one is authoritative, or how to bind it to the target runtime.
 
 ---
 
-## The governance control plane: exposing the registry to AI coding assistant
+## 4. The governance control plane: exposing the registry to AI coding assistant
 
 ### What the registry is
 
