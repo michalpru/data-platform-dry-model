@@ -21,7 +21,7 @@ This article reports a small proof of concept that tested how well it does. The 
 
 ## The test: one metric, three models, four setups
 The diagram below maps the ARPAC use case across the enterprise data platform, highlighting the artifacts exposed for AI coding assistant and the two certified enterprise definitions (marked green) that the governed metric should reuse. Additionally it has been assumed that the company uses different tools/enignes to test how AI models will handle cross-platform bindings. Snowflake and Databricks have been chosen as examples.
-![Data Landscape In The PoC](../publications/assets-diagrams/registry-aware-authoring-poc-scenarios.jpg){width=70%}
+<img src="../publications/assets-diagrams/registry-aware-authoring-poc-scenarios.jpg" alt="Data Landscape In The PoC" width="70%">
 
 The PoC runs the same ARPAC task through four authoring setups and three current models: **GPT-5.5**, **Claude Sonnet 4.6**, and **Claude Opus 4.8**. In this Poc the GitHub Copilot was used with VS Code IDE. Below are the certain artifacts exposed for the models:
 
