@@ -53,29 +53,29 @@ Full prompts and recorded runs are documented in [demo walkthrough](demo-walkthr
 
 ## 3. Why exposing only the code workspace to AI Coding Asssitant doesn't deliver governed reuse
 
-### Scenario 1A — Workspace-only (base tables): the duplication amplifier
+### Scenario 1A: Workspace-only with base tables
 
 This is the baseline. With only base tables visible and nothing reusable to find, every model builds ARPAC from first principles:
-- silently re-implements three governed rules (billable-event assembly, revenue recognition, currency normalization)
-- picks the **wrong active-customer definition**: `dim_customers.is_active`, a 12-month order flag, not the certified 90-day commercial status. 
-The SQL runs and looks correct, and none of the models flagged the definition as ungoverned — GPT framed `is_active` as the "executive-aligned" active-customer definition, and Sonnet and Opus went further, calling it "the authoritative active-customer flag" and "the enterprise active-customer definition" — so the result reads as trustworthy even as two dashboards quietly diverge. That is the *duplication amplifier*: with nothing certified to reuse, the assistant re-derives governed logic and no one notices.
+- Silently re-implements three governed rules (billable-event assembly, revenue recognition, currency normalization)
+- Picks the **wrong active-customer definition**: `dim_customers.is_active`, a 12-month order flag, not the certified 90-day commercial status. 
+The SQL runs and looks correct, and none of the models flagged the active-customer definition as ungoverned: GPT framed `is_active` as the "executive-aligned" , and Sonnet and Opus went further, calling it "the authoritative active-customer flag" and "the enterprise active-customer definition", so the result reads as trustworthy even as two dashboards quietly diverge. That is the **duplication amplifier**: with nothing certified to reuse, the assistant re-derives governed logic and no one notices.
 
 See the [Recorded run](demo-walkthrough.md#scenario-1a--workspace-only-base-tables), and the [Detailed Scenario 1A per-model results](poc-results.md#scenario-1a--base-dwh-tables-only).
 
 
-### Scenario 1B — Workspace-only (base tables + domain repositories): similarity without authority
+### Scenario 1B: Workspace-only with base tables and domain repositories
 
 The obvious fix is to give the AI coding assistant more to work with, so Scenario 1B adds some artifacts (functions and datasets) from the domain repositories. This is where the result becomes counter-intuitive, and where the article's headline sits: **more context did not fix the answer, but it made the wrong one more convincing.**
 
 With domain code visible, the models found similar artifacts and reused them — the wrong ones:
-
 - The Finance repo contains `invoice_revenue` — a **retired** view that skips refunds. Nothing in the code repository says "retired," so models reused it and reproduced a known defect
 - The Marketing repo contains a login-based active-customer rule — a **domain-local** definition never certified as enterprise-level canonical. Two of the three models translated it to SQL and explicitly labelled it *"the authoritative active-customer definition used by executive dashboards."*
 - Meanwhile the actually-certified recognition function and the certified active-customer status view were **invisible to workspace search** because they exist only as deployed warehouse objects or in repositories that were never checked out.
 
 See the [Recorded run](demo-walkthrough.md#scenario-1b--workspace-only-base-tables--domain-repositories), and the [Detailed Scenario 1B results and per-model analysis](scenarios/scenario-1b/README.md).
 
-### Scenario 1C — Workspace-only (all existing codebase): reachable but not distinguishable
+
+### Scenario 1C: Workspace-only with all existing codebase
 
 Scenario 1C grants the **most optimistic** workspace assumption possible: the assistant sees the *entire* codebase at once — every domain repository checked out and every warehouse object exposed as source, including the certified `recognize_revenue` logic and `commercial_customer_status_90d` definition. Assuming an assistant reaches and searches every repository and deployed object across every domain is hardly realistic, but the PoC grants it anyway to test the strongest version of "just give the AI more code." Even so, **it still does not compose the metric correctly**.
 
@@ -91,7 +91,6 @@ See the [Recorded run](demo-walkthrough.md#scenario-1c--workspace-only-all-exist
 
 ### The failure modes, in one place
 Across the runs, the workspace-only setups fail in four recurring ways (even when the SQL syntax is correct):
-
 - **Re-deriving governed logic** from raw tables (recognition, refund netting, currency, activity window)
 - **Reusing similar-but-wrong artifacts**: a retired view, or a domain-local rule promoted to an enterprise canonical
 - **Cross-engine and composition defects**: combining a Snowflake revenue-recognition UDF with a Databricks active-customer view as if a cross-engine binding existed
@@ -100,7 +99,6 @@ Across the runs, the workspace-only setups fail in four recurring ways (even whe
 
 ### What AI cannot infer from code alone
 Even when an AI coding assistant can search the exposed domain code, workspace search ranks matches only by textual and structural similarity. The decisive information is **not in the source**. Even with perfect search over every repository, an assistant cannot read off:
-
 - **Authority**: is this the approved, canonical definition for this scope, or a convincing look-alike?
 - **Reuse intent and scope**: was this built to be reused enterprise-wide, within one domain, or never?
 - **Lifecycle**: is it shared, certified, deprecated, or retired?
@@ -134,7 +132,7 @@ These results are **use-case-specific**, not a benchmark: a different mix of vis
 ### What the registry is
 
 The PoC uses a small **DRY Artifact Registry** — the **reuse-governance control plane** introduced in the [whitepaper](https://michalpru.github.io/data-platform-dry-model/). It is not a new warehouse, catalog, or code store. It is a **vendor-neutral metadata layer** that gives each reusable artifact a stable logical identity, lifecycle, reuse scope, owner, and implementation bindings — the pointers to the physical objects (warehouse UDFs, dbt macros, Databricks tables, etc.). 
-It governs three reuse interfaces — **callable logic, queryable datasets, and semantic contracts** — through manifests. It stores metadata, implementation bindings, and derived signals such as structural fingerprints, but never the implementation code and it never sits in the query-execution path.
+It governs three reuse interfaces: **callable logic, queryable datasets, and semantic contracts**. It stores metadata, and derived signals such as structural fingerprints, but never the implementation code and it never sits in the query-execution path.
 
 <img src="../publications/assets-diagrams//dry-artifact-registry.jpg" width="800"/>
 
@@ -144,17 +142,17 @@ Warehouse- and catalog-backed MCP servers may expose deployed objects, schemas, 
 
 ### Workspace search vs. Registry resolution
 
-Workspace code search answers *“what looks similar?”* The registry answers the governed question — *which definition is approved for this scope, and how is it consumed from this runtime?* Both find candidates; only the registry carries authority:
+Workspace code search answers ”what looks similar?” The registry answers the governed question: **”which artifact is approved for this scope, and how is it consumed from this runtime?”** Both find candidates; only the registry carries authority.
 
 | | Workspace similarity search | Registry-backed resolution |
 |---|---|---|
 | **Finds** | Structurally/textually similar code | The governed artifact for the intent |
 | **Coverage** | Only repositories open in the workspace | Every registered artifact, across engines |
-| **Authority signal** | None — lifecycle/owner/scope unknown | Certified vs. retired vs. domain-local, with owner |
-| **Runtime fit** | Raw file; consumer resolves it | `resolve_binding` returns the object for the runtime/dialect |
+| **Authority signal** | None: lifecycle/owner/scope unknown | Certified vs. retired vs. domain-local, with owner |
+| **Runtime fit** | Raw file; consumer resolves it | `resolve_binding` points to the deployed object for the runtime/dialect |
 | **Failure mode** | Confident reuse of the wrong artifact | Flags gaps (e.g. missing cross-engine binding) instead of guessing |
 
-Workspace search curbs accidental re-implementation; registry resolution makes reuse of the *canonical* artifact the lowest-friction path.
+Workspace search curbs accidental re-implementation; registry resolution makes reuse of the canonical artifact the lowest-friction path.
 
 ### What exactly was implemented in the PoC
 
