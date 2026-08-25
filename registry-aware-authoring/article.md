@@ -8,12 +8,12 @@
 
 ## An analytics engineer is asked for one number
 
-An analytics engineer is handed a familiar task: build **ARPAC — Average Revenue per Active Customer** (trailing 90 days) for an executive dashboard. 
-They open their IDE, describe the metric to an AI coding assistant — GitHub Copilot in this PoC — and let it draft the SQL.
+An analytics engineer is handed a familiar task: build **ARPAC: Average Revenue per Active Customer** (trailing 90 days) for an executive dashboard. 
+They open their IDE, describe the metric to an AI coding assistant and let it draft the SQL.
 
-ARPAC does not exist yet as a governed metric. But its parts do. **Net recognized revenue** and **active customers** are among the most reused concepts in any company — defined and redefined across warehouses, notebooks, and BI tools. In most large organizations, each concept has several *valid but different* definitions. Some are legitimate but intentionally scoped to a team or domain, such as Marketing or Finance, rather than approved as company-wide canonicals. Others are legacy or retired tables, views, or code that remain in repositories and can be mistaken for valid reuse candidates by an AI coding assistant.
+ARPAC does not exist yet as a governed metric. But its parts do. **Net recognized revenue** and **active customers** are among the most reused concepts in any company, defined and redefined across warehouses, notebooks, and BI tools. Each typically has several valid but different definitions: some intentionally scoped to a domain like Marketing or Finance rather than approved company-wide, others legacy or retired code still sitting in repositories or warehouses where an AI coding assistant can mistake them for valid reuse candidates.
 
-So the real task is not "write ARPAC from scratch." It is "compose ARPAC for executive reporting **from definitions already approved as company-wide canonicals**." That is a reuse problem, and it is exactly where AI-assisted authoring is supposed to help.
+So the real task is not to write ARPAC from scratch. It is "compose ARPAC for executive reporting **from the relevant, correct definitions already approved as company-wide canonicals**." That is a reuse problem, and it is exactly where AI-assisted authoring is supposed to help.
 
 This article reports a small proof of concept that tested how well it does. The result is the interesting part: when the AI coding assistant could use only the code available in its workspace, **none of the models produced the correct governed metric** — even when that workspace contained the *entire* codebase. More code improved partial correctness, but it neither identified the governed definition the metric required nor resolved the missing runtime binding for it.
 
@@ -23,7 +23,7 @@ This article reports a small proof of concept that tested how well it does. The 
 The diagram below maps the ARPAC use case across the enterprise data platform, highlighting the two certified enterprise definitions that the governed metric should reuse.
 ![Data Landscape In The PoC](../publications/assets-diagrams/registry-aware-authoring-poc-scenarios.jpg)
 
-The PoC runs the same ARPAC task through four authoring setups and three current models — **GPT-5.5**, **Claude Sonnet 4.6**, and **Claude Opus 4.8**:
+The PoC runs the same ARPAC task through four authoring setups and three current models — **GPT-5.5**, **Claude Sonnet 4.6**, and **Claude Opus 4.8**. In this Poc the GitHub Copilot was used with VS Code IDE and certain artifacts exposed for the models:
 
 | Authoring setup | Scenario | What the AI coding assistant can use |
 |---|---|---|
