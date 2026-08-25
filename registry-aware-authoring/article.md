@@ -133,32 +133,18 @@ These results are **use-case-specific**, not a benchmark: a different mix of vis
 
 ### What the registry is
 
-The turning point in the PoC is a small **DRY Artifact Registry** — the concept introduced in the [whitepaper](https://michalpru.github.io/data-platform-dry-model/). It is not a new warehouse or catalog. It is a thin **reuse-governance metadata** layer over the repositories, warehouses, and catalogs that already exist, adding only the facts they do not hold: a stable logical identity per artifact, its lifecycle state, reuse intent and scope, owner, and its **implementation bindings** — the physical objects (a warehouse UDF, a dbt macro, a Databricks table/view) that realise the same logical definition across engines and dialects. As the whitepaper describes, it stores manifests for the three reuse interfaces — **callable logic, queryable datasets, and semantic contracts** — as a vendor-neutral reuse architecture. It stores metadata and pointers; it never stores or executes code.
+The PoC uses a small **DRY Artifact Registry** — the **reuse-governance control plane** introduced in the [whitepaper](https://michalpru.github.io/data-platform-dry-model/). It is not a new warehouse, catalog, or code store. It is a **vendor-neutral metadata layer** that gives each reusable artifact a stable logical identity, lifecycle, reuse scope, owner, and implementation bindings — the pointers to the physical objects (warehouse UDFs, dbt macros, Databricks tables, etc.). 
+It governs three reuse interfaces — **callable logic, queryable datasets, and semantic contracts** — through manifests. It stores metadata, implementation bindings, and derived signals such as structural fingerprints, but never the implementation code and it never sits in the query-execution path.
 
-The PoC uses a small **DRY Artifact Registry** — the reuse-governance control plane introduced in the [whitepaper](https://michalpru.github.io/data-platform-dry-model/). It is not a new warehouse, catalog, or code store. It is a vendor-neutral metadata layer that gives each reusable artifact a stable logical identity, lifecycle, reuse scope, owner, and **implementation bindings** — the pointers to the physical objects (warehouse UDFs, dbt macros, Databricks tables, etc.). It governs three reuse interfaces — **callable logic, queryable datasets, and semantic contracts** — through manifests. It stores metadata, implementation bindings, and derived signals such as structural fingerprints, but never the implementation code and it never sits in the query-execution path.
+<img src="../publications/assets-diagrams//dry-artifact-registry.jpg" width="800"/>
 
-Workspace code search in the IDE can answer *“what looks similar?”* The registry answers the governed question: *“which definition is approved for this scope, and how is it consumed from this runtime?”* It is not RAG in itself: retrieval can surface registry records, but it cannot by itself certify an artifact, select a runtime binding, or establish ownership and lifecycle accountability.
+The registry is not RAG: retrieval can surface registry records, but it cannot by itself certify an artifact, select a runtime binding, or establish ownership and lifecycle accountability.
 
 Warehouse- and catalog-backed MCP servers may expose deployed objects, schemas, lineage, and some of these governance facts, potentially closing the reachability gap in Scenarios 1A–1C. This PoC does not compare those tools. The registry’s role is to normalize the required reuse-governance metadata from source control, repositories, warehouses, catalogs, and lineage systems, so an assistant need not infer authority or bindings from disparate signals. For background, see [The Missing Control Plane For Reuse Measurement](https://michalpru.github.io/data-platform-dry-model/publications/whitepaper-data-platform-dry-model.html#the-missing-control-plane-for-reuse-measurement).
 
+### Workspace search vs. Registry resolution
 
-### What exactly was implemented in the PoC
-
-The PoC exposes the registry to the assistant as a thin, layered stack that maps directly onto Chapter 4 of the whitepaper:
-
-![PoC architecture: registry services and comparison services, a thin MCP server, and the DRY Reuse agent](../publications/assets-diagrams/registry-aware-authoring-poc-architecture.jpg)
-
-- **The registry** — a local SQLite control plane built from pure-YAML artifact manifests. It holds logical identities, authority, bindings, and dependency edges; each binding points to real code in the workspace but the registry holds none of it.
-- **Registry service methods** — intent-first discovery and binding resolution: `search_artifacts`, `find_composable_artifacts`, `recommend_composition`, `resolve_binding`.
-- **Comparison service methods** — code-first verification: `compare_code` fingerprints authored code with a shared AST/feature engine and returns similarity **plus** governance evidence.
-- **A thin MCP server** — exposes both service groups as structured tools; it holds no business logic.
-- **The DRY Reuse agent** — a custom Copilot agent whose instructions drive the workflow and read each resolved binding's source to confirm columns and signatures before referencing them.
-
-Notably, the Python services **never call an LLM**. They return structured evidence; the agent reads that evidence and acts. The determinism lives in the tools; the language understanding lives in the model.
-
-### Workspace search vs. Registry services
-
-Both approaches find candidates. Only one of them carries the governed authority — which definition is certified, for what scope, who owns it, and how to bind to it.
+Workspace code search answers *“what looks similar?”* The registry answers the governed question — *which definition is approved for this scope, and how is it consumed from this runtime?* Both find candidates; only the registry carries authority:
 
 | | Workspace similarity search | Registry-backed resolution |
 |---|---|---|
@@ -168,7 +154,21 @@ Both approaches find candidates. Only one of them carries the governed authority
 | **Runtime fit** | Raw file; consumer resolves it | `resolve_binding` returns the object for the runtime/dialect |
 | **Failure mode** | Confident reuse of the wrong artifact | Flags gaps (e.g. missing cross-engine binding) instead of guessing |
 
-Workspace search reduces accidental re-implementation. Registry-backed resolution makes reuse of the *canonical* artifact the path of lowest friction — and refuses to fake what it cannot resolve.
+Workspace search curbs accidental re-implementation; registry resolution makes reuse of the *canonical* artifact the lowest-friction path.
+
+### What exactly was implemented in the PoC
+
+The PoC exposes the registry to the assistant as a thin, layered stack:
+
+![PoC architecture: registry services and comparison services, a thin MCP server, and the DRY Reuse agent](../publications/assets-diagrams/registry-aware-authoring-poc-architecture.jpg)
+
+- **The registry**: a local SQLite control plane built from pure-YAML artifact manifests. It holds logical identities, authority, bindings, and dependency edges; each binding points to real code in the workspace but the registry holds none of it
+- **Registry service methods**: intent-first discovery and binding resolution: `search_artifacts`, `find_composable_artifacts`, `recommend_composition`, `resolve_binding`
+- **Comparison service methods**: code-first verification: `compare_code` fingerprints authored code with a shared AST/feature engine and returns similarity **plus** governance evidence
+- **A thin MCP server**: exposes both service groups as structured tools; it holds no business logic
+- **The DRY Reuse agent**: a custom Copilot agent whose instructions drive the workflow and read each resolved binding's source to confirm columns and signatures before referencing them
+
+Notably, the Python services **never call an LLM**. They return structured evidence; the agent reads that evidence and acts. The determinism lives in the tools; the language understanding lives in the model.
 
 ### The agent workflow
 
