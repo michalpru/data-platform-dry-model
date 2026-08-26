@@ -333,7 +333,7 @@ See [demo-walkthrough.md](demo-walkthrough.md) for the full narrative with real 
 
 ## 10. Why not just dbt or the semantic layer?
 
-The most common objection is *"we already do this with dbt macros, models and the semantic layer."*
+*"We already do this with dbt macros, models and the semantic layer."*
 Those tools are complementary, not a replacement — the registry closes gaps they structurally cannot:
 
 1. **dbt governs a project; the failure modes are cross-project and cross-engine.** dbt Mesh /
