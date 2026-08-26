@@ -257,6 +257,10 @@ retired `invoice_revenue` for recognition (A1) — scores **0** on that componen
 producing it at all. There are **no negative penalties**, so totals are directly comparable across
 scenarios: `is_active` in 1A and the Marketing rule in 1B are both simply a zero on A4.
 
+Because each component is scored independently and there are no penalties, a run keeps the points for
+the components it gets right — which is why the workspace-only setups land at partial scores rather
+than 0%, and only an all-correct run reaches 15/15 (100%).
+
 ### Decisive verdict — was the correct governed ARPAC delivered?
 
 | Scenario | GPT-5.5 | Sonnet 4.6 | Opus 4.8 |

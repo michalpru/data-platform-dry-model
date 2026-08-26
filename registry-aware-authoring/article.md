@@ -43,7 +43,7 @@ This diagram depicts what is exposed to an AI coding assistant when an analytics
 
 <img src="../publications/assets-diagrams/authoring-time-reuse-architecture.jpg" alt="Authoring-time Reuse Architecture" width="75%">
 
-### Prompts
+### Prompt
 The prompt is the same business intent in every run: "I need a trailing-90-day ARPAC metric for executive reporting...
 - Numerator = net recognized revenue in USD, over the trailing 90 days, counting *only* active customers
 - Denominator = the count of active customers using the definition used in other executive dashboards... 
@@ -54,7 +54,31 @@ Each scenario's repositories are mocked and deliberately scoped, so the **test i
 
 ---
 
-## 3. PoC Results: Why exposing only the code workspace to AI Coding Asssitant doesn't deliver governed reuse
+## 3. PoC Results: AI assistant limited to IDE workspace code
+
+### The scoreboard
+
+Scored on one deliberately harsh grading question: **did it deliver the correct, governed ARPAC ?** The workspace-only setups fail for every model:
+
+| Model | 1A (base tables) | 1B (base tables + selected domain repos) | 1C (all existing codebase) | 2 (registry-aware) |
+|---|:--:|:--:|:--:|:--:|
+| **GPT-5.5** | 27% | 40% | 60% | 100% |
+| **Claude Sonnet 4.6** | 27% | 33% | 67% | 93% |
+| **Claude Opus 4.8** | 27% | 33% | 67% | 93% |
+
+Each percentage is the run's score on a **15-point rubric**, covering the components required for a correct, governed ARPAC: recognition, refund netting, currency, activity window, the certified active-customer definition, and composition/binding. The [full rubric and point-by-point breakdown](poc-results.md#4-scoring-matrix) has the details.
+
+The verdict is the same for every workspace-only run: **no governed ARPAC.** The climb from 1A (27%) to 1B (33–40%) to 1C (60–67%) shows that more visible code raises both partial correctness and false confidence, and never reaches a correct result.
+
+### The failure modes, in one place
+Across the runs, the workspace-only setups fail in four recurring ways (even when the SQL syntax is correct):
+1. **Re-deriving governed logic** from raw tables 
+2. **Reusing similar-but-wrong artifacts**: a retired view, or a domain-local rule treated as an enterprise canonical
+3. **Cross-engine and composition defects**: combining a Snowflake revenue-recognition UDF with a Databricks active-customer view as if a cross-engine binding existed
+4. **False confidence**: a well-commented result presented with no governance caveat
+
+These results are **use-case-specific**, not a benchmark: a different mix of visible artifacts could score higher or lower. What repeats is the tendency — when several plausible definitions exist, code access alone cannot establish which one is authoritative, or how to bind it to the target runtime.
+
 
 ### Scenario 1A: Workspace-only + base tables
 
@@ -93,45 +117,22 @@ The 1C output only looks more trustworthy than it did in the previous scenarios:
 
 See the [Recorded run](demo-walkthrough.md#scenario-1c--workspace-only-all-existing-codebase), and the [Detailed Scenario 1C results and per-model analysis](scenarios/scenario-1c/poc-results/README.md).
 
-### The failure modes, in one place
-Across the runs, the workspace-only setups fail in four recurring ways (even when the SQL syntax is correct):
-- **Re-deriving governed logic** from raw tables (recognition, refund netting, currency, activity window)
-- **Reusing similar-but-wrong artifacts**: a retired view, or a domain-local rule promoted to an enterprise canonical
-- **Cross-engine and composition defects**: combining a Snowflake revenue-recognition UDF with a Databricks active-customer view as if a cross-engine binding existed
-- **False confidence**: a well-commented result presented with no governance caveat
 
+## 4. Why exposing code workspaces to AI Coding Assistant doesn't deliver governed reuse
 
-### What AI cannot infer from code alone
 Even when an AI coding assistant can search the exposed domain code, workspace search ranks matches only by textual and structural similarity. The decisive information is **not in the source**. Even with perfect search over every repository, an assistant cannot read off:
-- **Authority**: is this the approved, canonical definition for this scope, or a convincing look-alike?
-- **Reuse intent and scope**: was this built to be reused enterprise-wide, within one domain, or never?
-- **Lifecycle**: is it shared, certified, deprecated, or retired?
-- **Ownership**: who is accountable for it, and can approve a change?
-- **Implementation bindings**: even if the right logic is found, how is it consumed from the engineer's runtime and dialect?
+1. **Authority**: is this the approved, canonical definition for this scope, or a convincing look-alike?
+2. **Reuse intent and scope**: was this built to be reused enterprise-wide, within one domain, or never?
+3. **Lifecycle**: is it shared, certified, deprecated, or retired?
+4. **Ownership**: who is accountable for it, and can approve a change?
+5. **Implementation bindings**: even if the right logic is found, how is it consumed from the engineer's runtime and dialect?
 
 AI-assisted authoring makes it **cheap to write code and to find something that looks reusable**. It does not answer the question the task actually turns on: **what should be reused.** That answer requires governance context that spans the repositories, and typically does not live in any of them.
 Widening the workspace does not resolve this; it just adds more places a retired, local, or irrelevant artifact can be picked up with false confidence.
 
-### The scoreboard
-
-Scored on one deliberately harsh grading question: **did it deliver the correct, governed ARPAC ?** The workspace-only setups fail for every model:
-
-| Model | 1A (base tables) | 1B (base tables + selected domain repos) | 1C (all existing codebase) | **2 (registry-aware)** |
-|---|:--:|:--:|:--:|:--:|
-| **GPT-5.5** | 27% | 40% | 60% | **100%** |
-| **Claude Sonnet 4.6** | 27% | 33% | 67% | **93%** |
-| **Claude Opus 4.8** | 27% | 33% | 67% | **93%** |
-
-Each percentage is the run's score on a **15-point rubric**, with points spread across the governed components (recognition, refund netting, currency, activity window, the certified active-customer definition, and composition/binding). A particular component that is wrong, or that relies on an artifact the assistant couldn't reach, loses only its own points, not the whole run; the components a run gets right still count. That is why the workspace-only setups land at partial scores rather than 0%, and only an all-correct run reaches 100%. 
-The [full rubric and point-by-point breakdown](poc-results.md#4-scoring-matrix) has the details.
-
-The verdict is the same for every workspace-only run: **no governed ARPAC.** The climb from 1A (27%) to 1B (33–40%) to 1C (60–67%) is real but partial — more visible code raises partial correctness, and confidence, but never reaches a correct result.
-
-These results are **use-case-specific**, not a benchmark: a different mix of visible artifacts could score higher or lower. What repeats is the tendency — when several plausible definitions exist, code access alone cannot establish which one is authoritative, or how to bind it to the target runtime.
-
 ---
 
-## 4. The governance control plane: exposing the Registry to AI coding assistant
+## 5. The governance control plane: exposing the Registry to AI coding assistant
 
 ### What the Registry is
 
@@ -146,6 +147,7 @@ It governs three reuse interfaces: **callable logic, queryable datasets, and sem
 
 Warehouse- and catalog-backed **MCP servers** may expose deployed objects, schemas, lineage, and some of these governance facts, potentially closing the reachability gap in Scenarios 1A–1C. This PoC does not compare those tools. **The Registry’s role is to normalize the required reuse-governance metadata from code repositories, warehouses, catalogs, and lineage systems, so an AI assistant doesn't need to infer them from disparate sources.**
 
+
 ### Workspace code search vs. Registry resolution
 
 Workspace code search answers ”what looks similar?” The registry answers the governed question: **”which artifact is approved for this scope, and how is it consumed from this runtime?”** Both find candidates; only the registry carries authority.
@@ -159,6 +161,27 @@ Workspace code search answers ”what looks similar?” The registry answers the
 | **Failure mode** | Confident reuse of the wrong artifact | Flags gaps (e.g. missing cross-engine binding) instead of guessing |
 
 Workspace search curbs accidental re-implementation; registry resolution makes reuse of the canonical artifact the lowest-friction path.
+
+
+### Registry-aware authoring (Scenario 2) provided correct ARPAC metric for all three models
+
+| Scenario | GPT-5.5 | Sonnet 4.6 | Opus 4.8 |
+|---|:--:|:--:|:--:|
+| 1A | ❌ No | ❌ No | ❌ No |
+| 1B | ❌ No | ❌ No | ❌ No |
+| 1C | ❌ No | ❌ No | ❌ No |
+| 2 | ✅ Yes | ✅ Yes | ✅ Yes |
+
+Across the registry-aware runs, every model produced the governed ARPAC and rejected the decoy artifacts:
+- correctly reused the certified `recognize_revenue` (Snowflake UDF; numerator) and `commercial_customer_status_90d` (Databricks view; denominator), authoring **only** the missing ARPAC ratio;
+- correctly rejected the retired `invoice_revenue` view and the base-table re-derivation that 1A/1B fell into;
+- correctly rejected the two newly registered domain-local look-alikes — the Sales billed proxy and the Marketing login proxy, while retaining the certified enterprise denominator;
+- and, when the active-customer status resolved only to Databricks while the target engine was Snowflake, correctly flagged the missing binding as an integration requirement rather than silently shipping a cross-engine join — two of the three invented nothing, while the third flagged the gap but minted a provisional Snowflake name.
+
+The scoreboard jump from ≤67% to ≥93% is not a model-quality effect; it reflects that, in this PoC, the registry surfaced governed authority and the cross-engine binding for each artifact. Scenario 1C and Scenario 2 see the same underlying code, yet only the registry-backed run composed the governed metric: reaching an object is not the same as knowing which definition is authoritative and approved for the intended scope. The two 93% scores (Sonnet and Opus) trail GPT's 100% by a single point each — the reproducible reporting date: both anchored the output to `CURRENT_DATE()` instead of a parameterized as-of date, a production-reproducibility nit rather than a governed-reuse miss.
+
+See the [Recorded run](demo-walkthrough.md#scenario-2--registry-aware-authoring), and the [Detailed Scenario 2 per-model results](poc-results.md#scenario-2--registry-aware-authoring).
+
 
 ### What exactly was implemented in the PoC
 
@@ -202,24 +225,7 @@ The same `compare_code` call closes the intent-first path as its Verify step. Wh
 The MCP server and the CLI are thin clients over the same Lookup & Compare services, so an engineer does not need the agent to use them. `search`, `recommend`, `resolve-binding`, and `compare` are callable from the command line for an ad-hoc check at authoring time, or as a build-time CI gate so the same comparison fires before merge.
 
 
-### Registry-aware authoring (Scenario 2) provided correct ARPAC metric for all three models
-
-| Scenario | GPT-5.5 | Sonnet 4.6 | Opus 4.8 |
-|---|:--:|:--:|:--:|
-| 1A | ❌ No | ❌ No | ❌ No |
-| 1B | ❌ No | ❌ No | ❌ No |
-| 1C | ❌ No | ❌ No | ❌ No |
-| 2 | ✅ Yes | ✅ Yes | ✅ Yes |
-
-Across the registry-aware runs, every model produced the governed ARPAC and rejected the decoy artifacts:
-- correctly reused the certified `recognize_revenue` (Snowflake UDF; numerator) and `commercial_customer_status_90d` (Databricks view; denominator), authoring **only** the missing ARPAC ratio;
-- correctly rejected the retired `invoice_revenue` view and the base-table re-derivation that 1A/1B fell into;
-- correctly rejected the two newly registered domain-local look-alikes — the Sales billed proxy and the Marketing login proxy, while retaining the certified enterprise denominator;
-- and, when the active-customer status resolved only to Databricks while the target engine was Snowflake, correctly flagged the missing binding as an integration requirement rather than silently shipping a cross-engine join — two of the three invented nothing, while the third flagged the gap but minted a provisional Snowflake name.
-
-The scoreboard jump from ≤67% to ≥93% is not a model-quality effect; it reflects that, in this PoC, the registry surfaced governed authority and the cross-engine binding for each artifact. Scenario 1C and Scenario 2 see the same underlying code, yet only the registry-backed run composed the governed metric: reaching an object is not the same as knowing which definition is authoritative and approved for the intended scope. The two 93% scores (Sonnet and Opus) trail GPT's 100% by a single point each — the reproducible reporting date: both anchored the output to `CURRENT_DATE()` instead of a parameterized as-of date, a production-reproducibility nit rather than a governed-reuse miss.
-
-See the [Recorded run](demo-walkthrough.md#scenario-2--registry-aware-authoring), and the [Detailed Scenario 2 per-model results](poc-results.md#scenario-2--registry-aware-authoring).
+### The registry vs the commonly used tools
 
 And none of this replaces data transformation frameworks (e.g. dbt) or the semantic layer: those remain the primary mechanisms for implementing and consuming reuse. The Registry adds the logical identity, lifecycle status, intended reuse scope, and the cross-engine, multi-implementation mapping that neither tool spans (see [PoC architecture §10](poc-architecture.md#10-why-not-just-dbt-or-the-semantic-layer)). The PoC exercises an enterprise-wide canonical, but the same registry model can also govern domain-scoped canonicals within a single domain.
 
@@ -227,21 +233,17 @@ And none of this replaces data transformation frameworks (e.g. dbt) or the seman
 
 ## Conclusions
 
-The proof of concept is small and deliberately narrow — one metric, three models, single runs — but the pattern it reproduces is clear. **AI authoring cuts both ways.** Without reuse context, an assistant is a *duplication amplifier*: it generates plausible code from local files with no awareness that a canonical definition already exists, and it makes reimplementation cheaper than discovery. The same assistant becomes a *reuse accelerator* the moment the platform surfaces governed code artifacts of certain authority, directly in the authoring environment.
+The proof of concept is small and deliberately narrow — one metric, three models, single runs, but the pattern it reproduces is clear. **AI authoring cuts both ways.** Without reuse context, an assistant is a *duplication amplifier*: it generates plausible code from local files with no awareness that a canonical definition already exists, and it makes reimplementation cheaper than discovery. The same assistant becomes a *reuse accelerator* the moment the platform surfaces governed code artifacts of certain authority, directly in the authoring environment.
 
 The deeper takeaway is that **reuse at authoring time is an authority problem, not only a search problem.** AI answers "what looks similar." Governed reuse needs "what is approved, for what scope, bound to my runtime." Those are governance decisions, not properties of the implementation code, so widening the *code* context alone does not recover them — and, as Scenarios 1B and 1C show, it can make things worse by lending false confidence to retired, domain-local, or look-alike code, even when the entire codebase is in view.
 
-The finding held **across every model tested**: every workspace-only run failed and every registry-aware run passed. This is a consistent pattern across the tested runs, not a universal benchmark — but the limitation it exposes is structural. 
-
-None of this is free, and the honest caveats matter. Declaration-layer manifests can rot unless they are **generated** from tool manifests rather than hand-maintained. Structural similarity is coarse — it catches copy-paste but misses semantically-equivalent rewrites, so those signals stay advisory. And the hard part of adoption is organizational — ownership, certification, and lifecycle governance — not the Python. 
-
 **If you want to move reuse upstream in your own platform**, the shape is small and additive:
 
-1. Certify a small, high-impact set of artifacts first — start where inconsistency already costs you (a Tier-1 metric, a cross-domain definition), not everything.
-2. Declare each one's identity, owner, lifecycle, reuse scope, contract source, and runtime bindings — generated from the tool manifests you already produce, not hand-maintained.
-3. Expose intent discovery and binding resolution to the authoring environment, so referencing the certified artifact is the lowest-friction path.
-4. Require unresolved scope or binding gaps to be explicit — flagged, never guessed.
-5. Treat similarity signals as review and exception routing, not as proof of authority.
+1. Certify a small, high-impact set of artifacts first — start where inconsistency already costs you (a Tier-1 metric, a cross-domain definition), not everything
+2. Declare each one's identity, owner, lifecycle, reuse scope, contract source, and runtime bindings — generated from the tool manifests you already produce, not hand-maintained
+3. Expose intent discovery and binding resolution to the authoring environment, so referencing the certified artifact is the lowest-friction path
+4. Require unresolved scope or binding gaps to be explicit — flagged, never guessed
+5. Treat similarity signals as review and exception routing, not as proof of authority
 
 If your platform spans multiple engines, repositories, and BI tools, this is worth a look. The full registry concept is in the **whitepaper**; the working implementation, scenarios, and every recorded run live in the **registry-aware-authoring** directory of the repository, with the architecture documented in its [README](README.md).
 
