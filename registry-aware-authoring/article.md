@@ -13,7 +13,7 @@ They open their IDE, describe the metric to an AI coding assistant and let it dr
 
 ARPAC does not exist yet as a governed metric. But its parts do. **Net recognized revenue** and **active customers** are among the most reused concepts in any company, defined and redefined across warehouses, notebooks, and BI tools. Each typically has several valid but different definitions: some intentionally scoped to a domain like Marketing or Finance rather than approved company-wide, others legacy or retired code still sitting in repositories or warehouses where an AI coding assistant can mistake them for valid reuse candidates.
 
-So the real task is not to write ARPAC from scratch. It is "compose ARPAC for executive reporting **from the relevant functions or datasets already approved as company-wide canonicals**." That is a reuse problem, and it is exactly where AI-assisted authoring is supposed to help.
+So the real task is not to write ARPAC from scratch. It is "**compose ARPAC for executive reporting from the relevant functions or datasets already approved as company-wide canonicals**." That is a reuse problem, and it is exactly where AI-assisted authoring is supposed to help.
 
 This article reports a small proof of concept that tested how well it does. The result is the interesting part: when the AI coding assistant could use only the code available in its workspace, **none of the models produced the correct governed metric**, even when that workspace contained the *entire* codebase. More code improved partial correctness, but it neither identified the governed definition the metric required nor resolved the missing runtime binding for it.
 
@@ -28,9 +28,9 @@ The PoC runs the same ARPAC task through four authoring setups and three current
 
 | Authoring setup | Scenario | What the AI coding assistant can use |
 |---|---|---|
-| **Workspace-only (base tables)** | **Scenario 1A** | The shared warehouse base tables: `dim_customers`, `fact_invoices`, and `fact_refunds` |
-| **Workspace-only (base tables + domain repositories)** | **Scenario 1B** | The base tables plus chosen Finance and Marketing domain code, so the assistant can find similar existing logic |
-| **Workspace-only (all existing codebase)** | **Scenario 1C** | The *entire* codebase across every domain, including the certified recognition logic and active-customer definition as source. This is the most optimistic workspace assumption |
+| **Workspace-only**<br>base tables | **Scenario 1A** | The shared warehouse base tables: `dim_customers`, `fact_invoices`, and `fact_refunds` |
+| **Workspace-only**<br>base tables + domain repositories | **Scenario 1B** | The base tables plus chosen Finance and Marketing domain code, so the assistant can find similar existing logic |
+| **Workspace-only**<br>all existing codebase | **Scenario 1C** | The **entire codebase** across every domain, including the certified recognition logic and active-customer definition as source. This is the most optimistic workspace assumption |
 | **Registry-aware authoring** | **Scenario 2** | The **DRY Artifact Registry**, exposed as structured tools over a thin MCP server and driven by the custom **DRY Reuse agent** |
 
 ### Authoring-time Reuse Architecture 
@@ -40,50 +40,52 @@ This diagram depicts what is exposed to an AI coding assistant when an analytics
 
 <img src="../publications/assets-diagrams/authoring-time-reuse-architecture.jpg" alt="Authoring-time Reuse Architecture" width="85%">
 
+### Prompts
 The prompt is the same business intent in every run: "I need a trailing-90-day ARPAC metric for executive reporting...
 - Numerator = net recognized revenue in USD, over the trailing 90 days, counting *only* active customers
 - Denominator = the count of active customers using the definition used in other executive dashboards... 
 Reuse existing definitions, datasets, or functions where appropriate, and explain what was reused"
 
-Full prompts and recorded runs are documented in [demo walkthrough](demo-walkthrough.md). Each scenario's repositories are mocked and deliberately scoped, so the test isolates *which context the assistant can reach*.
-
-**One deliberately harsh grading question** decides each run: *did it deliver the correct, governed ARPAC?* If a needed composable artifact was unreachable, that component scores **zero**, exactly like getting it wrong. The workspace-only scenarios withhold direct warehouse and catalog access; MCP tools could improve that *reachability* (as discussed later), but reaching an object is not the same as knowing which definition is authoritative. The test asks whether the governance facts needed to select and bind the correct definition are available.
+Full prompts and recorded runs are documented in [demo walkthrough](demo-walkthrough.md). Each scenario's repositories are mocked and deliberately scoped, so the **test isolates which context the assistant can reach.**
 
 ---
 
-## 3. Why exposing only the code workspace to AI Coding Asssitant doesn't deliver governed reuse
+## 3. PoC Results: Why exposing only the code workspace to AI Coding Asssitant doesn't deliver governed reuse
 
 ### Scenario 1A: Workspace-only with base tables
 
 This is the baseline. With only base tables visible and nothing reusable to find, every model builds ARPAC from first principles:
 - Silently re-implements three governed rules (billable-event assembly, revenue recognition, currency normalization)
 - Picks the **wrong active-customer definition**: `dim_customers.is_active`, a 12-month order flag, not the certified 90-day commercial status. 
-The SQL runs and looks correct, and none of the models flagged the active-customer definition as ungoverned: GPT framed `is_active` as the "executive-aligned" , and Sonnet and Opus went further, calling it "the authoritative active-customer flag" and "the enterprise active-customer definition", so the result reads as trustworthy even as two dashboards quietly diverge. That is the **duplication amplifier**: with nothing certified to reuse, the assistant re-derives governed logic and no one notices.
+The SQL runs and looks correct, and none of the models flagged the active-customer definition as ungoverned: GPT framed `is_active` as the "executive-aligned", and Opus went further, calling it "the enterprise active-customer definition", so the result reads as trustworthy even as two dashboards quietly diverge. 
+That is the **duplication amplifier**: with nothing certified to reuse, the assistant re-derives governed logic and no one notices.
 
 See the [Recorded run](demo-walkthrough.md#scenario-1a--workspace-only-base-tables), and the [Detailed Scenario 1A per-model results](poc-results.md#scenario-1a--base-dwh-tables-only).
 
 
 ### Scenario 1B: Workspace-only with base tables and domain repositories
 
-The obvious fix is to give the AI coding assistant more to work with, so Scenario 1B adds some artifacts (functions and datasets) from the domain repositories. This is where the result becomes counter-intuitive, and where the article's headline sits: **more context did not fix the answer, but it made the wrong one more convincing.**
+The obvious fix is to give the AI coding assistant more to work with, so Scenario 1B adds some artifacts (functions and datasets) from the domain repositories. 
 
 With domain code visible, the models found similar artifacts and reused them — the wrong ones:
-- The Finance repo contains `invoice_revenue` — a **retired** view that skips refunds. Nothing in the code repository says "retired," so models reused it and reproduced a known defect
-- The Marketing repo contains a login-based active-customer rule — a **domain-local** definition never certified as enterprise-level canonical. Two of the three models translated it to SQL and explicitly labelled it *"the authoritative active-customer definition used by executive dashboards."*
-- Meanwhile the actually-certified recognition function and the certified active-customer status view were **invisible to workspace search** because they exist only as deployed warehouse objects or in repositories that were never checked out.
+- The Finance repo contains `invoice_revenue`: a **retired** view that skips refunds. Nothing in the code repository says "retired," so models reused it and reproduced a known defect
+- The Marketing repo contains a **domain-local**, login-based active-customer rule. Two of the three models translated it to SQL and explicitly labelled it *"the authoritative active-customer definition used by executive dashboards."*
+- Meanwhile the composables actually needed, the enterprise-level canonicals, were **invisible to workspace search**, because they existed only as deployed warehouse objects or in repositories that were never checked out.
 
+This is where the result becomes counter-intuitive. **More context did not fix the answer, but it made the wrong one more convincing.**
 See the [Recorded run](demo-walkthrough.md#scenario-1b--workspace-only-base-tables--domain-repositories), and the [Detailed Scenario 1B results and per-model analysis](scenarios/scenario-1b/README.md).
 
 
 ### Scenario 1C: Workspace-only with all existing codebase
 
-Scenario 1C grants the **most optimistic** workspace assumption possible: the assistant sees the *entire* codebase at once — every domain repository checked out and every warehouse object exposed as source, including the certified `recognize_revenue` logic and `commercial_customer_status_90d` definition. Assuming an assistant reaches and searches every repository and deployed object across every domain is hardly realistic, but the PoC grants it anyway to test the strongest version of "just give the AI more code." Even so, **it still does not compose the metric correctly**.
+Scenario 1C grants the **most optimistic** workspace assumption possible: the AI assistant sees the **entire* codebase at once**: every domain repository checked out and every warehouse object exposed as source, including the needed composables: certified `recognize_revenue` UDF and `commercial_customer_status_90d` view.
+Even so, **it still does not compose the metric correctly**.
 
 #### What went right
-All three models finally get the **numerator** right — they discover and reuse the certified `recognize_revenue`, so revenue recognition, refund netting, and currency normalization are delegated rather than re-derived.
+All three models finally get the **numerator** right. They discover and reuse the certified `recognize_revenue`, so revenue recognition, refund netting, and currency normalization are delegated rather than re-derived.
 
 #### What fails again, and more instructively
-Three plausible "active customer" definitions exist: the certified `commercial_customer_status_90d`, a Sales-owned look-alike, and the Marketing login rule — and **every model chose the look-alike** over the certified view. Two things drove the choice: the models read and cast the look-alike as the "executive-style" active-customer rule, and where a model did weigh the certified view, it rejected it as non-runnable, because it depends on upstream tables not materialized in the workspace. Authority never entered in, as nothing in the source encodes it
+Three plausible "active customer" definitions exist: the certified `commercial_customer_status_90d`, a Sales-owned look-alike, and the Marketing login rule — and **every model chose the look-alike** over the certified view. Two things drove the choice: the models read and cast the look-alike as the "executive-style" active-customer rule, and where a model did weigh the certified view, it rejected it as non-runnable, because it depends on upstream tables not materialized in the workspace. Authority never entered in, as nothing in the source encodes it.
 
 The 1C output only looks more trustworthy than it did in the previous scenarios: a certified numerator, a clean composition, confident commentary, even as it silently uses the wrong denominator, understating the active-customer count and overstating ARPAC. **More visible code bought more convincing output, not a correct one**.
 
@@ -105,13 +107,15 @@ Even when an AI coding assistant can search the exposed domain code, workspace s
 - **Ownership**: who is accountable for it, and can approve a change?
 - **Implementation bindings**: even if the right logic is found, how is it consumed from the engineer's runtime and dialect?
 
-And there is a coverage limit on top of the semantic one: **workspace search only sees what is open.** Assuming an assistant will search every relevant repository and every deployed warehouse object across every domain is not realistic. Widening the workspace does not resolve this; it just adds more places a retired, local, or irrelevant artifact can be picked up with false confidence.
-
 AI-assisted authoring makes it **cheap to write code and to find something that looks reusable**. It does not answer the question the task actually turns on: **what should be reused.** That answer requires governance context that spans the repositories, and typically does not live in any of them.
+
+### Reachability
+Furthermore, assuming an assistant will search every relevant repository and every deployed warehouse object across every domain is not realistic. Widening the workspace does not resolve this; it just adds more places a retired, local, or irrelevant artifact can be picked up with false confidence.
+
 
 ### The scoreboard
 
-Scored on the single question — **did it deliver the correct governed ARPAC?** — the workspace-only setups fail for every model:
+Scored on one deliberately harsh grading question: **did it deliver the correct, governed ARPAC ?** The workspace-only setups fail for every model:
 
 | Model | 1A (base tables) | 1B (base tables + selected domain repos) | 1C (all existing codebase) | **2 (registry-aware)** |
 |---|:--:|:--:|:--:|:--:|
@@ -119,7 +123,7 @@ Scored on the single question — **did it deliver the correct governed ARPAC?**
 | **Claude Sonnet 4.6** | 27% | 33% | 67% | **93%** |
 | **Claude Opus 4.8** | 27% | 33% | 67% | **93%** |
 
-Each percentage is the run's score on a 15-point rubric: points awarded across the governed components (recognition, refund netting, currency, activity window, the certified active-customer definition, and correct composition/binding) — expressed as a fraction of the 15 available. See the [detailed scoreboard and per-scenario scoring](poc-results.md#4-scoring-matrix) for the full rubric and point-by-point breakdown.
+Each percentage is the run's score on a **15-point rubric**, with points spread across the governed components (recognition, refund netting, currency, activity window, the certified active-customer definition, and composition/binding). A particular component that is wrong, or that relies on an artifact the assistant couldn't reach, loses only its own points, not the whole run; the components a run gets right still count. That is why the workspace-only setups land at partial scores rather than 0%, and only an all-correct run reaches 100%. The [full rubric and point-by-point breakdown](poc-results.md#4-scoring-matrix) has the details.
 
 The verdict is the same for every workspace-only run: **no governed ARPAC.** The climb from 1A (27%) to 1B (33–40%) to 1C (60–67%) is real but partial — more visible code raises partial correctness, and confidence, but never reaches a correct result.
 
@@ -203,7 +207,7 @@ The outcome held across all three models. Every one:
 - resolved the registered Snowflake UDF binding for revenue and the Databricks view binding for active status, so the certified definitions were referenced rather than re-implemented;
 - and, when the active-customer status resolved only to Databricks while the target engine was Snowflake, surfaced the missing binding as an integration requirement rather than silently shipping a cross-engine join — two of the three invented nothing, while the third flagged the gap but minted a provisional Snowflake name.
 
-The scoreboard jump from ≤67% to ≥93% is not a model-quality effect; it reflects that, in this PoC, the registry surfaced governed authority and the required bindings — information that workspace search cannot supply, not even with the whole codebase in Scenario 1C. The two 93% scores (Sonnet and Opus) trail GPT's 100% by a single point each — the reproducible reporting date (C3): both anchored the output to `CURRENT_DATE()` instead of a parameterized as-of date, a production-reproducibility nit rather than a governed-reuse miss.
+The scoreboard jump from ≤67% to ≥93% is not a model-quality effect; it reflects that, in this PoC, the registry surfaced governed authority and the required bindings — information that workspace search cannot supply. Scenario 1C and Scenario 2 see the same underlying code, yet only the registry-backed run composed the governed metric: reaching an object is not the same as knowing which definition is authoritative and how to bind it. The two 93% scores (Sonnet and Opus) trail GPT's 100% by a single point each — the reproducible reporting date (C3): both anchored the output to `CURRENT_DATE()` instead of a parameterized as-of date, a production-reproducibility nit rather than a governed-reuse miss.
 
 Scenario 2 was not flawless — the models needed steering on registry-readiness polish (a consistent namespace; a per-customer components grain; a reproducible as-of date), and one model minted a provisional Snowflake name for the missing cross-engine binding while still flagging it as a required integration step. None of it changed the outcome: every model produced the correctly-governed ARPAC composition — reusing the certified definitions and flagging, not faking, the one missing cross-engine binding, which stays an explicit integration precondition rather than a live cross-engine execution. And none of this replaces dbt or the semantic layer: those remain the primary mechanisms for implementing and consuming reuse, while the registry adds the organization-level *certified* status and the cross-engine, multi-implementation bindings that a single project graph or semantic layer does not hold (see [README §10](README.md), [poc-results.md](poc-results.md)). The PoC exercises an enterprise-wide canonical, but the same registry model also governs domain-scoped canonicals within a single domain — the adoption boundary is heterogeneity and criticality, not enterprise scope alone.
 
