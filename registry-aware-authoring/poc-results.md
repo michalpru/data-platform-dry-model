@@ -6,7 +6,7 @@
 > authoring** across three models
 > (**GPT-5.5**, **Claude Sonnet 4.6**, **Claude Opus 4.8**), scored against the
 > failure patterns catalogued in §2 and the goals in
-> [demo-walkthrough.md](demo-walkthrough.md) and [README.md](README.md).
+> [demo-walkthrough.md](demo-walkthrough.md) and [poc-architecture.md](poc-architecture.md).
 
 - Scope analyzed: `scenarios/<scenario>/poc-results/<model>/`
 - Method: each run is checked against the failure patterns in §2; §3 links every model and

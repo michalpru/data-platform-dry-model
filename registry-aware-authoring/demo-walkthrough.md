@@ -76,7 +76,7 @@ I need a trailing-90-day ARPAC (Average Revenue per Active Customer) metric for 
 - Numerator = net recognized revenue in USD over the trailing 90 days, counting ONLY revenue from the customers in the denominator. Revenue from non-active customers is excluded.
 
 Constraints:
-- Do NOT read registry-aware-authoring/README.md, registry-aware-authoring/demo-walkthrough.md, or any other documentation file. Derive artifact identity, authority and bindings from what the registry tools return, not from documentation.
+- Do NOT read registry-aware-authoring/poc-architecture.md, registry-aware-authoring/demo-walkthrough.md, or any other documentation file. Derive artifact identity, authority and bindings from what the registry tools return, not from documentation.
 - Do NOT read registry-aware-authoring/scenarios/scenario-2/registry-manifests/ directly — query the registry through the MCP tools only.
 - DO read a resolved binding's `source` file under registry-aware-authoring/scenarios/scenario-2/workspace/ to confirm exact column names, parameters and function signatures before you reference them — this is the binding's implementation source, NOT the registry-manifests/ directory. Never guess a signature; if a source file cannot be read, mark those identifiers UNCONFIRMED.
 - Target runtime is Snowflake SQL warehouse.

@@ -221,19 +221,19 @@ The scoreboard jump from ≤67% to ≥93% is not a model-quality effect; it refl
 
 See the [Recorded run](demo-walkthrough.md#scenario-2--registry-aware-authoring), and the [Detailed Scenario 2 per-model results](poc-results.md#scenario-2--registry-aware-authoring).
 
-And none of this replaces data transformation frameworks (e.g. dbt) or the semantic layer: those remain the primary mechanisms for implementing and consuming reuse. The Registry adds the logical identity, lifecycle status, intended reuse scope, and the cross-engine, multi-implementation mapping that neither tool spans (see [README §10](README.md#10-why-not-just-dbt-or-the-semantic-layer)). The PoC exercises an enterprise-wide canonical, but the same registry model can also govern domain-scoped canonicals within a single domain.
+And none of this replaces data transformation frameworks (e.g. dbt) or the semantic layer: those remain the primary mechanisms for implementing and consuming reuse. The Registry adds the logical identity, lifecycle status, intended reuse scope, and the cross-engine, multi-implementation mapping that neither tool spans (see [PoC architecture §10](poc-architecture.md#10-why-not-just-dbt-or-the-semantic-layer)). The PoC exercises an enterprise-wide canonical, but the same registry model can also govern domain-scoped canonicals within a single domain.
 
 ---
 
 ## Conclusions
 
-The proof of concept is small and deliberately narrow — one metric, three models, single runs — but the pattern it reproduces is exactly the one the whitepaper predicts. **AI authoring cuts both ways.** Without reuse context, an assistant is a *duplication amplifier*: it generates plausible SQL from local files with no awareness that a canonical definition already exists, and it makes reimplementation cheaper than discovery. The same assistant becomes a *reuse accelerator* the moment the platform surfaces governed canonical definitions — not similar look-alikes of uncertain authority — directly in the authoring environment.
+The proof of concept is small and deliberately narrow — one metric, three models, single runs — but the pattern it reproduces is clear. **AI authoring cuts both ways.** Without reuse context, an assistant is a *duplication amplifier*: it generates plausible code from local files with no awareness that a canonical definition already exists, and it makes reimplementation cheaper than discovery. The same assistant becomes a *reuse accelerator* the moment the platform surfaces governed code artifacts of certain authority, directly in the authoring environment.
 
-The deeper takeaway is that **reuse at authoring time is an authority problem, not a search problem.** AI answers "what looks similar." Governed reuse needs "what is approved, for what scope, bound to my runtime." Those are governance decisions, not properties of the implementation code, so widening the *code* context alone does not recover them — and, as Scenarios 1B and 1C show, it can make things worse by lending false confidence to retired, domain-local, or look-alike code, even when the entire codebase is in view.
+The deeper takeaway is that **reuse at authoring time is an authority problem, not only a search problem.** AI answers "what looks similar." Governed reuse needs "what is approved, for what scope, bound to my runtime." Those are governance decisions, not properties of the implementation code, so widening the *code* context alone does not recover them — and, as Scenarios 1B and 1C show, it can make things worse by lending false confidence to retired, domain-local, or look-alike code, even when the entire codebase is in view.
 
-The finding held **across every model tested**: every workspace-only run failed and every registry-aware run passed. This is a consistent pattern across the tested runs, not a universal benchmark — but the limitation it exposes is structural. A stronger model may make fewer local mistakes, yet it still cannot infer an artifact's authority, scope, ownership, or runtime bindings when those facts are not in the context it can see — which is why the gap does not simply close with the next release.
+The finding held **across every model tested**: every workspace-only run failed and every registry-aware run passed. This is a consistent pattern across the tested runs, not a universal benchmark — but the limitation it exposes is structural. 
 
-None of this is free, and the honest caveats matter. Declaration-layer manifests can rot unless they are **generated** from tool manifests rather than hand-maintained. Structural similarity is coarse — it catches copy-paste but misses semantically-equivalent rewrites, so those signals stay advisory. And the hard part of adoption is organizational — ownership, certification, and lifecycle governance — not the Python. This PoC proves the authoring-time half of the story; the runtime adoption-versus-bypass half is out of scope by design.
+None of this is free, and the honest caveats matter. Declaration-layer manifests can rot unless they are **generated** from tool manifests rather than hand-maintained. Structural similarity is coarse — it catches copy-paste but misses semantically-equivalent rewrites, so those signals stay advisory. And the hard part of adoption is organizational — ownership, certification, and lifecycle governance — not the Python. 
 
 **If you want to move reuse upstream in your own platform**, the shape is small and additive:
 
@@ -243,7 +243,7 @@ None of this is free, and the honest caveats matter. Declaration-layer manifests
 4. Require unresolved scope or binding gaps to be explicit — flagged, never guessed.
 5. Treat similarity signals as review and exception routing, not as proof of authority.
 
-If your platform spans multiple engines, repositories, and BI tools, this is worth a look. The full registry concept is in the **whitepaper**; the working implementation, scenarios, and every recorded run are in the **[registry-aware-authoring](README.md)** directory of the repository.
+If your platform spans multiple engines, repositories, and BI tools, this is worth a look. The full registry concept is in the **whitepaper**; the working implementation, scenarios, and every recorded run live in the **registry-aware-authoring** directory of the repository, with the architecture documented in its [README](README.md).
 
 👉 The model and registry concept: [The Data Platform DRY Model](https://michalpru.github.io/data-platform-dry-model/)
 
