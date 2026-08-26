@@ -15,6 +15,8 @@ ARPAC does not exist yet as a governed metric. But its parts do. **Net recognize
 
 So the real task is not to write ARPAC from scratch. It is "**compose ARPAC for executive reporting from the relevant functions or datasets already approved as company-wide canonicals**." That is a reuse problem, and it is exactly where AI-assisted authoring is supposed to help.
 
+---
+
 This article reports a small proof of concept that tested how well it does. The result is the interesting part: when the AI coding assistant could use only the code available in its workspace, **none of the models produced the correct governed metric**, even when that workspace contained the *entire* codebase. More code improved partial correctness, but it neither identified the governed definition the metric required nor resolved the missing runtime binding for it.
 
 ---
@@ -38,7 +40,7 @@ This diagram depicts what is exposed to an AI coding assistant when an analytics
 -  Code workspace-only: Scenarios 1A/1B/1C
 - Registry-aware authoring: Scenario 2
 
-<img src="../publications/assets-diagrams/authoring-time-reuse-architecture.jpg" alt="Authoring-time Reuse Architecture" width="85%">
+<img src="../publications/assets-diagrams/authoring-time-reuse-architecture.jpg" alt="Authoring-time Reuse Architecture" width="75%">
 
 ### Prompts
 The prompt is the same business intent in every run: "I need a trailing-90-day ARPAC metric for executive reporting...
@@ -46,46 +48,45 @@ The prompt is the same business intent in every run: "I need a trailing-90-day A
 - Denominator = the count of active customers using the definition used in other executive dashboards... 
 Reuse existing definitions, datasets, or functions where appropriate, and explain what was reused"
 
-Full prompts and recorded runs are documented in [demo walkthrough](demo-walkthrough.md). Each scenario's repositories are mocked and deliberately scoped, so the **test isolates which context the assistant can reach.**
+Full prompts and recorded runs are documented in [demo walkthrough](demo-walkthrough.md). 
+Each scenario's repositories are mocked and deliberately scoped, so the **test isolates which context the assistant can reach.**
 
 ---
 
 ## 3. PoC Results: Why exposing only the code workspace to AI Coding Asssitant doesn't deliver governed reuse
 
-### Scenario 1A: Workspace-only with base tables
+### Scenario 1A: Code workspace-only with base tables
 
 This is the baseline. With only base tables visible and nothing reusable to find, every model builds ARPAC from first principles:
-- Silently re-implements three governed rules (billable-event assembly, revenue recognition, currency normalization)
+- Silently **re-implements three governed rules**: billable-event assembly, revenue recognition, currency normalization
 - Picks the **wrong active-customer definition**: `dim_customers.is_active`, a 12-month order flag, not the certified 90-day commercial status. 
 The SQL runs and looks correct, and none of the models flagged the active-customer definition as ungoverned: GPT framed `is_active` as the "executive-aligned", and Opus went further, calling it "the enterprise active-customer definition", so the result reads as trustworthy even as two dashboards quietly diverge. 
+
 That is the **duplication amplifier**: with nothing certified to reuse, the assistant re-derives governed logic and no one notices.
 
 See the [Recorded run](demo-walkthrough.md#scenario-1a--workspace-only-base-tables), and the [Detailed Scenario 1A per-model results](poc-results.md#scenario-1a--base-dwh-tables-only).
 
 
-### Scenario 1B: Workspace-only with base tables and domain repositories
+### Scenario 1B: Code workspace-only with base tables and domain repositories
 
 The obvious fix is to give the AI coding assistant more to work with, so Scenario 1B adds some artifacts (functions and datasets) from the domain repositories. 
 
 With domain code visible, the models found similar artifacts and reused them — the wrong ones:
 - The Finance repo contains `invoice_revenue`: a **retired** view that skips refunds. Nothing in the code repository says "retired," so models reused it and reproduced a known defect
 - The Marketing repo contains a **domain-local**, login-based active-customer rule. Two of the three models translated it to SQL and explicitly labelled it *"the authoritative active-customer definition used by executive dashboards."*
-- Meanwhile the composables actually needed, the enterprise-level canonicals, were **invisible to workspace search**, because they existed only as deployed warehouse objects or in repositories that were never checked out.
+- Meanwhile the composables actually needed (the enterprise-level canonicals) were **invisible to workspace search**, because they existed only as deployed warehouse objects or in repositories that were never checked out.
 
 This is where the result becomes counter-intuitive. **More context did not fix the answer, but it made the wrong one more convincing.**
+
 See the [Recorded run](demo-walkthrough.md#scenario-1b--workspace-only-base-tables--domain-repositories), and the [Detailed Scenario 1B results and per-model analysis](scenarios/scenario-1b/README.md).
 
 
-### Scenario 1C: Workspace-only with all existing codebase
+### Scenario 1C: Code workspace-only with all existing codebase
 
 Scenario 1C grants the **most optimistic** workspace assumption possible: the AI assistant sees the **entire* codebase at once**: every domain repository checked out and every warehouse object exposed as source, including the needed composables: certified `recognize_revenue` UDF and `commercial_customer_status_90d` view.
 Even so, **it still does not compose the metric correctly**.
-
-#### What went right
-All three models finally get the **numerator** right. They discover and reuse the certified `recognize_revenue`, so revenue recognition, refund netting, and currency normalization are delegated rather than re-derived.
-
-#### What fails again, and more instructively
-Three plausible "active customer" definitions exist: the certified `commercial_customer_status_90d`, a Sales-owned look-alike, and the Marketing login rule — and **every model chose the look-alike** over the certified view. Two things drove the choice: the models read and cast the look-alike as the "executive-style" active-customer rule, and where a model did weigh the certified view, it rejected it as non-runnable, because it depends on upstream tables not materialized in the workspace. Authority never entered in, as nothing in the source encodes it.
+- **What went right**: All models finally get the **numerator** right. They discover and reuse the certified `recognize_revenue`, so revenue recognition, refund netting, and currency normalization are delegated rather than re-derived.
+- **What fails again, and more instructively**: Every model chose the plausible Sales-owned look-alike "active customer" definition over the certified view. Two things drove the choice: the models read and cast the look-alike as the "executive-reporting aligned" rule, and where a model did weigh the certified view, it rejected it as non-runnable, because it depends on upstream tables not materialized in the workspace. Authority never entered in, as nothing in the source encodes it.
 
 The 1C output only looks more trustworthy than it did in the previous scenarios: a certified numerator, a clean composition, confident commentary, even as it silently uses the wrong denominator, understating the active-customer count and overstating ARPAC. **More visible code bought more convincing output, not a correct one**.
 
@@ -123,7 +124,8 @@ Scored on one deliberately harsh grading question: **did it deliver the correct,
 | **Claude Sonnet 4.6** | 27% | 33% | 67% | **93%** |
 | **Claude Opus 4.8** | 27% | 33% | 67% | **93%** |
 
-Each percentage is the run's score on a **15-point rubric**, with points spread across the governed components (recognition, refund netting, currency, activity window, the certified active-customer definition, and composition/binding). A particular component that is wrong, or that relies on an artifact the assistant couldn't reach, loses only its own points, not the whole run; the components a run gets right still count. That is why the workspace-only setups land at partial scores rather than 0%, and only an all-correct run reaches 100%. The [full rubric and point-by-point breakdown](poc-results.md#4-scoring-matrix) has the details.
+Each percentage is the run's score on a **15-point rubric**, with points spread across the governed components (recognition, refund netting, currency, activity window, the certified active-customer definition, and composition/binding). A particular component that is wrong, or that relies on an artifact the assistant couldn't reach, loses only its own points, not the whole run; the components a run gets right still count. That is why the workspace-only setups land at partial scores rather than 0%, and only an all-correct run reaches 100%. 
+The [full rubric and point-by-point breakdown](poc-results.md#4-scoring-matrix) has the details.
 
 The verdict is the same for every workspace-only run: **no governed ARPAC.** The climb from 1A (27%) to 1B (33–40%) to 1C (60–67%) is real but partial — more visible code raises partial correctness, and confidence, but never reaches a correct result.
 
@@ -133,18 +135,18 @@ These results are **use-case-specific**, not a benchmark: a different mix of vis
 
 ## 4. The governance control plane: exposing the registry to AI coding assistant
 
-### What the registry is
+### What the Registry is
 
-The PoC uses a small **DRY Artifact Registry** — the **reuse-governance control plane** introduced in the [whitepaper](https://michalpru.github.io/data-platform-dry-model/). It is not a new warehouse, catalog, or code store. It is a **vendor-neutral metadata layer** that gives each reusable artifact a stable logical identity, lifecycle, reuse scope, owner, and implementation bindings — the pointers to the physical objects (warehouse UDFs, dbt macros, Databricks tables, etc.). 
+The PoC uses a small **DRY Artifact Registry**, which is the **reuse-governance control plane** introduced in the [Whitepaper](https://michalpru.github.io/data-platform-dry-model/publications/whitepaper-data-platform-dry-model.html#the-missing-control-plane-for-reuse-measurement). It is not a new warehouse, catalog, or code store. It is a **vendor-neutral metadata layer** that gives each reusable artifact a stable logical identity, lifecycle, reuse scope, owner, and implementation bindings — the pointers to the physical objects. 
 It governs three reuse interfaces: **callable logic, queryable datasets, and semantic contracts**. It stores metadata, and derived signals such as structural fingerprints, but never the implementation code and it never sits in the query-execution path.
 
-<img src="../publications/assets-diagrams//dry-artifact-registry.jpg" width="800"/>
+<img src="../publications/assets-diagrams/dry-artifact-registry.jpg" width="800"/>
 
-The registry is not RAG: retrieval can surface registry records, but it cannot by itself certify an artifact, select a runtime binding, or establish ownership and lifecycle accountability.
+**The Registry is not RAG:** retrieval can surface registry records, but it cannot by itself certify an artifact, select a runtime binding, or establish ownership and lifecycle accountability. 
 
-Warehouse- and catalog-backed MCP servers may expose deployed objects, schemas, lineage, and some of these governance facts, potentially closing the reachability gap in Scenarios 1A–1C. This PoC does not compare those tools. The registry’s role is to normalize the required reuse-governance metadata from source control, repositories, warehouses, catalogs, and lineage systems, so an assistant need not infer authority or bindings from disparate signals. For background, see [The Missing Control Plane For Reuse Measurement](https://michalpru.github.io/data-platform-dry-model/publications/whitepaper-data-platform-dry-model.html#the-missing-control-plane-for-reuse-measurement).
+Warehouse- and catalog-backed **MCP servers** may expose deployed objects, schemas, lineage, and some of these governance facts, potentially closing the reachability gap in Scenarios 1A–1C. This PoC does not compare those tools. **The Registry’s role is to normalize the required reuse-governance metadata from code repositories, warehouses, catalogs, and lineage systems, so an AI assistant doesn't need to infer them from disparate sources.**
 
-### Workspace search vs. Registry resolution
+### Workspace code search vs. Registry resolution
 
 Workspace code search answers ”what looks similar?” The registry answers the governed question: **”which artifact is approved for this scope, and how is it consumed from this runtime?”** Both find candidates; only the registry carries authority.
 
@@ -160,11 +162,11 @@ Workspace search curbs accidental re-implementation; registry resolution makes r
 
 ### What exactly was implemented in the PoC
 
-The PoC exposes the registry to the assistant as a thin, layered stack:
+The PoC exposes the Registry to the assistant as a thin, layered stack:
 
 ![PoC architecture: registry services and comparison services, a thin MCP server, and the DRY Reuse agent](../publications/assets-diagrams/registry-aware-authoring-poc-architecture.jpg)
 
-- **The registry**: a local SQLite control plane built from pure-YAML artifact manifests. It holds logical identities, authority, bindings, and dependency edges; each binding points to real code in the workspace but the registry holds none of it
+- **The Registry**: a local SQLite control plane built from pure-YAML artifact manifests. It holds logical identities, authority, bindings, and dependency edges; each binding points to real code in the workspace but the registry holds none of it
 - **Registry service methods**: intent-first discovery and binding resolution: `search_artifacts`, `find_composable_artifacts`, `recommend_composition`, `resolve_binding`
 - **Comparison service methods**: code-first verification: `compare_code` fingerprints authored code with a shared AST/feature engine and returns similarity **plus** governance evidence
 - **A thin MCP server**: exposes both service groups as structured tools; it holds no business logic
@@ -174,21 +176,33 @@ Notably, the Python services **never call an LLM**. They return structured evide
 
 ### The agent workflow
 
-The DRY Reuse agent turns the prompt into a governed sequence — **Business intent → Registry discovery → Reuse plan and binding resolution → Copilot-authored composition → Registry comparison.** Its system instructions enforce the discipline: search the registry before implementing; look for a complete artifact first, then composable parts; resolve bindings before generating code; never fabricate a cross-engine bridge; confirm interface contracts from source, not memory; and compare the authored code back against the registry when done.
+The [DRY Reuse agent](../.github/agents/dry-reuse.agent.md) runs **two paths** over the same registry services, chosen by how a data/analytics engineer starts.
 
-For ARPAC, discovery finds no existing metric, so the agent decomposes the formula into its two named components and calls `recommend_composition`, which resolves each to its **enterprise-wide certified** definition and its binding — the domain-local `fact_billable_events` and the raw `dim_customers` flag are deliberately *not* selected for an executive metric.
+### 1. Intent-first agent workflow
+The default, when the engineer describes what to build.
 
-### Checking code that already exists
+**Business intent → Discover → Plan composition → Resolve bindings → Confirm interface → Compose → Verify.** 
 
-Discovery is intent-first, but the registry also works **code-first**. When an engineer has already written a transformation, `compare_code` normalizes it into an AST and a language-neutral feature profile — with an optional, advisory **embedding** signal for structurally-divergent rewrites the AST baseline would miss — and scores it against every registered artifact. What it returns is not just a similarity number but the **governance evidence** behind each match: the artifact it resembles, its lifecycle and owner, and a recommended action. Similarity is only a candidate; authority still comes from the registry, not the score. These are the whitepaper's build-time duplication-detection signals (§4.3.3 — AST structural fingerprinting plus advisory embeddings) brought forward to authoring time; a recorded [verification suite](scenarios/scenario-2/code-similarity-verification/) with positive *and* negative controls confirms the detector both **fires on real duplication and stays quiet on correctly-composed reuse**. (This PoC computes each fingerprint on the fly and persists none; a production gate would score against *persisted* derived signals instead — the trade-off is detailed in that suite's [README](scenarios/scenario-2/code-similarity-verification/README.md).)
+Its system instructions enforce the discipline: search the registry before writing code, prefer a complete artifact over composable parts, resolve each binding for the target runtime, confirm interface contracts from source rather than memory, never fabricate a cross-engine bridge, and compare the finished code back against the registry.
 
-That same call is the agent's closing **Verify** step: author only the missing part, then compare the result back so a governed artifact cannot be silently re-implemented. Run over the Scenario 2 SQL, it returns *no strong match, safe to author* — the revenue, netting, currency and activity-window rules are referenced, not re-derived. The recorded negative controls make the same point in reverse: a re-derived revenue rule, a reimplemented **retired** view, and a reformatted copy of the certified UDF are each surfaced with their lifecycle. One honest gap remains: in these runs the check ran through the CLI, so wiring the agent to run **and persist** that verdict with every generated artifact is still open.
+For the ARPAC use case in this PoC, discovery finds no existing metric, so the agent decomposes the formula into its two named components and calls `recommend_composition`, which resolves each to its **enterprise-wide certified** definition and binding — the domain-canonical `fact_billable_events` and the raw `dim_customers.is_active` flag are deliberately **not** selected for an executive metric.
 
-Because the MCP server and the CLI are thin clients over the **same** Lookup & Compare services, an engineer does not need the agent to use them: `search`, `recommend`, `resolve-binding`, and `compare` are callable from the command line for an ad-hoc check at authoring time, or as a build-time CI gate so the same comparison fires before merge.
+### 2. Code-first agent workflow
+When the engineer already has code and asks *"does this already exist?"*
+
+**Compare → Explain evidence → Resolve binding → Recommend reuse.** 
+
+The `compare_code` fingerprints the code with a shared AST/feature engine — plus an optional, advisory **embedding** signal for rewrites the AST would miss — and scores it against every registered artifact. It returns not just a similarity number but the **governance evidence** behind each match: the artifact it resembles, its lifecycle and owner, and a recommended action. Similarity is only a candidate; authority still comes from the registry, not the score. These are the whitepaper's build-time duplication-detection signals (§4.3.3) brought forward to authoring time; a recorded [verification suite](scenarios/scenario-2/code-similarity-verification/) confirms the detector both fires on real duplication and stays quiet on correctly-composed reuse.
+
+The same `compare_code` call is also the intent-first path's closing **Verify** step. Run over the Scenario 2 SQL it returns *no strong match, safe to author* — the revenue, netting, currency and activity-window rules are referenced, not re-derived. One honest gap remains: in these runs Verify ran through the CLI, so wiring the agent to run **and persist** that verdict with every generated artifact is still open.
 
 
+### Beyond the agent: the same services from the CLI
 
-### Scenario 2 — Registry-aware authoring: results
+The MCP server and the CLI are thin clients over the **same** Lookup & Compare services, so an engineer does not need the agent to use them. `search`, `recommend`, `resolve-binding`, and `compare` are callable from the command line for an ad-hoc check at authoring time, or as a build-time CI gate so the same comparison fires before merge.
+
+
+### Registry-aware authoring (Scenario 2): Results
 
 **Decisive verdict: correct governed ARPAC — Yes for all three models; both registered decoys rejected.**
 
