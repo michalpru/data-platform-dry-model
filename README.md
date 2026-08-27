@@ -16,3 +16,4 @@ The full model is available as a formatted whitepaper at:
 - `publications/`: narrative sources for the article and whitepaper: motivation, full model, adoption path, and operating model.
 - `dry-reference-repository/`: a reference structure showing how to organize repositories to support reuse.
 - `templates/`: tool-agnostic starting points for applying the Model in repositories, CI/CD pipelines, and artifact registries.
+- `registry-aware-authoring/`: a PoC for Registry-aware AI code authoring, including the Registry implementation, agent workflow, MCP and CLI interfaces, test scenarios, and recorded results.
