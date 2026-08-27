@@ -1,0 +1,57 @@
+apiVersion: dry.platform/v1
+kind: Metric
+metadata:
+  fqn: executive.metrics.arpac_90d.v1
+  title: ARPAC (Trailing 90-Day)
+  description: >
+    Average Revenue per Active Customer over the trailing 90 days, for executive dashboards.
+    Net recognized revenue in USD (numerator, active customers only) divided by the distinct
+    count of active customers (denominator, executive active-customer definition). Reusable
+    definition intended for adoption by other executive dashboards.
+  owner:
+    team: executive-analytics
+    escalation: executive-data-oncall
+  lifecycle:
+    state: shared # proposed for certification once the denominator has a Snowflake binding
+  registry:
+    publish: true
+    interfaceType: semantic_contract
+spec:
+  model: executive.datasets.arpac_90d_components.v1
+  type: ratio
+  numerator: net_recognized_revenue_usd
+  denominator: active_customer_count
+  # SQL binding for the Snowflake warehouse runtime:
+  implementation:
+    runtime: warehouse
+    dialect: snowflake
+    object: EXECUTIVE.METRICS.ARPAC_90D
+    source: ./arpac_90d.sql
+  time:
+    defaultGrain: day
+    window: trailing_90_days
+  allowedDimensions:
+    - reporting_date
+
+  # Provenance of reused governed artifacts (resolved via registry MCP tools).
+  reuses:
+    - fqn: finance.logic.recognize_revenue.v1
+      role: numerator
+      lifecycle: certified
+      reuseIntent: enterprise_canonical
+      binding: warehouse:snowflake:FINANCE.LOGIC.RECOGNIZE_REVENUE
+      note: Net recognized revenue USD; Snowflake-reachable UDF. No gap.
+    - fqn: sales.datasets.commercial_customer_status_90d.v1
+      role: denominator
+      lifecycle: certified
+      reuseIntent: enterprise_canonical
+      binding: databricks:sales.datasets.commercial_customer_status_90d
+      crossEngineGap: true
+      note: >
+        Executive active-customer definition. Databricks-only binding; requires a provisioned
+        Snowflake-reachable binding before production run. Referenced under reachability precondition;
+        no Snowflake bridge object fabricated.
+
+  compatibility:
+    policy: backward-compatible
+    deprecationWindowDays: 90

@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DRY Anti-Patterns — LinkedIn Carousel</title>
+<link rel="stylesheet" href="../../site-assets/fonts/public-sans.css" />
+<style>
+  /* ------------------------------------------------------------------
+     LinkedIn carousel — 7 slides, portrait 1080 x 1350 (4:5).
+     To export the PDF:
+       1. Open this file in Chrome/Edge.
+       2. Ctrl+P  ->  Destination: "Save as PDF".
+       3. Paper size: choose "1080 x 1350 px" if available, otherwise
+          leave default — the @page rule forces the correct size.
+       4. Margins: None.  Scale: Default (100%).
+          Turn ON "Background graphics".
+     ------------------------------------------------------------------ */
+
+  :root {
+    --navy:        #0f1e30;
+    --navy-2:      #14253b;
+    --ink:         #1f2733;
+    --ink-soft:    #3a4757;
+    --muted:       #6b7a8f;
+    --line:        #e6e9ee;
+    --blue:        #1c5fb0;
+    --blue-soft:   #eaf1fb;
+    --amber:       #c9791a;
+    --amber-bg:    #fbf3e7;
+    --chip-bg:     #eef2f7;
+    --page-w:      1080px;
+    --page-h:      1080px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+
+  body {
+    font-family: "Public Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    color: var(--ink);
+    background: #cfd6df;
+    letter-spacing: 0.1px;
+  }
+
+  /* Screen: stack the slides with breathing room. */
+  .deck {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 32px;
+    padding: 40px 0;
+  }
+
+  .slide {
+    position: relative;
+    width: var(--page-w);
+    height: var(--page-h);
+    background: #ffffff;
+    overflow: hidden;
+    box-shadow: 0 10px 40px rgba(15, 30, 48, 0.18);
+  }
+
+  /* ---------- shared framing ---------- */
+  .pad {
+    position: absolute;
+    inset: 0;
+    padding: 84px 90px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: 2.2px;
+    text-transform: uppercase;
+    color: var(--blue);
+  }
+  .kicker::before {
+    content: "";
+    width: 46px;
+    height: 3px;
+    background: var(--blue);
+    border-radius: 2px;
+  }
+
+  .foot {
+    position: absolute;
+    left: 90px;
+    right: 90px;
+    bottom: 46px;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    font-size: 20px;
+    color: var(--muted);
+    border-top: 1px solid var(--line);
+    padding-top: 20px;
+  }
+
+  /* huge ghost index number */
+  .ghost {
+    position: absolute;
+    top: 30px;
+    right: 54px;
+    font-size: 300px;
+    line-height: 1;
+    font-weight: 800;
+    color: #f0f3f7;
+    z-index: 0;
+    letter-spacing: -6px;
+    user-select: none;
+  }
+
+  /* ---------- content slide ---------- */
+  .content .pad { z-index: 1; }
+
+  .content .num-tag {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--blue);
+    letter-spacing: 1px;
+  }
+
+  .content h2 {
+    margin-top: 26px;
+    font-size: 58px;
+    line-height: 1.08;
+    font-weight: 700;
+    letter-spacing: -1px;
+    color: var(--navy-2);
+    max-width: 24ch;
+  }
+
+  .content .story {
+    margin-top: 40px;
+    font-size: 31px;
+    line-height: 1.5;
+    color: var(--ink-soft);
+    font-weight: 400;
+  }
+  .content .story + .story { margin-top: 22px; }
+
+  .chip {
+    font-family: "SFMono-Regular", "Cascadia Code", Consolas, monospace;
+    font-size: 0.86em;
+    background: var(--chip-bg);
+    color: var(--navy-2);
+    padding: 3px 12px;
+    border-radius: 7px;
+    border: 1px solid #dde4ec;
+    white-space: nowrap;
+  }
+
+  .problem {
+    margin-top: 48px;
+    background: var(--amber-bg);
+    border-left: 8px solid var(--amber);
+    border-radius: 10px;
+    padding: 34px 40px;
+  }
+  .problem .label {
+    font-size: 21px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--amber);
+  }
+  .problem p {
+    margin-top: 14px;
+    font-size: 32px;
+    line-height: 1.4;
+    font-weight: 600;
+    color: var(--navy-2);
+  }
+
+  /* ---------- cover + closing (dark) ---------- */
+  .dark {
+    color: #eef3f9;
+    background:
+      radial-gradient(120% 90% at 80% 0%, #1b3350 0%, rgba(27,51,80,0) 55%),
+      linear-gradient(160deg, #14253b 0%, #0d1a2b 100%);
+  }
+  .dark .kicker { color: #7fb2f0; }
+  .dark .kicker::before { background: #7fb2f0; }
+  .dark .foot {
+    color: #8ea3bd;
+    border-top: 1px solid rgba(255,255,255,0.14);
+  }
+
+  /* cover + closing shared text lines */
+  .cover .pad, .closing .pad { justify-content: center; }
+  .cover .kicker, .closing .kicker { margin-bottom: 46px; }
+
+  .dark .line {
+    font-size: 42px;
+    line-height: 1.42;
+    font-weight: 400;
+    color: #d7e2f0;
+  }
+  .dark .line + .line { margin-top: 22px; }
+  .dark .line strong { color: #ffffff; font-weight: 600; }
+
+  .cover .cue {
+    margin-top: 56px;
+    display: inline-flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 34px;
+    font-weight: 600;
+    color: #7fb2f0;
+  }
+  .cover .cue .arrow {
+    font-size: 42px;
+    line-height: 1;
+    transform: translateY(-1px);
+  }
+
+  /* closing */
+  .closing .cta {
+    margin-top: 56px;
+    padding-top: 34px;
+    border-top: 1px solid rgba(255,255,255,0.16);
+  }
+  .closing .cta .row {
+    font-size: 27px;
+    line-height: 1.45;
+    color: #d7e2f0;
+  }
+  .closing .cta .row + .row { margin-top: 20px; }
+  .closing .cta .tag {
+    display: block;
+    font-size: 20px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #7fb2f0;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .closing .note {
+    position: absolute;
+    left: 90px;
+    right: 90px;
+    bottom: 84px;
+    font-style: italic;
+    font-size: 28px;
+    line-height: 1.4;
+    color: #8ea3bd;
+  }
+
+  .closing .copyright {
+    position: absolute;
+    left: 90px;
+    right: 90px;
+    bottom: 44px;
+    font-size: 20px;
+    color: #6b7f98;
+  }
+
+  /* ---------- print ---------- */
+  @page { size: 1080px 1080px; margin: 0; }
+
+  @media print {
+    body { background: #ffffff; }
+    .deck { gap: 0; padding: 0; }
+    .slide {
+      box-shadow: none;
+      page-break-after: always;
+      break-after: page;
+    }
+    .slide:last-child { page-break-after: auto; break-after: auto; }
+  }
+</style>
+</head>
+<body>
+<div class="deck">
+
+  <!-- ===================== SLIDE 1 — COVER ===================== -->
+  <section class="slide dark cover">
+    <div class="pad">
+      <span class="kicker">Reuse in data platforms</span>
+      <p class="line">Reuse rarely breaks loudly.</p>
+      <p class="line">No alert.</p>
+      <p class="line">No failed run.</p>
+      <p class="line">Just the same <strong>code, business logic, and metrics</strong> quietly reimplemented across the platform.</p>
+      <span class="cue">Swipe to see all five <span class="arrow">&rarr;</span></span>
+    </div>
+  </section>
+
+  <!-- ===================== SLIDE 2 ===================== -->
+  <section class="slide content">
+    <div class="ghost">1</div>
+    <div class="pad">
+      <span class="num-tag">ANTI-PATTERN 01</span>
+      <h2>The <span class="chip">final_v2</span> table</h2>
+      <p class="story">A table that began as <span class="chip">orders_clean</span> became <span class="chip">orders_clean_final</span> after someone's hotfix, and eventually <span class="chip">orders_clean_final_finance_2026Q1</span> — a finance-specific version for one reporting period.</p>
+      <p class="story">Each variant encodes a slightly different business rule. None are deprecated. All are still queried in production.</p>
+      <div class="problem">
+        <span class="label">The real problem</span>
+        <p>No version is authoritative, and nothing retires the old ones.</p>
+      </div>
+    </div>
+    <div class="foot">
+      <span>2 / 7</span>
+    </div>
+  </section>
+
+  <!-- ===================== SLIDE 3 ===================== -->
+  <section class="slide content">
+    <div class="ghost">2</div>
+    <div class="pad">
+      <span class="num-tag">ANTI-PATTERN 02</span>
+      <h2>The business rule<br>living in the dashboard</h2>
+      <p class="story">Net Revenue was created as a calculated field inside a Power BI report because it was faster than putting it in a shared model. It reached the executive dashboard. Three other teams then built their own versions in their own reports.</p>
+      <div class="problem">
+        <span class="label">The real problem</span>
+        <p>When the business rule changes, there is no canonical place to update and no way to know how many different versions exist.</p>
+      </div>
+    </div>
+    <div class="foot">
+      <span>3 / 7</span>
+    </div>
+  </section>
+
+  <!-- ===================== SLIDE 4 ===================== -->
+  <section class="slide content">
+    <div class="ghost">3</div>
+    <div class="pad">
+      <span class="num-tag">ANTI-PATTERN 03</span>
+      <h2>The same ingestion logic<br>rebuilt by every team</h2>
+      <p class="story">One team built Salesforce ingestion: OAuth refresh, retries, pagination, deserialization, error handling. Another team rebuilt the same for Zendesk. Another for Stripe. The source-specific parts were genuinely different. The surrounding mechanics were not.</p>
+      <div class="problem">
+        <span class="label">The real problem</span>
+        <p>No shared ingestion module. The generic parts are rebuilt for every source.</p>
+      </div>
+    </div>
+    <div class="foot">
+      <span>4 / 7</span>
+    </div>
+  </section>
+
+  <!-- ===================== SLIDE 5 ===================== -->
+  <section class="slide content">
+    <div class="ghost">4</div>
+    <div class="pad">
+      <span class="num-tag">ANTI-PATTERN 04</span>
+      <h2>The notebook that<br>became production</h2>
+      <p class="story">An analyst built an LTV calculation one weekend, connecting to both data warehouse and source datasets directly. Leadership cited the numbers in a board deck. Six months later, the notebook runs on a schedule, feeding the whole organization. In the meantime an upstream table was silently renamed without anyone noticing the breakage.</p>
+      <div class="problem">
+        <span class="label">The real problem</span>
+        <p>No owner, no tests, and no way to catch upstream changes before they break it.</p>
+      </div>
+    </div>
+    <div class="foot">
+      <span>5 / 7</span>
+    </div>
+  </section>
+
+  <!-- ===================== SLIDE 6 ===================== -->
+  <section class="slide content">
+    <div class="ghost">5</div>
+    <div class="pad">
+      <span class="num-tag">ANTI-PATTERN 05</span>
+      <h2>The superior view<br>nobody wants to touch</h2>
+      <p class="story">It started as a simple filter on the orders table. Over three years it absorbed <span class="chip">JOINs</span>, <span class="chip">CASE WHEN</span> logic, and rules no one remembers writing. It is now a 700-line SQL statement that feeds 40 downstream queries, 5 dashboards, and 2 ML pipelines, and no one is certain what it actually computes.</p>
+      <div class="problem">
+        <span class="label">The real problem</span>
+        <p>It became canonical by accident: untestable, unowned, and too risky to change.</p>
+      </div>
+    </div>
+    <div class="foot">
+      <span>6 / 7</span>
+    </div>
+  </section>
+
+  <!-- ===================== SLIDE 7 — CLOSING ===================== -->
+  <section class="slide dark closing">
+    <div class="pad">
+      <span class="kicker">Why reuse breaks at scale</span>
+      <p class="line">Local reimplementation is simply easier, and sometimes the only available path.</p>
+      <p class="line">These are not team failures.<br>They are <strong>systemic outcomes</strong> of how data platforms are organized, governed, and consumed.</p>
+    </div>
+    <p class="note">The full write-up and a practical framework are linked in the post.</p>
+    <p class="copyright">© 2026 Michal Pruszynski</p>
+  </section>
+
+</div>
+</body>
+</html>

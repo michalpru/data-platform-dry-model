@@ -1,0 +1,101 @@
+apiVersion: dry.platform/v1
+kind: DatasetContract
+metadata:
+  fqn: executive.datasets.arpac_90d_components.v1 # use format: domain.namespace.name.vN
+  title: ARPAC 90d Components
+  description: >
+    Reporting-date-grain components for the trailing-90-day ARPAC metric: net recognized revenue
+    in USD (active customers only) and the distinct count of active customers. Composes two
+    certified enterprise-canonical artifacts; re-derives no revenue or active-customer logic.
+  owner:
+    team: executive-analytics
+    escalation: executive-data-oncall
+  lifecycle:
+    state: shared # proposed for certification once the denominator has a Snowflake binding
+  registry:
+    publish: true
+    interfaceType: queryable_dataset
+
+spec:
+  # --- DATA CONTRACT ---
+  grain:
+    - reporting_date
+  materialization:
+    type: view
+    refreshMode: on_query
+  schema:
+    - name: reporting_date
+      type: date
+      nullable: false
+    - name: net_recognized_revenue_usd
+      type: decimal(18,2)
+      nullable: false
+    - name: active_customer_count
+      type: number
+      nullable: false
+  compatibility:
+    policy: backward-compatible
+    deprecationWindowDays: 90
+
+  # --- DRY GOVERNANCE ---
+  dependencies:
+    - fqn: finance.logic.recognize_revenue.v1
+      relationship: transformation_dependency
+    - fqn: sales.datasets.commercial_customer_status_90d.v1
+      relationship: source_input
+
+  # Provenance of reused governed artifacts (resolved via registry MCP tools).
+  reuses:
+    - fqn: finance.logic.recognize_revenue.v1
+      role: numerator_source
+      lifecycle: certified
+      reuseIntent: enterprise_canonical
+      binding: warehouse:snowflake:FINANCE.LOGIC.RECOGNIZE_REVENUE
+      objectType: udf
+      signatureConfirmedFrom: finance/logic/recognize_revenue.sql
+      note: >
+        Net recognized revenue USD. Called as a table UDF over the trailing 90 days. Refund/credit
+        netting is already carried in RECOGNIZED_REVENUE_USD. Snowflake-reachable — no gap.
+    - fqn: sales.datasets.commercial_customer_status_90d.v1
+      role: denominator_source
+      lifecycle: certified
+      reuseIntent: enterprise_canonical
+      binding: databricks:sales.datasets.commercial_customer_status_90d
+      objectType: view
+      signatureConfirmedFrom: sales/datasets/commercial_customer_status_90d.sql
+      crossEngineGap: true
+      note: >
+        The executive active-customer definition. Resolved binding is Databricks-only; NO Snowflake
+        binding exists. Referenced under the reachability precondition below. Provisioning a
+        Snowflake-reachable binding (portable-SQL rebuild, or a shared/federated view registered as
+        an additional binding) is an integration requirement before production run. No Snowflake
+        bridge object was fabricated.
+
+  preconditions:
+    - id: denominator-snowflake-binding
+      description: >
+        sales.datasets.commercial_customer_status_90d must be reachable from the Snowflake warehouse
+        (additional certified binding) for this view to run. Until then the code is authored against
+        the resolved Databricks binding ref and is runnable the moment the binding is provisioned.
+
+  semanticGovernance:
+    transformationLogic: >
+      Denominator = DISTINCT customers with is_active_commercial_90d = TRUE at the as-of reporting
+      date (executive active-customer definition). Numerator = SUM of RECOGNIZED_REVENUE_USD from
+      FINANCE.LOGIC.RECOGNIZE_REVENUE over the trailing 90 days, inner-joined to the denominator
+      customer set so ONLY active-customer revenue is counted; non-active-customer revenue is
+      excluded. No revenue-recognition or active-customer classification logic is re-derived here.
+    grainOwnership: >
+      One row per reporting_date. Grain owned and enforced by executive-analytics.
+    fieldDefinitions:
+      net_recognized_revenue_usd: "Net recognized revenue in USD, trailing 90 days, active customers only."
+      active_customer_count: "Distinct count of active customers per the executive definition."
+    rejectedAlternatives:
+      - fqn: sales.datasets.active_customer_90d.v1
+        reason: Domain-scoped Sales billed-proxy; registry flags it as NOT the executive definition.
+      - fqn: marketing.logic.active_customer.v1
+        reason: Marketing login proxy; registry flags it as NOT the executive definition.
+      - fqn: shared.datasets.dim_customers.v1 (IS_ACTIVE)
+        reason: Operational 12-month order flag; registry flags it as NOT the certified executive definition.
+      - fqn: finance.datasets.invoice_revenue.v1
+        reason: Retired legacy revenue view; superseded by finance.logic.recognize_revenue.v1. Do NOT reuse.

@@ -1,0 +1,137 @@
+apiVersion: dry.platform/v1
+kind: Metric
+metadata:
+  fqn: finance.metrics.arpac_trailing_90_days.v1
+  title: Trailing-90-Day ARPAC (USD)
+  description: >
+    Average Revenue per Active Customer over the trailing 90 days, denominated in USD.
+    Reusable executive KPI: dashboards adopt it by querying
+    finance.metrics.arpac_trailing_90_days directly instead of re-deriving revenue,
+    currency, or active-customer logic.
+  owner:
+    team: finance-analytics
+    escalation: finance-data-oncall
+  lifecycle:
+    state: shared # local | shared | certified | deprecated | retired
+  registry:
+    publish: true
+    interfaceType: semantic_contract
+
+spec:
+  formula: net_recognized_revenue_usd / active_customer_count
+  grain: one row per metric_date (as-of CURRENT_DATE at query time)
+  currency: USD
+
+  window:
+    type: trailing
+    length_days: 90
+    anchor: CURRENT_DATE()
+    boundary: inclusive # [CURRENT_DATE - 90, CURRENT_DATE]; matches active_customer_90d
+
+  numerator:
+    name: net_recognized_revenue_usd
+    description: >
+      Net recognized revenue in USD over the trailing 90 days, counting ONLY customers
+      present in the denominator. Delegated entirely to FINANCE.LOGIC.RECOGNIZE_REVENUE,
+      which unions POSTED invoices and APPROVED refunds/credit notes from
+      FINANCE.DATASETS.FACT_BILLABLE_EVENTS (signed NET_AMOUNT, IS_RECOGNIZABLE) and
+      converts all source currencies to USD via FINANCE.LOGIC.NORMALIZE_CURRENCY.
+    source: FINANCE.LOGIC.RECOGNIZE_REVENUE(DATEADD(DAY, -90, CURRENT_DATE()), CURRENT_DATE())
+    aggregation: SUM(RECOGNIZED_REVENUE_USD)
+    filters:
+      - CUSTOMER_ID IN (active-customer denominator)
+    reused_artifact: finance.logic.recognize_revenue
+    reuse_rationale: >
+      Certified finance function that already nets invoices against refunds, applies
+      recognition timing (RECOGNITION_DATE), and normalises currency. No revenue or FX
+      logic is re-implemented in the metric.
+
+  denominator:
+    name: active_customer_count
+    description: >
+      Distinct count of active customers. Reuses the active-customer rule from
+      sales.datasets.active_customer_90d: a customer with >= 1 POSTED invoice in the
+      trailing 90 days, over the shared.dim_customers universe.
+    sources:
+      - table: shared.dim_customers
+        role: customer universe
+      - table: shared.fact_invoices
+        role: activity signal
+        filters:
+          - invoice_status = 'POSTED'
+          - invoice_date >= DATEADD(DAY, -90, CURRENT_DATE())
+          - invoice_date <= CURRENT_DATE()
+    aggregation: COUNT(DISTINCT customer_id)
+    reused_artifact: sales.datasets.active_customer_90d
+    reuse_rationale: >
+      This is the trailing-90-day active-customer definition already used by the
+      executive/sales reporting layer and is the only 90-day, workspace-runnable rule.
+      The metric inlines the single as-of slice of this per-reporting_date view, adapting
+      Spark date_sub to Snowflake DATEADD (identical semantics).
+
+  dependencies:
+    direct:
+      - sales.datasets.active_customer_90d       # denominator rule (ported inline)
+      - shared.dim_customers                     # customer universe
+      - shared.fact_invoices                     # activity signal
+      - FINANCE.LOGIC.RECOGNIZE_REVENUE          # numerator
+    transitive:
+      - FINANCE.DATASETS.FACT_BILLABLE_EVENTS    # via RECOGNIZE_REVENUE
+      - FINANCE.LOGIC.NORMALIZE_CURRENCY         # via RECOGNIZE_REVENUE
+      - FINANCE.DATASETS.DIM_EXCHANGE_RATES      # via NORMALIZE_CURRENCY
+
+  implementation:
+    sql_file: arpac_trailing_90_days.sql
+    view_name: finance.metrics.arpac_trailing_90_days
+    platform: Snowflake
+    columns:
+      - name: metric_date
+        type: DATE
+        description: As-of date the metric was computed (CURRENT_DATE at query time).
+      - name: active_customer_count
+        type: NUMBER
+        description: Denominator — distinct customers with a POSTED invoice in the trailing 90 days.
+      - name: net_recognized_revenue_usd
+        type: NUMBER(18,2)
+        description: Numerator — net recognized USD revenue over the trailing 90 days, active customers only.
+      - name: arpac_trailing_90_days_usd
+        type: NUMBER(18,2)
+        description: >
+          ARPAC = net_recognized_revenue_usd / active_customer_count.
+          NULL when active_customer_count = 0.
+
+  not_reused:
+    - artifact: finance.invoice_revenue
+      reason: >
+        Gross POSTED-invoice revenue only; excludes refunds and credit notes, so it is
+        not "net" recognized revenue. Superseded by recognize_revenue.
+    - artifact: sales.datasets.commercial_customer_status_90d
+      reason: >
+        Depends on sales.datasets.fact_commercial_events, reporting_calendar, and
+        sales.datasets.dim_customers — none present in the workspace. Not runnable.
+    - artifact: marketing.logic.active_customer
+      reason: >
+        Marketing-portal login engagement rule (PySpark/Databricks), a different semantic
+        and platform than the commercial active-customer definition required here.
+    - artifact: shared.dim_customers.is_active
+      reason: >
+        12-month order-activity flag — inconsistent with the required 90-day window.
+
+  assumptions:
+    - >
+      Denominator anchors on invoice_date; numerator anchors on RECOGNITION_DATE inside
+      RECOGNIZE_REVENUE (COALESCE(POSTED_DATE, INVOICE_DATE)). Both span the same 90-day
+      calendar range; recognition timing may shift an event between adjacent windows.
+    - >
+      RECOGNIZE_REVENUE returns only IS_RECOGNIZABLE = TRUE events with signed NET_AMOUNT
+      (negative for refunds), so no extra netting/filtering is needed in the metric.
+    - >
+      ARPAC returns NULL (not 0) when active_customer_count = 0, via NULLIF, to avoid a
+      misleading zero.
+    - >
+      Active customers with zero trailing-90-day recognized revenue remain in the
+      denominator (correctly diluting ARPAC) and contribute 0 via the LEFT JOIN.
+
+  compatibility:
+    policy: backward-compatible
+    deprecationWindowDays: 90

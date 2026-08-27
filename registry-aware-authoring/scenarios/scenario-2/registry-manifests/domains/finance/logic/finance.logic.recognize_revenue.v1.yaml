@@ -1,0 +1,56 @@
+# DRY Artifact manifest (registry = logical metadata index; no code stored here).
+#
+# The demo's key example of ONE logical identity with MULTIPLE Implementation Bindings on the SAME
+# Snowflake stack — a native warehouse SQL table function and a dbt macro that reuses the same
+# rule. The registry treats them as the same governed definition, so reuse via dbt is not mistaken
+# for duplication of the UDF.
+apiVersion: dry.platform/v1
+kind: DryArtifact
+metadata:
+  fqn: finance.logic.recognize_revenue.v1
+  title: Recognize Revenue
+  description: >
+    The enterprise-wide certified definition of net recognized revenue (USD), used by executive
+    dashboards. Finance-owned revenue-recognition rule: reads the canonical billable-event stream
+    finance.datasets.fact_billable_events.v1, keeps only recognizable events in the requested
+    window, and normalizes each signed amount to USD via finance.logic.normalize_currency.v1.
+    Consumers must call this instead of re-deriving revenue from raw invoices/refunds.
+  owner:
+    team: finance-analytics
+    escalation: finance-data-oncall
+  lifecycle:
+    state: certified
+spec:
+  entryRole: producer
+  interfaceTypes:
+    - callable_logic
+  reuseIntent: enterprise_canonical
+  implementationBindings:
+    - system: warehouse
+      env: prod
+      objectType: udf
+      dialect: snowflake
+      ref: FINANCE.LOGIC.RECOGNIZE_REVENUE
+      attributionKey: "warehouse:snowflake:FINANCE.LOGIC.RECOGNIZE_REVENUE"
+      source: finance/logic/recognize_revenue.sql
+    - system: dbt
+      env: prod
+      objectType: macro
+      dialect: snowflake
+      ref: dry_finance_macros.recognized_revenue_relation
+      attributionKey: "dbt:dry_finance_macros.recognized_revenue_relation"
+      source: finance/logic/dbt/recognized_revenue_relation.sql
+  compatibility:
+    policy: backward-compatible
+    breakingChanges:
+      - recognition_rule_change
+      - netting_rule_change
+      - output_grain_or_column_change
+  dependencies:
+    - fqn: finance.datasets.fact_billable_events.v1
+      relationship: source_input
+    - fqn: finance.logic.normalize_currency.v1
+      relationship: transformation_dependency
+  knownConsumers:
+    - fqn: enterprise.datasets.customer_arpac_components_90d.v1
+      relationship: transformation_dependency

@@ -1,0 +1,40 @@
+# Registered by CI on merge to main.
+# Promoted from: domains/finance/semantics/metrics/finance.metrics.arpac.v1.yaml
+#
+# Registry scope: shared semantic contract (analytics-eng-authored ratio metric).
+# This is the Pattern-3 outcome: ARPAC composed from two certified metrics, so it is
+# discoverable and its dependencies are resolvable for impact analysis.
+apiVersion: dry.platform/v1
+kind: DryArtifact
+metadata:
+  fqn: finance.metrics.arpac.v1
+  title: Average Revenue per Active Customer (ARPAC)
+  description: >
+    Ratio metric = net_recognized_revenue / active_customer (90-day). Composed from two
+    certified metrics; no revenue logic or activity window is reimplemented. Shared candidate
+    for enterprise certification (Tier-1 executive reporting).
+  owner:
+    team: revenue-analytics
+    escalation: analytics-eng-oncall
+  lifecycle:
+    state: shared
+spec:
+  entryRole: producer
+  interfaceTypes:
+    - semantic_contract
+  reuseIntent: domain_canonical
+  implementationBindings:
+    - system: semantic-layer
+      env: prod
+      objectType: metric_definition
+      ref: semantic.metrics.arpac
+      attributionKey: "metric:arpac"
+  compatibility:
+    policy: backward-compatible
+  # Declared Dependencies resolved to logical identities for impact analysis.
+  dependencies:
+    - fqn: finance.metrics.net_recognized_revenue.v1
+      relationship: ratio_numerator
+    - fqn: enterprise.metrics.active_customer.v1
+      relationship: ratio_denominator
+  sourceManifest: domains/finance/semantics/metrics/finance.metrics.arpac.v1.yaml

@@ -1,0 +1,99 @@
+apiVersion: dry.platform/v1
+kind: DatasetContract
+metadata:
+  fqn: exec.metrics.arpac_90d_components.v1
+  title: ARPAC 90-Day Components
+  description: >
+    Per-active-customer components dataset for the trailing-90-day ARPAC metric.
+    One row per active customer as of CURRENT_DATE, carrying that customer's net
+    recognized revenue in USD over the trailing 90 days. Reuses the enterprise
+    executive active-customer definition (sales.datasets.commercial_customer_status_90d.v1)
+    for the denominator population and the certified recognize-revenue UDF
+    (finance.logic.recognize_revenue.v1) for the numerator. Revenue from customers
+    not in the active set is excluded by the LEFT-JOIN-from-active-set pattern.
+  owner:
+    team: exec-analytics
+    escalation: exec-data-oncall
+  lifecycle:
+    state: shared           # promote to certified once the active-customer Snowflake binding gap is resolved
+  registry:
+    publish: true
+    interfaceType: queryable_dataset
+
+spec:
+  grain:
+    - CUSTOMER_ID
+  materialization:
+    type: view
+    refreshMode: on_demand  # evaluates CURRENT_DATE at query time; materialize nightly if latency requires
+  schema:
+    - name: CUSTOMER_ID
+      type: number(38,0)
+      nullable: false
+    - name: REPORTING_DATE
+      type: date
+      nullable: false
+      description: CURRENT_DATE at query-execution time (active-customer snapshot date)
+    - name: NET_RECOGNIZED_REVENUE_USD
+      type: number(18,2)
+      nullable: false
+      description: >
+        Sum of RECOGNIZED_REVENUE_USD from FINANCE.LOGIC.RECOGNIZE_REVENUE for the
+        trailing 90-day window. Zero when the customer had no recognizable billable
+        events in the window.
+  compatibility:
+    policy: backward-compatible
+    deprecationWindowDays: 90
+
+  dependencies:
+    - fqn: sales.datasets.commercial_customer_status_90d.v1
+      relationship: source_input
+      bindingNote: >
+        BINDING GAP — INTEGRATION REQUIREMENT.
+        This artifact is REGISTERED_CANONICAL | certified | enterprise_canonical but has
+        a Databricks binding only. No Snowflake warehouse binding is registered.
+        Provisional Snowflake object: SALES.DATASETS.COMMERCIAL_CUSTOMER_STATUS_90D.
+        Provisioning a Snowflake binding via the portable-SQL framework or a registered
+        federated view is required before the components view is executable.
+    - fqn: finance.logic.recognize_revenue.v1
+      relationship: transformation_dependency
+      bindingNote: >
+        Snowflake binding confirmed: FINANCE.LOGIC.RECOGNIZE_REVENUE(P_START_DATE DATE,
+        P_END_DATE DATE) returning CUSTOMER_ID, BILLABLE_EVENT_ID, RECOGNITION_DATE,
+        EVENT_TYPE, SOURCE_CURRENCY, RECOGNIZED_REVENUE_USD. Certified enterprise
+        canonical revenue-recognition function.
+
+  semanticGovernance:
+    transformationLogic: >
+      Active customers are identified using the enterprise executive definition
+      (sales.datasets.commercial_customer_status_90d.v1, IS_ACTIVE_COMMERCIAL_90D = TRUE,
+      filtered to REPORTING_DATE = CURRENT_DATE). Revenue is the net recognized amount
+      in USD for each active customer over the trailing 90-day window ending CURRENT_DATE,
+      as computed by FINANCE.LOGIC.RECOGNIZE_REVENUE. The LEFT JOIN drives from the
+      active-customer set, ensuring that revenue from non-active customers is excluded.
+    grainOwnership: >
+      Each row represents exactly one active customer. Grain is owned by exec-analytics.
+      Downstream aggregation must not alter the grain.
+    fieldDefinitions:
+      NET_RECOGNIZED_REVENUE_USD: >
+        Certified net recognized revenue (USD) from FINANCE.LOGIC.RECOGNIZE_REVENUE
+        for the trailing 90 days, for this customer only. Includes invoice events and
+        nets refunds/credit notes (netting is performed inside the certified UDF via
+        signed NET_AMOUNT). Zero, never NULL, for active customers with no revenue events.
+      REPORTING_DATE: >
+        The active-customer snapshot date (CURRENT_DATE at query time). Represents the
+        date as of which IS_ACTIVE_COMMERCIAL_90D is evaluated. The 90-day revenue
+        window is [REPORTING_DATE - 90 days, REPORTING_DATE].
+    semanticBreakingChanges:
+      - change: active-customer population source replaced or IS_ACTIVE_COMMERCIAL_90D logic altered
+        breaking: true
+        reason: denominator changes break ARPAC comparability across reporting periods
+      - change: revenue source replaced with non-certified artifact (e.g. FACT_INVOICES directly)
+        breaking: true
+        reason: metric values diverge from the enterprise canonical revenue definition
+      - change: JOIN direction changed (e.g. driving from revenue instead of active customers)
+        breaking: true
+        reason: non-active customer revenue would leak into the numerator
+      - change: COALESCE(…, 0) removed for NET_RECOGNIZED_REVENUE_USD
+        breaking: true
+        reason: NULLs for zero-revenue active customers would alter ARPAC numerator

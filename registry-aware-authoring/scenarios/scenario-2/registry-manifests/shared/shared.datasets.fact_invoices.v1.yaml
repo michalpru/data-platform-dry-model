@@ -1,0 +1,35 @@
+# DRY Artifact manifest (registry = logical metadata index; no code stored here).
+apiVersion: dry.platform/v1
+kind: DryArtifact
+metadata:
+  fqn: shared.datasets.fact_invoices.v1
+  title: Invoice Facts
+  description: >
+    Issued invoice facts in the shared data warehouse. Invoice dates and posted amounts do not by
+    themselves constitute the certified recognized-revenue definition.
+  owner:
+    team: platform-dwh
+    escalation: dwh-data-oncall
+  lifecycle:
+    state: certified
+spec:
+  entryRole: producer
+  interfaceTypes:
+    - queryable_dataset
+  reuseIntent: shared_utility
+  implementationBindings:
+    - system: warehouse
+      env: prod
+      objectType: table
+      dialect: snowflake
+      ref: SHARED.DATASETS.FACT_INVOICES
+      attributionKey: "warehouse:snowflake:SHARED.DATASETS.FACT_INVOICES"
+      source: dwh/shared/datasets/fact_invoices.sql
+  compatibility:
+    policy: backward-compatible
+  dependencies: []
+  knownConsumers:
+    - fqn: finance.datasets.fact_billable_events.v1
+      relationship: source_input
+    - fqn: finance.datasets.invoice_revenue.v1
+      relationship: source_input

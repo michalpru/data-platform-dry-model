@@ -1,0 +1,49 @@
+# DRY Artifact manifest (registry = logical metadata index; no code stored here).
+#
+# A Sales-owned, DOMAIN-SCOPED active-customer definition: the billed-customer proxy (POSTED
+# invoice in the trailing 90 days). It is a legitimately-registered domain canonical for Sales
+# operational reporting, but it is intentionally NARROWER than — and must not be substituted for —
+# the enterprise-certified sales.datasets.commercial_customer_status_90d (paid invoice OR active
+# subscription OR committed order). Registered here to prove that registry-aware authoring keeps a
+# discoverable-but-domain-local definition OUT of the executive ARPAC composition.
+apiVersion: dry.platform/v1
+kind: DryArtifact
+metadata:
+  fqn: sales.datasets.active_customer_90d.v1
+  title: Active Customer (90d, billed proxy)
+  description: >
+    Sales operational active-customer proxy: is_active_customer_90d at customer x reporting-date
+    grain, where a customer is active only when it has a POSTED invoice within the trailing 90 days.
+    This is a domain-scoped Sales definition for operational reporting; it is NOT the executive
+    active-customer definition (that is the enterprise-certified
+    sales.datasets.commercial_customer_status_90d.v1, which also counts active subscriptions and
+    committed orders).
+  owner:
+    team: sales-analytics
+    escalation: sales-data-oncall
+  lifecycle:
+    state: certified
+spec:
+  entryRole: producer
+  interfaceTypes:
+    - queryable_dataset
+  reuseIntent: domain_canonical
+  implementationBindings:
+    - system: databricks
+      env: prod
+      objectType: view
+      dialect: databricks
+      ref: sales.datasets.active_customer_90d
+      attributionKey: "databricks:sales.datasets.active_customer_90d"
+      source: sales/datasets/active_customer_90d.sql
+  compatibility:
+    policy: backward-compatible
+    breakingChanges:
+      - activity_window_change
+      - grain_or_column_change
+  dependencies:
+    - fqn: shared.datasets.dim_customers.v1
+      relationship: source_input
+    - fqn: shared.datasets.fact_invoices.v1
+      relationship: source_input
+  knownConsumers: []

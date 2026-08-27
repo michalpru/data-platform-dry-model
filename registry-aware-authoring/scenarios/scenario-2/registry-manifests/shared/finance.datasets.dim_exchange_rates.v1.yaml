@@ -1,0 +1,35 @@
+# DRY Artifact manifest (registry = logical metadata index; no code stored here).
+# Finance-owned base table; kept in the shared/ tier because it is a foundational base dataset the
+# registry treats alongside the DWH base tables.
+apiVersion: dry.platform/v1
+kind: DryArtifact
+metadata:
+  fqn: finance.datasets.dim_exchange_rates.v1
+  title: Exchange Rates Dimension
+  description: >
+    Finance-owned daily exchange rates used by certified and legacy revenue implementations
+    (via finance.logic.normalize_currency.v1).
+  owner:
+    team: finance-analytics
+    escalation: finance-data-oncall
+  lifecycle:
+    state: certified
+spec:
+  entryRole: producer
+  interfaceTypes:
+    - queryable_dataset
+  reuseIntent: shared_utility
+  implementationBindings:
+    - system: warehouse
+      env: prod
+      objectType: table
+      dialect: snowflake
+      ref: FINANCE.DATASETS.DIM_EXCHANGE_RATES
+      attributionKey: "warehouse:snowflake:FINANCE.DATASETS.DIM_EXCHANGE_RATES"
+      source: finance/datasets/dim_exchange_rates.sql
+  compatibility:
+    policy: backward-compatible
+  dependencies: []
+  knownConsumers:
+    - fqn: finance.logic.normalize_currency.v1
+      relationship: source_input

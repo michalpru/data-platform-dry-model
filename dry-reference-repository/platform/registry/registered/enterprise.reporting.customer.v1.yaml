@@ -22,10 +22,12 @@ metadata:
   lifecycle:
     state: certified
 spec:
+  entryRole: producer
+  reuseIntent: enterprise_canonical
   interfaceTypes:
     - queryable_dataset
     - semantic_contract
-  physicalImplementations:
+  implementationBindings:
     - system: warehouse
       env: prod
       ref: analytics.enterprise.customer

@@ -1,0 +1,198 @@
+﻿{
+  "scope": "workspace",
+  "language": "sql",
+  "dialect": "snowflake",
+  "method": "ast",
+  "coverage": "CURRENT_WORKSPACE_ONLY",
+  "coverage_warnings": [
+    "Warehouse objects (UDFs, tables, views) were not searched.",
+    "Semantic-layer / metric runtimes were not searched.",
+    "Repositories not checked out into this workspace were not searched.",
+    "Package versions not installed locally were not searched.",
+    "No governance signal: lifecycle, ownership and reuse intent are UNKNOWN."
+  ],
+  "matches": [
+    {
+      "logical_id": "registry-aware-authoring\\scenarios\\scenario-2\\workspace\\finance\\datasets\\fact_billable_events.sql",
+      "title": "fact_billable_events.sql",
+      "language": "sql",
+      "governance": {
+        "authority": "UNKNOWN",
+        "lifecycle": "UNKNOWN",
+        "owner": "UNKNOWN",
+        "reuse_intent": "UNKNOWN"
+      },
+      "coverage": "CURRENT_WORKSPACE_ONLY",
+      "similarity": {
+        "ast": 0.11228070175438597,
+        "feature": 0.3226,
+        "combined": 0.1543,
+        "method": "ast",
+        "ast_supported": true
+      },
+      "evidence": {
+        "shared_source_entities": [
+          "fact_invoices",
+          "fact_refunds"
+        ],
+        "shared_operations": [],
+        "shared_concepts": [
+          "amount",
+          "currency",
+          "customer",
+          "invoice",
+          "net",
+          "recogniz",
+          "refund",
+          "revenue"
+        ],
+        "notes": []
+      },
+      "relationship": "PARTIAL_REIMPLEMENTATION",
+      "recommended_action": "Workspace-only match with no governance signal. Verify against the registry before assuming this is canonical."
+    },
+    {
+      "logical_id": "registry-aware-authoring\\scenarios\\scenario-2\\workspace\\finance\\datasets\\invoice_revenue.sql",
+      "title": "invoice_revenue.sql",
+      "language": "sql",
+      "governance": {
+        "authority": "UNKNOWN",
+        "lifecycle": "UNKNOWN",
+        "owner": "UNKNOWN",
+        "reuse_intent": "UNKNOWN"
+      },
+      "coverage": "CURRENT_WORKSPACE_ONLY",
+      "similarity": {
+        "ast": 0.11818181818181818,
+        "feature": 0.2162,
+        "combined": 0.1378,
+        "method": "ast",
+        "ast_supported": true
+      },
+      "evidence": {
+        "shared_source_entities": [
+          "fact_invoices"
+        ],
+        "shared_operations": [],
+        "shared_concepts": [
+          "amount",
+          "currency",
+          "customer",
+          "invoice",
+          "recogniz",
+          "refund",
+          "revenue"
+        ],
+        "notes": []
+      },
+      "relationship": "INSUFFICIENT_EVIDENCE",
+      "recommended_action": "Workspace-only match with no governance signal. Verify against the registry before assuming this is canonical."
+    },
+    {
+      "logical_id": "registry-aware-authoring\\scenarios\\scenario-2\\workspace\\sales\\datasets\\commercial_customer_status_90d.sql",
+      "title": "commercial_customer_status_90d.sql",
+      "language": "sql",
+      "governance": {
+        "authority": "UNKNOWN",
+        "lifecycle": "UNKNOWN",
+        "owner": "UNKNOWN",
+        "reuse_intent": "UNKNOWN"
+      },
+      "coverage": "CURRENT_WORKSPACE_ONLY",
+      "similarity": {
+        "ast": 0.12560386473429952,
+        "feature": 0.1026,
+        "combined": 0.121,
+        "method": "ast",
+        "ast_supported": true
+      },
+      "evidence": {
+        "shared_source_entities": [
+          "dim_customers"
+        ],
+        "shared_operations": [],
+        "shared_concepts": [
+          "active",
+          "customer",
+          "invoice"
+        ],
+        "notes": []
+      },
+      "relationship": "INSUFFICIENT_EVIDENCE",
+      "recommended_action": "Workspace-only match with no governance signal. Verify against the registry before assuming this is canonical."
+    },
+    {
+      "logical_id": "registry-aware-authoring\\scenarios\\scenario-2\\workspace\\finance\\logic\\recognize_revenue.sql",
+      "title": "recognize_revenue.sql",
+      "language": "sql",
+      "governance": {
+        "authority": "UNKNOWN",
+        "lifecycle": "UNKNOWN",
+        "owner": "UNKNOWN",
+        "reuse_intent": "UNKNOWN"
+      },
+      "coverage": "CURRENT_WORKSPACE_ONLY",
+      "similarity": {
+        "ast": 0.07567567567567568,
+        "feature": 0.2581,
+        "combined": 0.1122,
+        "method": "ast",
+        "ast_supported": true
+      },
+      "evidence": {
+        "shared_source_entities": [],
+        "shared_operations": [],
+        "shared_concepts": [
+          "amount",
+          "currency",
+          "customer",
+          "invoice",
+          "net",
+          "recogniz",
+          "refund",
+          "revenue"
+        ],
+        "notes": []
+      },
+      "relationship": "INSUFFICIENT_EVIDENCE",
+      "recommended_action": "Workspace-only match with no governance signal. Verify against the registry before assuming this is canonical."
+    },
+    {
+      "logical_id": "registry-aware-authoring\\scenarios\\scenario-2\\workspace\\dwh\\shared\\datasets\\fact_invoices.sql",
+      "title": "fact_invoices.sql",
+      "language": "sql",
+      "governance": {
+        "authority": "UNKNOWN",
+        "lifecycle": "UNKNOWN",
+        "owner": "UNKNOWN",
+        "reuse_intent": "UNKNOWN"
+      },
+      "coverage": "CURRENT_WORKSPACE_ONLY",
+      "similarity": {
+        "ast": 0.05309734513274336,
+        "feature": 0.2692,
+        "combined": 0.0963,
+        "method": "ast",
+        "ast_supported": true
+      },
+      "evidence": {
+        "shared_source_entities": [
+          "fact_invoices"
+        ],
+        "shared_operations": [],
+        "shared_concepts": [
+          "amount",
+          "currency",
+          "customer",
+          "invoice",
+          "recogniz",
+          "revenue"
+        ],
+        "notes": []
+      },
+      "relationship": "INSUFFICIENT_EVIDENCE",
+      "recommended_action": "Workspace-only match with no governance signal. Verify against the registry before assuming this is canonical."
+    }
+  ],
+  "summary": "No strong match found. Safe to author, but register the new artifact."
+}

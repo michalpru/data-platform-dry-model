@@ -1,0 +1,57 @@
+apiVersion: dry.platform/v1
+kind: Metric
+metadata:
+  fqn: finance.metrics.arpac.v1
+  title: Average Revenue per Active Customer (ARPAC)
+  description: >
+    ARPAC = Net Recognized Revenue / Active Customers (90-day).
+
+    Authored by analytics engineering for the executive dashboard by COMPOSING two already
+    certified artifacts, rather than re-deriving revenue or re-defining the active-customer
+    window:
+      - finance.metrics.net_recognized_revenue.v1  (certified; finance-analytics) — the
+        numerator, which itself resolves down to the certified recognition UDF, the currency
+        macro, and the canonical revenue_events dataset.
+      - enterprise.metrics.active_customer.v1      (certified; data-governance) — the
+        denominator, the enterprise Is_Active_Commercial_90d definition.
+
+    This manifest represents the Scenario 2 (registry-backed) outcome from the PoC: no revenue
+    logic, netting rule, currency rule, or activity window is reimplemented. Contrast with the
+    Scenario 1A/1B outcome, where the same number is rebuilt from raw tables and silently diverges.
+  owner:
+    team: revenue-analytics
+    escalation: analytics-eng-oncall
+  lifecycle:
+    state: shared
+    note: >
+      Proposed for enterprise certification once reviewed by Data Governance for Tier-1
+      executive reporting. Until then it is a shared, registry-discoverable candidate.
+  registry:
+    publish: true
+    interfaceType: semantic_contract
+spec:
+  type: ratio
+  numerator:
+    metric: finance.metrics.net_recognized_revenue.v1
+  denominator:
+    metric: enterprise.metrics.active_customer.v1
+  time:
+    defaultGrain: month
+    supportedGrains: [month, quarter, year]
+  allowedDimensions:
+    - event_date
+    - customer_segment
+    - region
+  compatibility:
+    policy: backward-compatible
+    note: >
+      ARPAC inherits breaking-change semantics from its two component metrics. A version
+      change in either certified component that alters values (e.g., a new activity window in
+      active_customer v2, or a recognition-rule change in net_recognized_revenue v2) is a
+      breaking change for ARPAC and requires re-validation before promotion.
+  dependencies:
+    declared:
+      - fqn: finance.metrics.net_recognized_revenue.v1
+        relationship: ratio_numerator
+      - fqn: enterprise.metrics.active_customer.v1
+        relationship: ratio_denominator

@@ -1,0 +1,43 @@
+# DRY Artifact manifest (registry = logical metadata index; no code stored here).
+#
+# A Marketing-owned, DOMAIN-LOCAL active-customer proxy: distinct customers with a Marketing Portal
+# login in the trailing 90 days (PySpark on Databricks). It is a legitimate marketing engagement
+# definition, but it is NOT the enterprise active-customer definition — that is the certified
+# sales.datasets.commercial_customer_status_90d.v1 (commercial activity, not portal engagement).
+# Registered so registry-aware authoring surfaces it as discoverable-and-rejected for the executive
+# ARPAC request, rather than leaving it invisible.
+apiVersion: dry.platform/v1
+kind: DryArtifact
+metadata:
+  fqn: marketing.logic.active_customer.v1
+  title: Active Customer (Marketing Portal login)
+  description: >
+    Marketing engagement proxy: distinct customers with a Marketing Portal login within the
+    trailing 90 days. A domain-local marketing definition for campaign reach and engagement
+    analytics; it is NOT the executive active-customer definition (that is the enterprise-certified
+    sales.datasets.commercial_customer_status_90d.v1, which measures commercial activity, not logins).
+  owner:
+    team: marketing-analytics
+    escalation: marketing-data-oncall
+  lifecycle:
+    state: shared
+spec:
+  entryRole: producer
+  interfaceTypes:
+    - callable_logic
+  reuseIntent: domain_canonical
+  implementationBindings:
+    - system: databricks
+      env: prod
+      objectType: function
+      dialect: pyspark
+      ref: marketing.logic.active_customer
+      attributionKey: "databricks:marketing.logic.active_customer"
+      source: marketing/logic/active_customer.py
+  compatibility:
+    policy: backward-compatible
+    breakingChanges:
+      - activity_signal_change
+      - activity_window_change
+  dependencies: []
+  knownConsumers: []
