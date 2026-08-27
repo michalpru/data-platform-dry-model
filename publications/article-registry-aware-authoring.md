@@ -272,8 +272,6 @@ If your platform spans multiple engines, repositories, and BI tools, this is wor
 
 👉 GitHub: [data-platform-dry-model](https://github.com/michalpru/data-platform-dry-model)
 
-👉 GitHub: [data-platform-dry-model / Registry-aware-authoring PoC](../registry-aware-authoring/README.md)   
-
 ---
 
 *Author's note: This article reflects my independent professional perspective, not that of any current or former employer, client, or vendor. The scenarios, data, and results are from a deliberately illustrative proof of concept. All text and diagrams are my own original work.*
