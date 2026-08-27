@@ -29,8 +29,7 @@ $$\text{ARPAC}_{90d} = \frac{\text{Net recognized revenue (USD) from active cust
 This "active-only numerator" is the standard ARPAC convention (average revenue *per active
 customer* should divide revenue **from** active customers by the number of active customers). It is
 the definition materialized by the Scenario 2 generated artifacts. It is a deliberate, documented
-choice; a variant that puts total recognized revenue over the active count is a different metric and
-is not used here.
+choice; a variant that puts total recognized revenue over the active count is a different metric and is not used here.
 
 ---
 

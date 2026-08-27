@@ -478,6 +478,8 @@ Impact analysis for finance.logic.recognize_revenue.v1 [certified]
 
 **Result:** no revenue logic, no netting rule, no currency rule, and no activity window is
 re-implemented. Reuse of the canonical artifacts is the lowest-friction path — the whitepaper's
+
+
 *"AI assistant as reuse accelerator."*
 
 ---
