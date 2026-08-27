@@ -60,11 +60,9 @@ Each scenario's repositories are mocked and deliberately scoped, so the **test i
 
 ---
 
-## 3. PoC Results: AI assistant limited to IDE workspace code
+## Results at a glance
 
-### The scoreboard
-
-Scored on one deliberately harsh grading question: **did it deliver the correct, governed ARPAC ?** The setups based on IDE workspace code only fail for every model:
+One question decides every run: **did it deliver the correct, governed ARPAC?** Scored on a 15-point rubric across four scenarios and three models, the whole PoC reduces to one table — workspace-only authoring fails everywhere, and only registry-aware authoring passes:
 
 | Model | 1A (base tables) | 1B (base tables + selected domain repos) | 1C (all existing codebase) | 2 (registry-aware) |
 |---|:--:|:--:|:--:|:--:|
@@ -72,9 +70,13 @@ Scored on one deliberately harsh grading question: **did it deliver the correct,
 | **Claude Sonnet 4.6** | 27% | 33% | 67% | 93% |
 | **Claude Opus 4.8** | 27% | 33% | 67% | 93% |
 
-Each percentage is the run's score on a **15-point rubric**, covering the components required for a correct, governed ARPAC: recognition, refund netting, currency, activity window, the certified active-customer definition, and composition/binding. The [full rubric and point-by-point breakdown](poc-results.md#4-scoring-matrix) has the details.
+Each percentage scores the components a correct, governed ARPAC requires: recognition, refund netting, currency, activity window, the certified active-customer definition, and composition/binding ([full rubric](poc-results.md#4-scoring-matrix)). The climb from 1A (27%) to 1C (60–67%) shows that more visible code raises partial correctness and false confidence but never reaches a correct result. §3 dissects the workspace-only failures (1A–1C); §5 analyses the registry-aware result (Scenario 2).
 
-The verdict is the same for every run using only IDE workspace code: **no governed ARPAC.** The climb from 1A (27%) to 1B (33–40%) to 1C (60–67%) shows that more visible code raises both partial correctness and false confidence, and never reaches a correct result. The final column previews the registry-aware result (Scenario 2); it is analysed later in §5.
+---
+
+## 3. PoC Results: AI assistant limited to IDE workspace code
+
+Every workspace-only run (1A–1C) fails the governance test above. Here is how.
 
 ### The failure modes when AI Assistant uses IDE workspace code
 Across the runs four recurring failure modes appear (even when the generated code syntax is correct):
@@ -118,7 +120,7 @@ Even so, **it still does not compose the metric correctly**.
 - **What went right**: All models finally get the **numerator** right. They discover and reuse the certified `recognize_revenue`, so revenue recognition, refund netting, and currency normalization are delegated rather than re-derived.
 - **What fails again, and more instructively**: Every model chose the plausible Sales-owned look-alike "active customer" definition over the certified view. Both are Databricks views, so the split was not cross-engine: the certified view depends on upstream tables that are not materialized in the IDE workspace, so models rejected it as non-runnable, while the look-alike reads only the always-present shared base tables.
 
-The 1C output only looks more trustworthy than it did in the previous scenarios: a certified numerator, a clean composition, confident commentary, even as it silently uses the wrong denominator, understating the active-customer count and overstating ARPAC. **More visible code bought more convincing output, not a correct one**.
+The 1C output silently uses the wrong denominator — a certified numerator and clean composition lend it confidence while it understates the active-customer count and overstates ARPAC.
 
 See the [Recorded run](demo-walkthrough.md#scenario-1c--workspace-only-all-existing-codebase), and the [Detailed Scenario 1C results and per-model analysis](scenarios/scenario-1c/poc-results/README.md).
 
@@ -151,6 +153,9 @@ It governs three reuse interfaces: **callable logic, queryable datasets, and sem
 
 Warehouse- and catalog-backed **MCP servers** may expose deployed objects, schemas, lineage, and some of these governance facts, potentially closing the reachability gap in Scenarios 1A–1C. This PoC does not compare those tools. **The Registry’s role is to normalize the required reuse-governance metadata from code repositories, warehouses, catalogs, and lineage systems, so an AI assistant doesn't need to infer them from disparate sources.**
 
+### How the Registry complements existing data tools
+
+The Registry does not replace data transformation frameworks (e.g. dbt) or the semantic layer; they remain the primary mechanisms for implementing reuse. The Registry adds logical identity, lifecycle status, intended reuse scope, and cross-engine mappings between multiple implementations that neither layer spans (see [PoC architecture §10](poc-architecture.md#10-why-not-just-dbt-or-the-semantic-layer)). It also adds code-similarity checks that detect likely duplication and return the governance evidence needed to assess it. The PoC exercises an enterprise-wide canonical, but the same Registry model can also govern domain-scoped canonicals within a single domain.
 
 ### IDE workspace code search vs. Registry resolution
 
@@ -169,7 +174,7 @@ IDE workspace code search curbs accidental re-implementation; registry resolutio
 
 ### Registry-aware authoring (Scenario 2) provided correct ARPAC metric for all three models
 
-This is the **same 15-point scoreboard from §3**, repeated here so the comparison is explicit — only now the focus is the final column, Scenario 2:
+This is the **same 15-point scoreboard from *Results at a glance***, repeated here so the comparison is explicit — only now the focus is the final column, Scenario 2:
 
 | Model | 1A (base tables) | 1B (base tables + selected domain repos) | 1C (all existing codebase) | 2 (registry-aware) |
 |---|:--:|:--:|:--:|:--:|
@@ -247,10 +252,6 @@ The same `compare_code` call closes the intent-first path as its Verify step. Wh
 The MCP server and the CLI are thin clients over the same Lookup & Compare services, so an engineer does not need the agent to use them. `search`, `recommend`, `resolve-binding`, and `compare` are callable from the command line for an ad-hoc check at authoring time, or as a build-time CI gate so the same comparison fires before merge.
 
 
-### How the Registry complements existing data tools
-
-The Registry does not replace data transformation frameworks (e.g. dbt) or the semantic layer; they remain the primary mechanisms for implementing reuse. The Registry adds logical identity, lifecycle status, intended reuse scope, and cross-engine mappings between multiple implementations that neither layer spans (see [PoC architecture §10](poc-architecture.md#10-why-not-just-dbt-or-the-semantic-layer)). It also adds code-similarity checks that detect likely duplication and return the governance evidence needed to assess it. The PoC exercises an enterprise-wide canonical, but the same Registry model can also govern domain-scoped canonicals within a single domain.
-
 ---
 
 ## Conclusions
@@ -259,7 +260,7 @@ The proof of concept is small and deliberately narrow — one metric, three mode
 
 The deeper takeaway is that **reuse at authoring time is an authority problem, not only a search problem.** AI answers "what looks similar." Governed reuse needs "what is approved, for what scope, bound to my runtime." Those are governance decisions, not properties of the implementation code, so widening the code context alone does not recover them, and it can make things worse by lending false confidence to retired, domain-local, or look-alike code.
 
-**If you want to move reuse upstream in your own platform**, the shape is small and additive — the PoC's own control plane is just SQLite plus pure-YAML manifests generated from tool output an engineer already produces:
+**If you want to move reuse upstream in your own platform**, the shape is small and additive:
 
 1. Certify a small, high-impact set of artifacts first — start where inconsistency already costs you (a Tier-1 metric, a cross-domain definition), not everything
 2. Declare each one's identity, owner, lifecycle, reuse scope, contract source, and runtime bindings — generated from the tool manifests you already produce, not hand-maintained
