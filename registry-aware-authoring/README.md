@@ -4,7 +4,7 @@ This directory contains a proof of concept for AI-assisted, governed reuse in a 
 
 ## Start here
 
-- [Article](article.md): the narrative of the problem, experiment, results, and conclusions.
+- [Article](../publications/article-registry-aware-authoring.md): the narrative of the problem, experiment, results, and conclusions.
 - [PoC architecture](poc-architecture.md): the technical architecture, artifact catalog, scenario design, and implementation choices.
 - [Demo walkthrough](demo-walkthrough.md): the prompts, recorded authoring runs, CLI output, and VS Code screenshots.
 - [Results analysis](poc-results.md): the scoring rubric and per-model findings across all scenarios.
@@ -13,7 +13,7 @@ This directory contains a proof of concept for AI-assisted, governed reuse in a 
 
 | Path | Scope |
 |---|---|
-| `article.md` | Publication-ready account of the PoC and its conclusions. |
+| [`../publications/article-registry-aware-authoring.md`](../publications/article-registry-aware-authoring.md) | Publication-ready account of the PoC and its conclusions. |
 | `poc-architecture.md` | Architecture and design reference for the PoC. |
 | `demo-walkthrough.md` | Reproducible scenario walkthrough and recorded runs. |
 | `poc-results.md` | Detailed results, scoring, and model-by-model analysis. |

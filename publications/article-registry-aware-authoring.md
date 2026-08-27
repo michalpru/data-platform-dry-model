@@ -1,8 +1,8 @@
-# AI-assisted authoring for governed reuse in data platforms
+# When an AI coding assistant is a duplication amplifier in your data platform
 
-*A proof of concept implementing the DRY Artifact Registry for AI-assisted authoring — what context is missing, and what changes when you add it.*
+*A hands-on proof of concept that moves reuse decisions into the IDE: give an AI coding assistant a reuse-governance control plane, and it becomes a reuse accelerator instead of re-deriving logic.*
 
-*Version 0.1 (draft) · August 2026*
+*Version 1.0.0 · August 2026*
 
 ---
 
@@ -22,7 +22,7 @@ This article reports a small **proof of concept** testing how well an AI coding 
 
 ## 2. The test: one metric, three models, four scenarios
 The diagram below maps the ARPAC use case across the enterprise data platform, highlighting the artifacts exposed to the assistant and the two certified enterprise definitions (green) it should reuse. The company is assumed to run multiple engines, here Snowflake and Databricks, to test how models handle cross-platform bindings.
-<img src="../publications/assets-diagrams/registry-aware-authoring-poc-scenarios.jpg" alt="Data Landscape In The PoC" width="80%">
+<img src="assets-diagrams/registry-aware-authoring-poc-scenarios.jpg" alt="Data Landscape In The PoC" width="80%">
 
 The PoC runs the same ARPAC task through four scenarios and three current models: **GPT-5.5**, **Claude Sonnet 4.6**, and **Claude Opus 4.8**. GitHub Copilot was used with the VS Code IDE. 
 
@@ -41,7 +41,7 @@ The four scenarios fall under two conditions:
 ### Authoring-time Reuse Architecture 
 This diagram depicts what is exposed to an AI coding assistant when an analytics engineer performs their task:
 
-<img src="../publications/assets-diagrams/authoring-time-reuse-architecture.jpg" alt="Authoring-time Reuse Architecture" width="75%">
+<img src="assets-diagrams/authoring-time-reuse-architecture.jpg" alt="Authoring-time Reuse Architecture" width="75%">
 
 ### Prompt
 The prompt is the same business intent in every run: 
@@ -52,7 +52,7 @@ The prompt is the same business intent in every run:
 
 Reuse existing definitions, datasets, or functions where appropriate, and explain what was reused."
 
-Full prompts and recorded runs are documented in [demo walkthrough](demo-walkthrough.md). 
+Full prompts and recorded runs are documented in [demo walkthrough](../registry-aware-authoring/demo-walkthrough.md). 
 Each scenario's repositories are mocked and deliberately scoped, so the **test isolates which context the assistant can reach.**
 
 ---
@@ -67,7 +67,7 @@ One question decides every run: **did it deliver the correct, governed ARPAC?** 
 | **Claude Sonnet 4.6** | 27% | 33% | 67% | 93% |
 | **Claude Opus 4.8** | 27% | 33% | 67% | 93% |
 
-Each percentage scores the components a correct, governed ARPAC requires: recognition, refund netting, currency, activity window, the certified active-customer definition, and composition/binding ([full rubric](poc-results.md#4-scoring-matrix)). The climb from 1A (27%) to 1C (60–67%) shows that more visible code raises partial correctness and false confidence but never reaches a correct result. §3 dissects the IDE-workspace-only failures (1A–1C); §5 analyses the registry-aware result (Scenario 2).
+Each percentage scores the components a correct, governed ARPAC requires: recognition, refund netting, currency, activity window, the certified active-customer definition, and composition/binding ([full rubric](../registry-aware-authoring/poc-results.md#4-scoring-matrix)). The climb from 1A (27%) to 1C (60–67%) shows that more visible code raises partial correctness and false confidence but never reaches a correct result. §3 dissects the IDE-workspace-only failures (1A–1C); §5 analyses the registry-aware result (Scenario 2).
 
 ---
 
@@ -93,7 +93,7 @@ The SQL runs and looks correct, and none of the models flagged it as ungoverned:
 
 That is the **duplication amplifier**: with nothing certified to reuse, the assistant re-derives governed logic and no one notices.
 
-See the [Recorded run](demo-walkthrough.md#scenario-1a--workspace-only-base-tables), and the [Detailed Scenario 1A per-model results](poc-results.md#scenario-1a--base-dwh-tables-only).
+See the [Recorded run](../registry-aware-authoring/demo-walkthrough.md#scenario-1a--workspace-only-base-tables), and the [Detailed Scenario 1A per-model results](../registry-aware-authoring/poc-results.md#scenario-1a--base-dwh-tables-only).
 
 
 ### Scenario 1B: base tables + selected domain repositories
@@ -107,7 +107,7 @@ With domain code visible, the models found similar artifacts and reused them, bu
 
 **More context did not fix the answer, but it made the wrong one more convincing.**
 
-See the [Recorded run](demo-walkthrough.md#scenario-1b--workspace-only-base-tables--domain-repositories), and the [Detailed Scenario 1B results and per-model analysis](scenarios/scenario-1b/README.md).
+See the [Recorded run](../registry-aware-authoring/demo-walkthrough.md#scenario-1b--workspace-only-base-tables--domain-repositories), and the [Detailed Scenario 1B results and per-model analysis](../registry-aware-authoring/scenarios/scenario-1b/README.md).
 
 
 ### Scenario 1C: the entire codebase
@@ -119,7 +119,7 @@ Even so, **it still does not compose the metric correctly**.
 
 The 1C output silently uses the wrong denominator: a certified numerator and clean composition make it look trustworthy even as it undercounts active customers and so reports a wrong ARPAC.
 
-See the [Recorded run](demo-walkthrough.md#scenario-1c--workspace-only-all-existing-codebase), and the [Detailed Scenario 1C results and per-model analysis](scenarios/scenario-1c/poc-results/README.md).
+See the [Recorded run](../registry-aware-authoring/demo-walkthrough.md#scenario-1c--workspace-only-all-existing-codebase), and the [Detailed Scenario 1C results and per-model analysis](../registry-aware-authoring/scenarios/scenario-1c/poc-results/README.md).
 
 ---
 
@@ -145,7 +145,7 @@ The PoC uses a small **DRY Artifact Registry**, which is the **reuse-governance 
 It is not a new warehouse, catalog, or code store. Instead, the Registry is a **vendor-neutral metadata layer** that gives each reusable artifact a stable logical identity, lifecycle, reuse scope, owner, and implementation bindings — the pointers to the physical objects. 
 It governs three reuse interfaces: **callable logic, queryable datasets, and semantic contracts**. It stores metadata, and derived signals such as structural fingerprints, but never the implementation code and it never sits in the query-execution path.
 
-<img src="../publications/assets-diagrams/dry-artifact-registry.jpg" width="800"/>
+<img src="assets-diagrams/dry-artifact-registry.jpg" width="800"/>
 
 **Retrieval finds candidates; only governed metadata confers authority.** RAG over these records can surface a plausible match, but it cannot by itself establish which one is approved for the scope.
 
@@ -203,14 +203,14 @@ Across the registry-aware runs, every model produced the governed ARPAC and reje
 
 The scoreboard jump from ≤67% to ≥93% is not a model-quality effect; it reflects that, in this PoC, the registry surfaced governed authority and the cross-engine binding for each artifact. Scenario 1C and Scenario 2 see the same underlying code, yet only the registry-backed run composed the governed metric: reaching an object is not the same as knowing which definition is authoritative and approved for the intended scope. Sonnet and Opus miss only the reproducible-reporting-date point — both anchored the output to `CURRENT_DATE()` instead of a parameterized as-of date, a production-reproducibility nit rather than a governed-reuse miss.
 
-See the [Recorded run](demo-walkthrough.md#scenario-2--registry-aware-authoring), and the [Detailed Scenario 2 per-model results](poc-results.md#scenario-2--registry-aware-authoring).
+See the [Recorded run](../registry-aware-authoring/demo-walkthrough.md#scenario-2--registry-aware-authoring), and the [Detailed Scenario 2 per-model results](../registry-aware-authoring/poc-results.md#scenario-2--registry-aware-authoring).
 
 
 ### What exactly was implemented in the PoC
 
 The PoC exposes the Registry to the assistant as a thin, layered stack:
 
-![PoC architecture: the DRY Reuse agent over a thin MCP server, calling the registry's lookup & binding and reuse-detection services on a SQLite store](../publications/assets-diagrams/registry-aware-authoring-poc-architecture.jpg)
+![PoC architecture: the DRY Reuse agent over a thin MCP server, calling the registry's lookup & binding and reuse-detection services on a SQLite store](assets-diagrams/registry-aware-authoring-poc-architecture.jpg)
 
 - **The Registry**: a local SQLite control plane built from pure-YAML manifests. It holds logical identities, lifecycle, owner, bindings, and dependency edges — each binding points to real code the registry never stores
 - **Lookup & binding** (`RegistryService`/`BindingService`): `search_artifacts`, `find_composable_artifacts`, `recommend_composition`, `resolve_binding`
@@ -218,7 +218,7 @@ The PoC exposes the Registry to the assistant as a thin, layered stack:
 - **A thin MCP server**: exposes both service groups as structured tools, with no business logic
 - **The DRY Reuse agent**: a custom Copilot agent that drives the workflow and reads each binding's source to confirm columns and signatures before use
 
-The [Registry source code](registry/) is available in the PoC repository.
+The [Registry source code](../registry-aware-authoring/registry/) is available in the PoC repository.
 
 The Python services **never call an LLM**: they return structured evidence, and the agent acts on it. Determinism lives in the tools; language understanding lives in the model.
 
@@ -240,7 +240,7 @@ When the engineer already has code and asks *"does this already exist?"*
 
 **Compare → Explain evidence → Resolve binding → Recommend reuse** 
 
-The `compare_code` fingerprints the code with a shared AST/feature engine, plus an optional, advisory **embedding** signal for rewrites the AST would miss, and scores it against every registered artifact. It returns not just a similarity number but the **governance evidence** behind each match: the artifact it resembles, its lifecycle and owner, and a recommended action. These are the whitepaper's [build-time duplication-detection signals](https://michalpru.github.io/data-platform-dry-model/publications/whitepaper-data-platform-dry-model.html#duplication-prevention-and-detection), brought forward to authoring time. A recorded [code similarity verification suite](scenarios/scenario-2/code-similarity-verification/) confirms the detector both fires on real duplication and stays quiet on correctly-composed reuse.
+The `compare_code` fingerprints the code with a shared AST/feature engine, plus an optional, advisory **embedding** signal for rewrites the AST would miss, and scores it against every registered artifact. It returns not just a similarity number but the **governance evidence** behind each match: the artifact it resembles, its lifecycle and owner, and a recommended action. These are the whitepaper's [build-time duplication-detection signals](https://michalpru.github.io/data-platform-dry-model/publications/whitepaper-data-platform-dry-model.html#duplication-prevention-and-detection), brought forward to authoring time. A recorded [code similarity verification suite](../registry-aware-authoring/scenarios/scenario-2/code-similarity-verification/) confirms the detector both fires on real duplication and stays quiet on correctly-composed reuse.
 
 The same `compare_code` call closes the intent-first path as its Verify step. When it analyzes the SQL produced in Scenario 2, it returns *no strong match, safe to author*: the revenue, netting, currency, and activity-window rules are referenced rather than re-derived. In this PoC, Verify ran through the CLI; wiring the agent to run and persist that verdict for every generated artifact remains open.
 
@@ -272,7 +272,7 @@ If your platform spans multiple engines, repositories, and BI tools, this is wor
 
 👉 GitHub: [data-platform-dry-model](https://github.com/michalpru/data-platform-dry-model)
 
-👉 GitHub: [data-platform-dry-model / Registry-aware-authoring PoC](README.md)   
+👉 GitHub: [data-platform-dry-model / Registry-aware-authoring PoC](../registry-aware-authoring/README.md)   
 
 ---
 
