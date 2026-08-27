@@ -47,10 +47,13 @@ This diagram depicts what is exposed to an AI coding assistant when an analytics
 <img src="../publications/assets-diagrams/authoring-time-reuse-architecture.jpg" alt="Authoring-time Reuse Architecture" width="75%">
 
 ### Prompt
-The prompt is the same business intent in every run: "I need a trailing-90-day ARPAC metric for executive reporting...
+The prompt is the same business intent in every run: 
+
+"I need a trailing-90-day ARPAC metric for executive reporting...
 - Numerator = net recognized revenue in USD, over the trailing 90 days, counting *only* active customers
 - Denominator = the count of active customers using the definition used in other executive dashboards... 
-Reuse existing definitions, datasets, or functions where appropriate, and explain what was reused"
+
+Reuse existing definitions, datasets, or functions where appropriate, and explain what was reused."
 
 Full prompts and recorded runs are documented in [demo walkthrough](demo-walkthrough.md). 
 Each scenario's repositories are mocked and deliberately scoped, so the **test isolates which context the assistant can reach.**
@@ -248,11 +251,13 @@ The deeper takeaway is that **reuse at authoring time is an authority problem, n
 4. Require unresolved scope or binding gaps to be explicit — flagged, never guessed
 5. Treat similarity signals as review and exception routing, not as proof of authority
 
-If your platform spans multiple engines, repositories, and BI tools, this is worth a look. The full registry concept is in the **whitepaper**; the working implementation, scenarios, and every recorded run live in the **registry-aware-authoring** directory of the repository, with the architecture documented in its [README](README.md).
+If your platform spans multiple engines, repositories, and BI tools, this is worth a look. 
 
-👉 The model and registry concept: [The Data Platform DRY Model](https://michalpru.github.io/data-platform-dry-model/)
+👉 The model and full registry concept: [Whitepaper: The Data Platform DRY Model](https://michalpru.github.io/data-platform-dry-model/)
 
 👉 GitHub: [data-platform-dry-model](https://github.com/michalpru/data-platform-dry-model)
+
+👉 GitHub: [data-platform-dry-model / Registry-aware-authoring PoC](README.md)   
 
 ---
 
