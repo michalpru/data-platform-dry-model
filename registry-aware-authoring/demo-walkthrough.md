@@ -38,8 +38,9 @@ Two authoring setups are compared — the first split into three workspace-expos
     domain is exposed — including the certified logic as source — the most optimistic workspace
     assumption.
 - **Scenario 2 — Registry-aware authoring.** Instead of reasoning over raw files, the engineer works
-  through the **DRY Artifact Registry** — its **registry service methods** (intent search + binding
-  resolution) and **comparison service methods** (code verification) — reached through a **thin MCP
+  through the **DRY Artifact Registry** — its **Lookup & binding** services (intent search + binding
+  resolution) and **Reuse detection** service (code verification), implemented as
+  `RegistryService`/`BindingService` and `ReuseDetectionService` — reached through a **thin MCP
   server** and driven by the **DRY Reuse agent**. Authority, not similarity, decides what is reused.
 
 ---

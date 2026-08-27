@@ -19,7 +19,7 @@ for an executive dashboard. Two enterprise-certified concepts already exist and 
 
 ### ARPAC definition (canonical for this PoC)
 
-$$\text{ARPAC}_{90d} = \frac{{ } \text{Net recognized revenue (USD) attributable to active customers}}{\bigl|\\ \text{Count of active customers}}$$
+$$\text{ARPAC}_{90d} = \frac{\text{Net recognized revenue (USD) from active customers}}{\text{Count of active customers}}$$
 
 - **Numerator** — net recognized revenue in USD **attributable to active customers only**. Revenue
   from customers who are not commercially active in the window is excluded.
@@ -63,36 +63,50 @@ components**. It does **not** store or execute implementation code:
 - SQLite plus deterministic AST / feature comparison is sufficient; a vector store is optional and
   advisory.
 
-, 
+<img src="../publications/assets-diagrams/dry-artifact-registry.jpg" alt="The DRY Artifact Registry: logical identities, authority, and implementation bindings over existing repositories and platform components" width="800"/>
 
 ---
 
-## 4. The three scenarios
+## 4. The four scenarios
 
-In this PoC the "existing repositories" are **mocked** as a per-scenario workspace tree (`registry-aware-authoring/scenarios/scenario-.../workspace/`).
+In this PoC the "existing repositories" are **mocked** as a per-scenario workspace tree (`registry-aware-authoring/scenarios/scenario-.../workspace/`). The diagram maps the ARPAC use case across the (mocked) enterprise data platform and marks the two certified enterprise definitions the governed metric must reuse; the company runs two engines (Snowflake, Databricks), so the PoC also exercises cross-engine bindings.
+
+<img src="../publications/assets-diagrams/registry-aware-authoring-poc-scenarios.jpg" alt="Data landscape in the PoC: ARPAC use case across Snowflake and Databricks, with the two certified enterprise definitions highlighted" width="80%">
 
 - **Scenario 1 — workspace-only authoring.** Standard Copilot reasons over code available in the
-  workspace to build the metric. **Scenario 1A — Workspace-only (base tables)** exposes base DWH
-  tables only; **Scenario 1B — Workspace-only (base tables + domain repositories)** additionally
-  exposes Finance and Marketing domain code.
-- **Scenario 2 — Registry-aware authoring.** The DRY Artifact Registry (registry service methods +
-  comparison service methods) is exposed through a thin MCP server and driven by the DRY Reuse agent
+  workspace to build the metric, at three exposure levels: **1A — base tables** exposes the shared
+  DWH base tables only; **1B — base tables + domain repositories** additionally exposes Finance and
+  Marketing domain code; **1C — all existing codebase** exposes the *entire* codebase, including the
+  certified logic as source (the most optimistic workspace-only assumption).
+- **Scenario 2 — Registry-aware authoring.** The DRY Artifact Registry (Lookup & binding + Reuse
+  detection services) is exposed through a thin MCP server and driven by the DRY Reuse agent
   (architecture in §7).
 
 | Authoring setup | Scenario | Authoring mode | Exposed in the workspace | Likely / intended outcome |
 |---|---|---|---|---|
 | **Workspace-only (base tables)** | **1A** | Standard Copilot (workspace context + search) | Base DWH tables only (`dim_customers`, `fact_invoices`, `fact_refunds`) | Copilot re-codes ARPAC from first principles: invoice-based revenue, refunds ignored, invoice date as revenue date, and `dim_customers.is_active` (a 12-month order flag) misused as the active-customer definition. |
 | **Workspace-only (base tables + domain repositories)** | **1B** | Standard Copilot (workspace context + search) | Base tables **+** Finance and Marketing domain repositories | Copilot reuses the most *similar* code it finds — the **retired** `finance.datasets.invoice_revenue` view and the Marketing-specific `active_customer` login rule — but similarity and availability do not indicate business authority. |
+| **Workspace-only (all existing codebase)** | **1C** | Standard Copilot (workspace context + search) | The **entire** codebase, incl. the certified `recognize_revenue` UDF and `commercial_customer_status_90d` view exposed as source, plus the Sales `active_customer_90d` look-alike | Copilot reuses the certified numerator, but still picks the Sales invoice-only look-alike over the certified denominator: both are runnable from `shared.*`, and no source file says which is authoritative. |
 | **Registry-aware authoring** | **2** | Registry-aware custom agent (MCP intent lookup + code comparison) | The **registry** (logical artifacts + resolvable bindings). The registry manifests live alongside it in `registry-aware-authoring/scenarios/scenario-2/registry-manifests/` | The agent searches by intent, evaluates lifecycle/scope, resolves the certified Snowflake and Databricks bindings, and authors **only** the missing Enterprise composition. Nothing governed is re-implemented. |
 
-The failure modes in 1A/1B are the point: **workspace similarity without governance can be worse
-than authoring from scratch**, because it lends false confidence to retired or domain-specific code.
+The failure modes in 1A/1B/1C are the point: **workspace similarity — or even full code access —
+without governance can be worse than authoring from scratch**, because it lends false confidence to
+retired, domain-local or look-alike code.
+
+The diagram below depicts what is exposed to the AI coding assistant in each condition — IDE
+workspace code only (1A/1B/1C) versus the DRY Artifact Registry over MCP (2):
+
+<img src="../publications/assets-diagrams/authoring-time-reuse-architecture.jpg" alt="Authoring-time reuse architecture: what is exposed to the AI coding assistant in the workspace-only conditions versus registry-aware authoring" width="75%">
 
 ---
 
 ## 5. Artifact catalog
 
-The **input registry** loaded by the PoC holds the nine artifacts below. The two Enterprise
+The **input registry** loaded by the PoC holds the eleven artifacts below (the `ingest` step reports
+*"Ingested 11 registered artifacts"*). Two of them — the Sales billed proxy
+`sales.datasets.active_customer_90d.v1` and the Marketing login rule
+`marketing.logic.active_customer.v1` — are **domain-local decoys**, registered on purpose so
+Scenario 2 surfaces them as *discoverable-and-rejected* rather than hiding them. The two Enterprise
 Analytics artifacts are what **Scenario 2 generates** (they start absent).
 
 | FQN | Interface | Kind / binding | Engine | Lifecycle | In input registry |
@@ -106,6 +120,8 @@ Analytics artifacts are what **Scenario 2 generates** (they start absent).
 | `finance.logic.normalize_currency.v1` | callable_logic | SQL table function **+** dbt macro | Snowflake | shared | ✓ |
 | `finance.logic.recognize_revenue.v1` | callable_logic | SQL UDF **+** dbt macro | Snowflake | certified | ✓ |
 | `sales.datasets.commercial_customer_status_90d.v1` | queryable_dataset | view | Databricks | certified | ✓ |
+| `sales.datasets.active_customer_90d.v1` | queryable_dataset | view (billed proxy) | Databricks | certified · **domain-scoped decoy** | ✓ |
+| `marketing.logic.active_customer.v1` | callable_logic | function (PySpark) | Databricks | shared · **domain-local decoy** | ✓ |
 | `enterprise.datasets.customer_arpac_components_90d.v1` | queryable_dataset | composition dataset | Snowflake | certified | *generated (scenario 2)* |
 | `enterprise.semantic.arpac_90d.v1` | semantic_contract | metric | Snowflake | certified | *generated (scenario 2)* |
 
@@ -140,7 +156,7 @@ stack that dbt-on-Snowflake never sees.
 ```
 registry-aware-authoring/
   README.md                      ← this file (single source of truth)
-  registry/                      ← the DRY Artifact Registry engine + Lookup & Compare Service
+  registry/                      ← the DRY Artifact Registry engine + Lookup & binding and Reuse detection services
     dry_registry/
       manifests.py               ← loads DryArtifact YAML; MANIFESTS_DIR + WORKSPACE_DIR anchors
       store.py                   ← SQLite control plane + FTS5 search
@@ -156,15 +172,17 @@ registry-aware-authoring/
       mcp_server.py              ← THIN stdio MCP proxy over the services (registry scope)
     pyproject.toml               ← zero required ML deps; optional [sql] [vector] [mcp] extras
     tests/                       ← invariant tests (offline)
-  demo-walkthrough.md            ← the three-scenario walkthrough with commands + real output
-  scenarios/                     ← the three workspaces the assistant "sees"
+  demo-walkthrough.md            ← the four-scenario walkthrough with commands + real output
+  scenarios/                     ← the four workspaces the assistant "sees"
     scenario-1a/                 ← base warehouse tables only
     scenario-1b/                 ← base tables + finance & marketing domain repos
+    scenario-1c/                 ← the entire codebase, incl. certified logic as source
     scenario-2/                  ← registry-aware
       registry-manifests/        ← the PoC registry: PURE YAML DryArtifact manifests, no code
         shared/                  ← base-table manifests (dim_customers, fact_invoices, fact_refunds, dim_exchange_rates)
         domains/finance/         ← finance datasets + logic manifests
-        domains/sales/           ← sales dataset manifest
+        domains/sales/           ← sales dataset manifests (commercial_customer_status_90d + active_customer_90d decoy)
+        domains/marketing/       ← marketing active-customer decoy manifest
       workspace/                 ← the mocked code the bindings point at
         dwh/shared/datasets/     ← base-table DDL (Snowflake)
         finance/{datasets,logic} ← finance code (Snowflake + dbt macros)
@@ -189,8 +207,10 @@ team repository) and are **not** part of the PoC's loaded registry.
 > **Registry** knows *what exists* (start here) · the **comparison service** *verifies* what is
 > similar · the **DRY Reuse agent** knows *how to help the engineer use both*.
 
-Scenario 2 exposes the DRY Artifact Registry to the engineer as a layered stack — registry service
-methods and comparison service methods over the store, a thin MCP server that makes them callable as
+<img src="../publications/assets-diagrams/registry-aware-authoring-poc-architecture.jpg" alt="PoC architecture: the DRY Reuse agent over a thin MCP server, calling the registry's lookup and binding and reuse-detection services on a SQLite store" width="800"/>
+
+Scenario 2 exposes the DRY Artifact Registry to the engineer as a layered stack — Lookup & binding
+and Reuse detection services over the store, a thin MCP server that makes them callable as
 structured tools, and the DRY Reuse agent that drives the workflow:
 
 ```
@@ -198,8 +218,8 @@ structured tools, and the DRY Reuse agent that drives the workflow:
                 │  structured tool calls
      ┌──────────┴───────────┐  thin MCP server  (.vscode/mcp.json, stdio; no business logic)
      ▼                      ▼
- registry service      comparison service
- methods               methods
+ Lookup & binding      Reuse detection
+ service               service
   search_artifacts       compare_code
   get_artifact           (shared AST + feature engine;
   find_composable_...      similarity + governance)
@@ -214,12 +234,12 @@ structured tools, and the DRY Reuse agent that drives the workflow:
 1. **DRY Artifact Registry** — a SQLite control plane with an FTS5 index built by `ingest` from the
    pure-YAML DryArtifact manifests. It holds logical identities, authority (lifecycle / owner / reuse
    intent), bindings and dependency edges — never implementation code.
-2. **Registry service methods** (`RegistryService`, `BindingService`) — intent discovery and binding
-   resolution: `search_artifacts`, `get_artifact`, `find_composable_artifacts`,
+2. **Lookup & binding** (implemented as `RegistryService` + `BindingService`) — intent discovery and
+   binding resolution: `search_artifacts`, `get_artifact`, `find_composable_artifacts`,
    `recommend_composition`, `resolve_binding`.
-3. **Comparison service methods** (`ReuseDetectionService`) — code-first verification: `compare_code`
-   fingerprints candidate code with the shared AST/feature engine and returns similarity **plus**
-   governance evidence.
+3. **Reuse detection** (implemented as `ReuseDetectionService`) — code-first verification:
+   `compare_code` fingerprints candidate code with the shared AST/feature engine and returns
+   similarity **plus** governance evidence.
 4. **Thin MCP server** — a stdio proxy (registered in `.vscode/mcp.json`) that exposes both service
    groups as structured MCP tools. It holds no business logic; it forwards typed calls to the
    services and returns their JSON payloads. The CLI is the *same* thin client without MCP.

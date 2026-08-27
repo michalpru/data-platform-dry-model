@@ -12,19 +12,16 @@ An analytics engineer is handed a familiar task: build **ARPAC: Average Revenue 
 
 They open their IDE, describe the metric to an AI coding assistant and let it draft the SQL.
 
-In this use case ARPAC does not exist yet as a governed metric. But its parts do. **Net recognized revenue** and **active customers** are among the most reused concepts in any company, defined and redefined across warehouses, notebooks, and BI tools. Each typically has several valid but different definitions: some intentionally scoped to a domain like Marketing or Finance rather than approved company-wide, others legacy or retired code still sitting in repositories or warehouses where an AI coding assistant can mistake them for valid reuse candidates.
+In this use case ARPAC does not exist yet as a governed metric. But its parts do. *Net recognized revenue* and *active customers* are among the most reused concepts in any company, defined and redefined across warehouses, notebooks, and BI tools. Each typically has several valid but different definitions: some intentionally scoped to a domain like Marketing or Finance rather than approved company-wide, others legacy or retired code the AI assistant can mistake for valid reuse candidates.
 
-So the real task is not to write ARPAC from scratch. It is "**compose ARPAC for executive reporting from the relevant functions or datasets already approved as company-wide canonicals**." That is a reuse problem, and it is exactly where AI-assisted authoring is supposed to help.
+So the real task is not to write ARPAC from scratch. It is "**compose ARPAC for executive reporting from the relevant functions or datasets already approved as company-wide canonicals**." That is a reuse problem, and it is where AI-assisted authoring is supposed to help.
 
----
-
-This article reports a small proof of concept that tested how well an AI coding assistant does the job. The result is the interesting part: when it could use only **IDE workspace code**, **none of the models produced the correct governed metric**, even when that codebase was fully exposed. More code improved partial correctness, but it neither identified the governed definition the metric required nor resolved the missing runtime binding for it.
+This article reports a small **proof of concept** testing how well an AI coding assistant does this. The finding is that given only IDE workspace code, none of the models produced the correct governed metric, even with the entire codebase exposed.
 
 ---
 
 ## 2. The test: one metric, three models, four scenarios
-The diagram below maps the ARPAC use case across the enterprise data platform, highlighting the artifacts exposed for AI coding assistant and the two certified enterprise definitions (marked green) that the governed metric should reuse. Additionally it has been assumed that the company uses different tools/engines to test how AI models will handle cross-platform bindings. Snowflake and Databricks have been chosen as examples.
-
+The diagram below maps the ARPAC use case across the enterprise data platform, highlighting the artifacts exposed to the assistant and the two certified enterprise definitions (green) it should reuse. The company is assumed to run multiple engines, here Snowflake and Databricks, to test how models handle cross-platform bindings.
 <img src="../publications/assets-diagrams/registry-aware-authoring-poc-scenarios.jpg" alt="Data Landscape In The PoC" width="80%">
 
 The PoC runs the same ARPAC task through four scenarios and three current models: **GPT-5.5**, **Claude Sonnet 4.6**, and **Claude Opus 4.8**. GitHub Copilot was used with the VS Code IDE. 
@@ -60,9 +57,9 @@ Each scenario's repositories are mocked and deliberately scoped, so the **test i
 
 ---
 
-## Results at a glance
+## PoC Results at a glance
 
-One question decides every run: **did it deliver the correct, governed ARPAC?** Scored on a 15-point rubric across four scenarios and three models, the whole PoC reduces to one table — workspace-only authoring fails everywhere, and only registry-aware authoring passes:
+One question decides every run: **did it deliver the correct, governed ARPAC?** On a 15-point rubric, workspace-only AI authoring fails everywhere; only registry-aware authoring passes:
 
 | Model | 1A (base tables) | 1B (base tables + selected domain repos) | 1C (all existing codebase) | 2 (registry-aware) |
 |---|:--:|:--:|:--:|:--:|
@@ -70,15 +67,15 @@ One question decides every run: **did it deliver the correct, governed ARPAC?** 
 | **Claude Sonnet 4.6** | 27% | 33% | 67% | 93% |
 | **Claude Opus 4.8** | 27% | 33% | 67% | 93% |
 
-Each percentage scores the components a correct, governed ARPAC requires: recognition, refund netting, currency, activity window, the certified active-customer definition, and composition/binding ([full rubric](poc-results.md#4-scoring-matrix)). The climb from 1A (27%) to 1C (60–67%) shows that more visible code raises partial correctness and false confidence but never reaches a correct result. §3 dissects the workspace-only failures (1A–1C); §5 analyses the registry-aware result (Scenario 2).
+Each percentage scores the components a correct, governed ARPAC requires: recognition, refund netting, currency, activity window, the certified active-customer definition, and composition/binding ([full rubric](poc-results.md#4-scoring-matrix)). The climb from 1A (27%) to 1C (60–67%) shows that more visible code raises partial correctness and false confidence but never reaches a correct result. §3 dissects the IDE-workspace-only failures (1A–1C); §5 analyses the registry-aware result (Scenario 2).
 
 ---
 
-## 3. PoC Results: AI assistant limited to IDE workspace code
+## 3. Why AI-assisted authoring fails on IDE workspace code alone
 
-Every workspace-only run (1A–1C) fails the governance test above. Here is how.
+Every run (1A–1C) fails the governance test above. Here is how.
 
-### The failure modes when AI Assistant uses IDE workspace code
+### The failure modes
 Across the runs four recurring failure modes appear (even when the generated code syntax is correct):
 1. **Re-deriving governed logic** from raw tables 
 2. **Reusing similar-but-wrong artifacts**: a retired view, or a domain-local rule treated as an enterprise canonical
@@ -89,10 +86,10 @@ These results are **use-case-specific**, not a benchmark: a different mix of vis
 
 ### Scenario 1A: base tables only
 
-This is the baseline. With only base tables visible in IDE and nothing reusable to find, every model builds ARPAC from first principles:
+This is the baseline. With only base tables visible in IDE, every model builds ARPAC from first principles:
 - Silently **re-implements three governed rules**: billable-event assembly, revenue recognition, currency normalization
 - Picks the **wrong active-customer definition**: `dim_customers.is_active`, a 12-month order flag, not the certified 90-day commercial status. 
-The SQL runs and looks correct, and none of the models flagged the active-customer definition as ungoverned: GPT framed `is_active` as the "executive-aligned", and Opus went further, calling it "the enterprise active-customer definition", so the result reads as trustworthy even as two dashboards quietly diverge. 
+The SQL runs and looks correct, and none of the models flagged it as ungoverned: GPT framed `is_active` as the "executive-aligned", and Opus went further, calling it "the enterprise active-customer definition", so the result reads as trustworthy even as two dashboards quietly diverge. 
 
 That is the **duplication amplifier**: with nothing certified to reuse, the assistant re-derives governed logic and no one notices.
 
@@ -104,26 +101,27 @@ See the [Recorded run](demo-walkthrough.md#scenario-1a--workspace-only-base-tabl
 The obvious fix is to give the AI coding assistant more to work with, so Scenario 1B adds some artifacts (functions and datasets) from the domain repositories. 
 
 With domain code visible, the models found similar artifacts and reused them, but the wrong ones:
-- The Finance repo contains `invoice_revenue`: a **retired** view that skips refunds. Nothing in the code repository says "retired," so models reused it and reproduced a known defect
+- The Finance repo contains `invoice_revenue`: a **retired** view that skips refunds. Nothing in the code says "retired," so models reused it and reproduced a known defect
 - The Marketing repo contains a **domain-local**, login-based active-customer rule. Two of the three models translated it to SQL and explicitly labelled it *"the authoritative active-customer definition used by executive dashboards."*
 - Meanwhile the composables actually needed (the enterprise-level canonicals) were **invisible to IDE workspace code search**, because they existed only as deployed warehouse objects or in repositories that were never checked out.
 
-This is where the result becomes counter-intuitive. **More context did not fix the answer, but it made the wrong one more convincing.**
+**More context did not fix the answer, but it made the wrong one more convincing.**
 
 See the [Recorded run](demo-walkthrough.md#scenario-1b--workspace-only-base-tables--domain-repositories), and the [Detailed Scenario 1B results and per-model analysis](scenarios/scenario-1b/README.md).
 
 
 ### Scenario 1C: the entire codebase
 
-Scenario 1C grants the **most optimistic assumption about IDE workspace code**: the AI assistant sees the **entire codebase** at once. Every domain repository is checked out and every warehouse object exposed as source, including the needed composables in this use case: certified `recognize_revenue` UDF and `commercial_customer_status_90d` view.
+Scenario 1C grants the **most optimistic assumption about IDE workspace code**: the AI assistant sees the **entire codebase** at once. Every domain repository is checked out and every warehouse object exposed as source, including the needed composables: certified `recognize_revenue` UDF and `commercial_customer_status_90d` view.
 Even so, **it still does not compose the metric correctly**.
 - **What went right**: All models finally get the **numerator** right. They discover and reuse the certified `recognize_revenue`, so revenue recognition, refund netting, and currency normalization are delegated rather than re-derived.
-- **What fails again, and more instructively**: Every model chose the plausible Sales-owned look-alike "active customer" definition over the certified view. Both are Databricks views, so the split was not cross-engine: the certified view depends on upstream tables that are not materialized in the IDE workspace, so models rejected it as non-runnable, while the look-alike reads only the always-present shared base tables.
+- **What fails again, and more instructively**: Every model chose the Sales-owned look-alike "active customer" definition over the certified view. Both are Databricks views, so the split was not cross-engine: the certified view depends on upstream tables not materialized in the IDE workspace, so models rejected it as non-runnable, while the look-alike reads only the always-present shared base tables.
 
-The 1C output silently uses the wrong denominator — a certified numerator and clean composition lend it confidence while it understates the active-customer count and overstates ARPAC.
+The 1C output silently uses the wrong denominator: a certified numerator and clean composition make it look trustworthy even as it undercounts active customers and so reports a wrong ARPAC.
 
 See the [Recorded run](demo-walkthrough.md#scenario-1c--workspace-only-all-existing-codebase), and the [Detailed Scenario 1C results and per-model analysis](scenarios/scenario-1c/poc-results/README.md).
 
+---
 
 ## 4. What code cannot tell you
 
@@ -132,14 +130,14 @@ Even when an AI coding assistant can search the exposed domain code, IDE workspa
 2. **Reuse intent and scope**: was this built to be reused enterprise-wide, within one domain, or never?
 3. **Lifecycle**: is it shared, certified, deprecated, or retired?
 4. **Ownership**: who is accountable for it, and can approve a change?
-5. **Implementation bindings**: even if the right logic is found, how is it consumed from the engineer's runtime and dialect?
+5. **Runtime bindings**: which deployed object implements the logic for the engineer's engine and dialect (and whether a cross-engine binding exists at all) is a deployment fact, not a source fact
 
 AI-assisted authoring makes it **cheap to write code and to find something that looks reusable**. It does not answer the question the task actually turns on: **what should be reused.** That answer requires governance context that spans the repositories, and typically does not live in any of them.
 Expanding the IDE workspace code context does not resolve this; it just adds more places a retired, local, or irrelevant artifact can be picked up with false confidence.
 
 ---
 
-## 5. The governance control plane: exposing the Registry to AI coding assistant
+## 5. The governance control plane: surfacing the Registry to the AI assistant
 
 ### What the Registry is
 
@@ -155,7 +153,7 @@ Warehouse- and catalog-backed **MCP servers** may expose deployed objects, schem
 
 ### How the Registry complements existing data tools
 
-The Registry does not replace data transformation frameworks (e.g. dbt) or the semantic layer; they remain the primary mechanisms for implementing reuse. The Registry adds logical identity, lifecycle status, intended reuse scope, and cross-engine mappings between multiple implementations that neither layer spans (see [PoC architecture §10](poc-architecture.md#10-why-not-just-dbt-or-the-semantic-layer)). It also adds code-similarity checks that detect likely duplication and return the governance evidence needed to assess it. The PoC exercises an enterprise-wide canonical, but the same Registry model can also govern domain-scoped canonicals within a single domain.
+The Registry does not replace data transformation frameworks (e.g. dbt) or a semantic layer; they remain the primary mechanisms for implementing reuse. The Registry adds logical identity, lifecycle status, intended reuse scope, and cross-engine mappings between multiple implementations that neither layer spans. It also adds code-similarity checks that detect likely duplication and return the governance evidence needed to assess it. The PoC exercises an enterprise-wide canonical, but the same Registry model can also govern domain-scoped canonicals within a single domain.
 
 ### IDE workspace code search vs. Registry resolution
 
@@ -195,7 +193,7 @@ Where do those points come from?
 | Reproducible date (1) | 0 | 1 | 1 | 1 |
 | **Total** | **4 / 15 (27%)** | **6 / 15 (40%)** | **9 / 15 (60%)** | **15 / 15 (100%)** |
 
-The two heaviest components — the certified active-customer definition (4 pts) and cross-engine composition (2 pts) — stay at zero across every workspace-only setup and resolve only once the registry is exposed. *Sonnet 4.6 and Opus 4.8 follow the same shape, differing by ≤1 point — both reach 14/15 (93%) in Scenario 2, losing only the reproducible-date point.*
+The two heaviest components: the certified active-customer definition (4 pts) and cross-engine composition (2 pts) stay at zero across every IDE-workspace-only setup and resolve only once the registry is exposed. *Sonnet 4.6 and Opus 4.8 follow the same shape, differing by ≤1 point — both reach 14/15 (93%) in Scenario 2, losing only the reproducible-date point.*
 
 Across the registry-aware runs, every model produced the governed ARPAC and rejected the decoy artifacts:
 - correctly reused the certified `recognize_revenue` (Snowflake UDF; numerator) and `commercial_customer_status_90d` (Databricks view; denominator), authoring **only** the missing ARPAC ratio;
@@ -212,44 +210,44 @@ See the [Recorded run](demo-walkthrough.md#scenario-2--registry-aware-authoring)
 
 The PoC exposes the Registry to the assistant as a thin, layered stack:
 
-![PoC architecture: registry services and comparison services, a thin MCP server, and the DRY Reuse agent](../publications/assets-diagrams/registry-aware-authoring-poc-architecture.jpg)
+![PoC architecture: the DRY Reuse agent over a thin MCP server, calling the registry's lookup & binding and reuse-detection services on a SQLite store](../publications/assets-diagrams/registry-aware-authoring-poc-architecture.jpg)
 
-- **The Registry**: a local SQLite control plane built from pure-YAML artifact manifests. It holds logical identities, authority, bindings, and dependency edges; each binding points to real code in the IDE workspace but the registry holds none of it
-- **Registry service methods**: intent-first discovery and binding resolution: `search_artifacts`, `find_composable_artifacts`, `recommend_composition`, `resolve_binding`
-- **Comparison service methods**: code-first verification: `compare_code` fingerprints authored code with a shared AST/feature engine and returns similarity **plus** governance evidence
-- **A thin MCP server**: exposes both service groups as structured tools; it holds no business logic
-- **The DRY Reuse agent**: a custom Copilot agent whose instructions drive the workflow and read each resolved binding's source to confirm columns and signatures before referencing them
+- **The Registry**: a local SQLite control plane built from pure-YAML manifests. It holds logical identities, lifecycle, owner, bindings, and dependency edges — each binding points to real code the registry never stores
+- **Lookup & binding** (`RegistryService`/`BindingService`): `search_artifacts`, `find_composable_artifacts`, `recommend_composition`, `resolve_binding`
+- **Reuse detection** (`ReuseDetectionService`): `compare_code` fingerprints authored code with a shared AST/feature engine, returning similarity **plus** governance evidence
+- **A thin MCP server**: exposes both service groups as structured tools, with no business logic
+- **The DRY Reuse agent**: a custom Copilot agent that drives the workflow and reads each binding's source to confirm columns and signatures before use
 
 The [Registry source code](registry/) is available in the PoC repository.
 
-Notably, the Python services **never call an LLM**. They return structured evidence; the agent reads that evidence and acts. The determinism lives in the tools; the language understanding lives in the model.
+The Python services **never call an LLM**: they return structured evidence, and the agent acts on it. Determinism lives in the tools; language understanding lives in the model.
 
 ### The agent workflow
 
-The [DRY Reuse agent](../.github/agents/dry-reuse.agent.md) runs **two paths** over the same registry services, chosen by how a data/analytics engineer starts.
+The [DRY Reuse agent](../.github/agents/dry-reuse.agent.md) runs **two paths** over the same registry services, chosen by how the engineer starts.
 
-### 1. Intent-first agent workflow
+#### 1. Intent-first agent workflow
 The default, when the engineer describes what to build.
 
 **Business intent → Discover → Plan composition → Resolve bindings → Confirm interface → Compose → Verify** 
 
-Agent's system instructions enforce the discipline: search the registry before writing code, prefer a complete artifact over composable parts, resolve each binding for the target runtime, confirm interface contracts from source rather than memory, never fabricate a cross-engine bridge, and compare the finished code back against the registry.
+The system instructions enforce the discipline: prefer a complete artifact over composable parts, confirm interface contracts from source rather than memory, and never fabricate a cross-engine bridge.
 
-For the ARPAC use case in this PoC, discovery finds no existing metric, so the agent decomposes the formula into its two named components and calls `recommend_composition`, which resolves each to its **enterprise-wide certified** definition and binding — the domain-canonical `fact_billable_events` and the raw `dim_customers.is_active` flag are deliberately **not** selected for an executive metric.
+For ARPAC, discovery finds no existing metric, so the agent decomposes the formula into its two named components and calls `recommend_composition`, which resolves each to its certified definition — `recognize_revenue` for revenue, `commercial_customer_status_90d` for active customers. It reuses those enterprise-wide certified artifacts rather than re-deriving them from raw tables or reusing domain-canonicals.
 
-### 2. Code-first agent workflow
+#### 2. Code-first agent workflow
 When the engineer already has code and asks *"does this already exist?"*
 
 **Compare → Explain evidence → Resolve binding → Recommend reuse** 
 
-The `compare_code` fingerprints the code with a shared AST/feature engine, plus an optional, advisory **embedding** signal for rewrites the AST would miss, and scores it against every registered artifact. It returns not just a similarity number but the **governance evidence** behind each match: the artifact it resembles, its lifecycle and owner, and a recommended action. Similarity is only a candidate; authority still comes from the registry, not the score. These are the whitepaper's [build-time duplication-detection signals](https://michalpru.github.io/data-platform-dry-model/publications/whitepaper-data-platform-dry-model.html#duplication-prevention-and-detection), brought forward to authoring time. A recorded [code similarity verification suite](scenarios/scenario-2/code-similarity-verification/) confirms the detector both fires on real duplication and stays quiet on correctly-composed reuse.
+The `compare_code` fingerprints the code with a shared AST/feature engine, plus an optional, advisory **embedding** signal for rewrites the AST would miss, and scores it against every registered artifact. It returns not just a similarity number but the **governance evidence** behind each match: the artifact it resembles, its lifecycle and owner, and a recommended action. These are the whitepaper's [build-time duplication-detection signals](https://michalpru.github.io/data-platform-dry-model/publications/whitepaper-data-platform-dry-model.html#duplication-prevention-and-detection), brought forward to authoring time. A recorded [code similarity verification suite](scenarios/scenario-2/code-similarity-verification/) confirms the detector both fires on real duplication and stays quiet on correctly-composed reuse.
 
 The same `compare_code` call closes the intent-first path as its Verify step. When it analyzes the SQL produced in Scenario 2, it returns *no strong match, safe to author*: the revenue, netting, currency, and activity-window rules are referenced rather than re-derived. In this PoC, Verify ran through the CLI; wiring the agent to run and persist that verdict for every generated artifact remains open.
 
 
 ### Beyond the agent: the same services from the CLI
 
-The MCP server and the CLI are thin clients over the same Lookup & Compare services, so an engineer does not need the agent to use them. `search`, `recommend`, `resolve-binding`, and `compare` are callable from the command line for an ad-hoc check at authoring time, or as a build-time CI gate so the same comparison fires before merge.
+The MCP server and the CLI are thin clients over the same Lookup & binding and Reuse detection services, so an engineer does not need the agent to use them. `search`, `recommend`, `resolve-binding`, and `compare` are callable from the command line for an ad-hoc check at authoring time, or as a build-time CI gate so the same comparison fires before merge.
 
 
 ---
