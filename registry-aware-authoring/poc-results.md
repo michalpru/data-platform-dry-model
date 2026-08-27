@@ -344,8 +344,7 @@ The registry makes the certified inputs' authority and runtime bindings explicit
 scores the two high-weight components and clears the bar. Sonnet and Opus each lose only the date-reproducibility
 point (C3, `CURRENT_DATE()`); Sonnet flags the missing Snowflake binding as a required bridge rather
 than shipping a silent cross-engine join, so it keeps full cross-engine credit (C2).
-Namespace and components-grain differences are registry-readiness polish, not correctness, and are
-not scored here.
+Namespace and components-grain differences are registry-readiness polish, not correctness, and are not scored here.
 
 **Decisive verdict: all three models deliver the correct governed ARPAC and reject both registered
 decoys; the two 93% scores differ from GPT's 100% only on the reproducible reporting-date point (C3).**
