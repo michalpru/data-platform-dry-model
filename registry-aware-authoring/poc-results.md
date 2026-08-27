@@ -150,15 +150,16 @@ fixed seven-component rubric used to score every scenario appears in §4.
 | Applies revenue recognition rule (A1) — none available | ❌ none | ❌ none | ❌ none |
 | Nets refunds `fact_refunds` (A2) | ✅ netted | ✅ netted | ✅ netted |
 | Normalizes currency to USD (A3) | ⚠️ USD-only filter | ⚠️ USD-only filter | ⚠️ USD-only filter |
-| Uses certified active-customer def (A4) — only `is_active` available | ❌ forced | ❌ forced | ❌ forced |
+| Uses certified active-customer def (A4) — only `is_active` available | ❌ asserted as executive-aligned | ❌ reused as dashboard-aligned | ❌ asserted as governed/dashboard-aligned |
 | Restricts numerator to active customers (C4) | ✅ | ✅ | ✅ |
-| Flags the governance limitation to the reader (D) | ⚠️ partial | ✅ explicit | ⚠️ partial |
+| Flags the governance limitation to the reader (D) | ❌ asserted as executive-aligned | ❌ asserted as dashboard-aligned | ❌ asserted as governed/dashboard-aligned |
 
 **Observation:** all three models were near-identical and actually **avoided two failure patterns** —
 they netted refunds (A2) and restricted revenue to active customers (C4). But the two decisive
-patterns are unavoidable here: A4 (no certified active definition exists, so `is_active` is forced)
-and A1 (no recognition rule available). Sonnet partly mitigated D by explicitly warning that
-`is_active` "would be replaced by a certified commercial-activity dataset" in a governed platform.
+patterns cannot be resolved here: A4 (no certified active definition is available) and A1 (no
+recognition rule is available). None of the models mitigated D: each used `is_active` directly and
+presented it as suitable for executive reporting despite the absence of a certified
+commercial-activity definition.
 
 ### Scenario 1B — base tables + Finance & Marketing domain repos
 
@@ -169,7 +170,7 @@ and A1 (no recognition rule available). Sonnet partly mitigated D by explicitly 
 | Avoids `dim_customers.is_active` (A4) | ✅ | ✅ | ✅ |
 | Nets refunds `fact_refunds` (A2) | ✅ | ✅ | ✅ |
 | Reuses `normalize_currency` for FX (A3) | ✅ | ⚠️ used FX table directly | ✅ |
-| Recognizes authority / semantics gap (B3, B5) | ❌ no | ❌ no | ✅ partially |
+| Recognizes authority / semantics gap (B3, B5) | ❌ no | ❌ no | ⚠️ partially |
 
 **Observation:** this is the scenario that separates the models. **Sonnet and GPT fell into both
 traps** — they reused the retired `invoice_revenue` *and* translated the Marketing login rule to SQL,
